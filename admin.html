@@ -1095,13 +1095,22 @@ const sb = createClient(
 );
 
 async function checkAdmin() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) { showLoginScreen(); return; }
-  const { data: perfil } = await sb.from('perfiles').select('rol').eq('id', session.user.id).single();
-  if (!perfil || perfil.rol !== 'admin') { showLoginScreen('No tienes permisos de administrador'); return; }
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('admin-wrap').style.display = 'flex'; document.getElementById('admin-wrap').style.flexDirection = 'row';
-  renderTables();
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { showLoginScreen(); return; }
+    // usuarios usa auth_id para guardar el UUID de Supabase Auth
+    const { data: perfil, error } = await sb.from('usuarios').select('rol').eq('auth_id', session.user.id).single();
+    if (error || !perfil || perfil.rol !== 'admin') {
+      showLoginScreen('No tienes permisos de administrador');
+      return;
+    }
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-wrap').style.display = 'flex';
+    document.getElementById('admin-wrap').style.flexDirection = 'row';
+    renderTables();
+  } catch(e) {
+    showLoginScreen('Error de conexión: ' + e.message);
+  }
 }
 
 function showLoginScreen(msg) {
