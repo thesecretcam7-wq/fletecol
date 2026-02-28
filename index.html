@@ -1240,18 +1240,20 @@ function actualizarPantallaPendiente(estado, motivo, rol) {
 
 async function cargarPerfil() {
   if(!usuarioActual) return;
-  const { data } = await sb.from('usuarios').select('*').eq('auth_id', usuarioActual.id).single();
-  if(data) {
-    const estadoAnterior = perfilActual ? perfilActual.estado : null;
-    perfilActual = data;
-    actualizarUIperfil();
-    mostrarAvatares(data);
-
-    // Mostrar banner si el estado cambió o si no se ha visto la notificación
-    if(!data.notificacion_vista) {
-      if(data.estado === 'aprobado') mostrarBannerEstado('aprobado', data.nombre);
-      if(data.estado === 'rechazado') mostrarBannerEstado('rechazado', data.nombre, data.motivo_rechazo);
+  try {
+    const { data, error } = await sb.from('usuarios').select('*').eq('auth_id', usuarioActual.id).single();
+    if(error) { console.error('Error cargando perfil:', error); return; }
+    if(data) {
+      perfilActual = data;
+      actualizarUIperfil();
+      mostrarAvatares(data);
+      if(!data.notificacion_vista) {
+        if(data.estado === 'aprobado') mostrarBannerEstado('aprobado', data.nombre);
+        if(data.estado === 'rechazado') mostrarBannerEstado('rechazado', data.nombre, data.motivo_rechazo);
+      }
     }
+  } catch(e) {
+    console.error('Error en cargarPerfil:', e);
   }
 }
 
@@ -1347,11 +1349,44 @@ async function login() {
   const pass  = document.getElementById('login-pass').value;
   const errEl = document.getElementById('login-error');
   const btn   = document.getElementById('btn-login');
+
+  errEl.style.display = 'none';
   if(!email || !pass) { errEl.textContent='Completa todos los campos'; errEl.style.display='block'; return; }
+
   btn.disabled = true; btn.textContent = 'Iniciando sesión...';
-  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
-  if(error) {
-    errEl.textContent = error.message === 'Invalid login credentials' ? 'Correo o contraseña incorrectos' : error.message;
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+
+    if(error) {
+      errEl.textContent = error.message === 'Invalid login credentials'
+        ? 'Correo o contraseña incorrectos'
+        : error.message;
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Iniciar sesión';
+      return;
+    }
+
+    // Login exitoso — cargar perfil y redirigir manualmente
+    // (no esperar solo al onAuthStateChange para mayor confiabilidad)
+    if(data?.user) {
+      usuarioActual = data.user;
+      btn.textContent = 'Cargando...';
+      await cargarPerfil();
+      if(!perfilActual) {
+        errEl.textContent = 'No se encontró tu perfil. Contacta soporte.';
+        errEl.style.display = 'block';
+        btn.disabled = false; btn.textContent = 'Iniciar sesión';
+        return;
+      }
+      await redirigirSegunEstado();
+    }
+
+    btn.disabled = false; btn.textContent = 'Iniciar sesión';
+
+  } catch(e) {
+    console.error('Error en login:', e);
+    errEl.textContent = 'Error de conexión. Intenta de nuevo.';
     errEl.style.display = 'block';
     btn.disabled = false; btn.textContent = 'Iniciar sesión';
   }
