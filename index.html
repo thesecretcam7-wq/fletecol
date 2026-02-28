@@ -1096,6 +1096,7 @@ const sb = createClient(
 );
 
 let usuarioActual = null;
+let enRegistro = false; // true mientras el usuario está completando el registro
 let perfilActual = null;
 let vehSeleccionado = 'moto';
 let filtroVehActual = 'todos';
@@ -1106,34 +1107,45 @@ let chatSub = null;
 
 // ══ INIT ══
 async function init() {
-  const { data: { session } } = await sb.auth.getSession();
-  document.getElementById('loading').style.display = 'none';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    document.getElementById('loading').style.display = 'none';
 
-  if(session) {
-    usuarioActual = session.user;
-    await cargarPerfil();
-    redirigirSegunEstado();
-  }
-
-  sb.auth.onAuthStateChange(async (event, session) => {
-    if(event === 'SIGNED_IN' && session) {
+    if(session) {
       usuarioActual = session.user;
       await cargarPerfil();
-      redirigirSegunEstado();
-    }
-    if(event === 'SIGNED_OUT') {
-      usuarioActual = null;
-      perfilActual = null;
+      await redirigirSegunEstado();
+    } else {
       ir('s-landing');
     }
-  });
+
+    sb.auth.onAuthStateChange(async (event, session) => {
+      if(event === 'SIGNED_IN' && session) {
+        usuarioActual = session.user;
+        // Si estamos en el flujo de registro, NO redirigir automáticamente
+        if(enRegistro) return;
+        await cargarPerfil();
+        await redirigirSegunEstado();
+      }
+      if(event === 'SIGNED_OUT') {
+        usuarioActual = null;
+        perfilActual = null;
+        enRegistro = false;
+        ir('s-landing');
+      }
+    });
+  } catch(e) {
+    console.error('Error en init:', e);
+    document.getElementById('loading').style.display = 'none';
+    ir('s-landing');
+  }
 }
 
-function redirigirSegunEstado() {
+async function redirigirSegunEstado() {
   if(!perfilActual) { ir('s-landing'); return; }
   const estado = perfilActual.estado;
   if(estado === 'aprobado') {
-    irApp('s-rutas');
+    await irApp('s-rutas');
   } else {
     // pendiente, rechazado, baneado → pantalla de espera con mensaje según estado
     actualizarPantallaPendiente(estado, perfilActual.motivo_rechazo, perfilActual.rol);
@@ -1260,7 +1272,7 @@ function ir(screenId) {
   document.getElementById('bottom-nav').classList.remove('visible');
 }
 
-function irApp(screenId) {
+async function irApp(screenId) {
   ir(screenId);
   document.getElementById('bottom-nav').classList.add('visible');
   const map = {'s-rutas':0,'s-publicar':1,'s-chat':2,'s-pagos':3,'s-perfil':4};
@@ -1269,7 +1281,6 @@ function irApp(screenId) {
   if(screenId === 's-chat') cargarConversaciones();
   if(screenId === 's-mis') cargarMisPubs();
   if(screenId === 's-publicar') {
-    // Asegurar que el perfil esté cargado antes de mostrar el formulario
     if(!perfilActual && usuarioActual) await cargarPerfil();
     cargarVehiculoConductor();
   }
@@ -1327,6 +1338,10 @@ function regStep(n) {
   [1,2,3,4].forEach(i => { const el = document.getElementById('reg-step'+i); if(el) el.style.display = 'none'; });
   const t = document.getElementById('reg-step'+n);
   if(t) t.style.display = 'block';
+  // Activar bandera de registro al entrar a steps 2, 3, 4
+  if(n >= 2) enRegistro = true;
+  // Al llegar al step 4 (completado), desactivar bandera
+  if(n === 4) enRegistro = false;
   if(n === 3) checkSessionForDocs();
 }
 
@@ -1366,6 +1381,7 @@ async function registrar() {
   if(pass.length < 8) { errEl.textContent='La contraseña debe tener mínimo 8 caracteres'; errEl.style.display='block'; return; }
 
   btn.disabled = true; btn.textContent = 'Creando cuenta...';
+  enRegistro = true; // Evitar redirect automático durante registro
 
   const { data, error } = await sb.auth.signUp({ email, password: pass });
   if(error) {
@@ -2019,6 +2035,11 @@ async function publicarCarga() {
     toast('Cargando perfil...', 'info');
     await cargarPerfil();
     if(!perfilActual) { toast('No se pudo cargar tu perfil. Intenta de nuevo.', 'error'); return; }
+  }
+  // Verificar que la cuenta esté aprobada
+  if(perfilActual.estado !== 'aprobado') {
+    toast('Tu cuenta aún está en revisión. Espera la aprobación para publicar.', 'error');
+    return;
   }
 
   const errEl = document.getElementById('carga-error');
