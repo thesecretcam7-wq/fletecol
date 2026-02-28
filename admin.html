@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FleteCOL — Panel Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -406,6 +407,7 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
 </style>
 </head>
 <body>
+<div id="admin-wrap" style="display:none;width:100%;min-height:100vh;flex-direction:row;">
 
 <!-- SIDEBAR OVERLAY (móvil) -->
 <div class="sidebar-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
@@ -1082,9 +1084,59 @@ function updateDate() {
 }
 
 // ══ INIT ══
-renderTables();
 updateDate();
 setInterval(updateDate, 60000);
+
+// ══ SUPABASE AUTH ══
+const { createClient } = supabase;
+const sb = createClient(
+  'https://sorldaixuzpqlyqdcedi.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvcmxkYWl4dXpwcWx5cWRjZWRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMjkxODIsImV4cCI6MjA4NzcwNTE4Mn0.L1RjnhY62XiBltYHaT0vciFY9SHSrKbiM3GA8Buy89Q'
+);
+
+async function checkAdmin() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { showLoginScreen(); return; }
+  const { data: perfil } = await sb.from('perfiles').select('rol').eq('id', session.user.id).single();
+  if (!perfil || perfil.rol !== 'admin') { showLoginScreen('No tienes permisos de administrador'); return; }
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin-wrap').style.display = 'flex'; document.getElementById('admin-wrap').style.flexDirection = 'row';
+  renderTables();
+}
+
+function showLoginScreen(msg) {
+  document.getElementById('admin-wrap').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  if (msg) document.getElementById('login-error').textContent = msg;
+}
+
+async function adminLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const btn = document.getElementById('login-btn');
+  btn.textContent = 'Verificando...'; btn.disabled = true;
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    document.getElementById('login-error').textContent = 'Correo o contraseña incorrectos';
+    btn.textContent = 'Entrar'; btn.disabled = false;
+    return;
+  }
+  checkAdmin();
+}
+
+checkAdmin();
 </script>
+
+</div>
+<div id="login-screen" style="display:none;position:fixed;inset:0;background:#080A0F;z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:24px;">
+  <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:28px;">Flete<span style="color:#F5C400">COL</span> <span style="font-size:14px;color:#7A8499;font-weight:400;">Admin</span></div>
+  <div style="background:#0F1117;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:32px;width:320px;display:flex;flex-direction:column;gap:16px;">
+    <input id="login-email" type="email" placeholder="Correo admin" style="background:#161B24;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;color:#E8ECF4;font-size:14px;outline:none;">
+    <input id="login-pass" type="password" placeholder="Contrasena" style="background:#161B24;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;color:#E8ECF4;font-size:14px;outline:none;" onkeydown="if(event.key==='Enter')adminLogin()">
+    <div id="login-error" style="color:#FF4545;font-size:12px;min-height:16px;"></div>
+    <button id="login-btn" onclick="adminLogin()" style="background:#F5C400;color:#080A0F;font-weight:700;border:none;border-radius:10px;padding:13px;font-size:15px;cursor:pointer;">Entrar</button>
+  </div>
+</div>
+
 </body>
 </html>
