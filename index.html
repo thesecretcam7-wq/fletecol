@@ -1149,6 +1149,7 @@ let filtroVehActual = 'todos';
 let misRutas = [];
 let misCargas = [];
 let convActual = null;
+let mensajesPendientes = []; // cola de mensajes que fallaron
 let chatSub = null;
 
 // ══ INIT ══
@@ -1209,6 +1210,8 @@ document.addEventListener('visibilitychange', async () => {
         mostrarHeaderChat(nombre, convActual.origen, convActual.destino, convActual.precio_acordado||0, false);
       }
     }
+      // Reenviar mensajes que fallaron mientras estaba en otra pestaña
+    await enviarPendientes();
     if(convActual?.id) {
       suscribirMensajes(convActual.id);
       await cargarConversaciones(convActual?.id);
@@ -2706,37 +2709,68 @@ async function enviarMsg() {
   wrap.appendChild(divTemp);
   wrap.scrollTop = wrap.scrollHeight;
 
-  // Reintentar hasta 3 veces con pausa entre intentos
-  let enviado = false;
-  for(let intento = 1; intento <= 3; intento++) {
-    try {
-      const { data: msg, error: errMsg } = await sb.from('mensajes').insert({
-        conversacion_id: convActual.id,
-        emisor_id: perfilActual.id,
-        contenido: txt,
-        tipo: 'texto'
-      }).select().single();
+  // Guardar en cola de pendientes por si la conexión falla
+  const pendiente = {
+    id: 'temp-' + Date.now(),
+    conversacion_id: convActual.id,
+    emisor_id: perfilActual.id,
+    contenido: txt,
+    tipo: 'texto'
+  };
+  mensajesPendientes.push(pendiente);
 
-      if(errMsg) throw new Error(errMsg.message);
+  try {
+    const { data: msg, error: errMsg } = await sb.from('mensajes').insert({
+      conversacion_id: pendiente.conversacion_id,
+      emisor_id: pendiente.emisor_id,
+      contenido: pendiente.contenido,
+      tipo: pendiente.tipo
+    }).select().single();
 
-      const temp = document.getElementById('msg-temp');
-      if(temp) {
-        temp.removeAttribute('id');
-        temp.dataset.msgId = msg.id;
-        temp.innerHTML = temp.innerHTML.replace('⏳','✓✓');
-      }
-      enviado = true;
-      break;
-    } catch(e) {
-      console.log(`Intento ${intento} fallido:`, e.message);
-      if(intento < 3) await new Promise(r => setTimeout(r, 1000 * intento));
-    }
-  }
+    if(errMsg) throw new Error(errMsg.message);
 
-  if(!enviado) {
+    // Éxito — quitar de pendientes y marcar como enviado
+    mensajesPendientes = mensajesPendientes.filter(p => p.id !== pendiente.id);
     const temp = document.getElementById('msg-temp');
-    if(temp) temp.innerHTML = temp.innerHTML.replace('⏳','❌');
-    toast('No se pudo enviar — recarga la página','error');
+    if(temp) {
+      temp.removeAttribute('id');
+      temp.dataset.msgId = msg.id;
+      temp.innerHTML = temp.innerHTML.replace('⏳','✓✓');
+    }
+  } catch(e) {
+    console.log('Error enviando, quedó en cola:', e.message);
+    const temp = document.getElementById('msg-temp');
+    if(temp) temp.innerHTML = temp.innerHTML.replace('⏳','🕐');
+  }
+}
+
+// Enviar mensajes pendientes cuando vuelve la conexión
+async function enviarPendientes() {
+  if(!mensajesPendientes.length || !perfilActual) return;
+  console.log('Enviando', mensajesPendientes.length, 'mensajes pendientes...');
+  const porEnviar = [...mensajesPendientes];
+  for(const p of porEnviar) {
+    try {
+      const { data: msg, error } = await sb.from('mensajes').insert({
+        conversacion_id: p.conversacion_id,
+        emisor_id: p.emisor_id,
+        contenido: p.contenido,
+        tipo: p.tipo
+      }).select().single();
+      if(error) throw error;
+      mensajesPendientes = mensajesPendientes.filter(x => x.id !== p.id);
+      // Actualizar el indicador 🕐 → ✓✓ en el DOM
+      const divs = document.querySelectorAll('.msg-g.mine');
+      divs.forEach(d => {
+        if(d.textContent.includes(p.contenido) && d.innerHTML.includes('🕐')) {
+          d.dataset.msgId = msg.id;
+          d.innerHTML = d.innerHTML.replace('🕐','✓✓');
+        }
+      });
+      console.log('Pendiente enviado:', p.contenido);
+    } catch(e) {
+      console.log('Sigue fallando:', e.message);
+    }
   }
 }
 
