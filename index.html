@@ -1156,6 +1156,11 @@ let chatSub = null;
 let estadoSub = null; // suscripción realtime al estado del usuario
 
 async function init() {
+  // Restaurar mensajes pendientes si la página se recargó
+  try {
+    const pendSaved = sessionStorage.getItem('mensajesPendientes');
+    if(pendSaved) mensajesPendientes = JSON.parse(pendSaved);
+  } catch(e) {}
   try {
     const { data: { session } } = await sb.auth.getSession();
     document.getElementById('loading').style.display = 'none';
@@ -1448,6 +1453,8 @@ async function irApp(screenId) {
   document.querySelectorAll('.bnav-item').forEach((b,i) => b.classList.toggle('active', i === map[screenId]));
   if(screenId === 's-rutas') cargarRutas();
   if(screenId === 's-chat') cargarConversaciones();
+  // Enviar pendientes al entrar a cualquier pantalla
+  if(mensajesPendientes.length > 0) enviarPendientes();
   if(screenId === 's-mis') cargarMisPubs();
   if(screenId === 's-publicar') {
     if(!perfilActual && usuarioActual) await cargarPerfil();
@@ -2731,6 +2738,7 @@ async function enviarMsg() {
 
     // Éxito — quitar de pendientes y marcar como enviado
     mensajesPendientes = mensajesPendientes.filter(p => p.id !== pendiente.id);
+    sessionStorage.setItem('mensajesPendientes', JSON.stringify(mensajesPendientes));
     const temp = document.getElementById('msg-temp');
     if(temp) {
       temp.removeAttribute('id');
@@ -2739,6 +2747,7 @@ async function enviarMsg() {
     }
   } catch(e) {
     console.log('Error enviando, quedó en cola:', e.message);
+    sessionStorage.setItem('mensajesPendientes', JSON.stringify(mensajesPendientes));
     const temp = document.getElementById('msg-temp');
     if(temp) temp.innerHTML = temp.innerHTML.replace('⏳','🕐');
   }
@@ -2759,6 +2768,7 @@ async function enviarPendientes() {
       }).select().single();
       if(error) throw error;
       mensajesPendientes = mensajesPendientes.filter(x => x.id !== p.id);
+      sessionStorage.setItem('mensajesPendientes', JSON.stringify(mensajesPendientes));
       // Actualizar el indicador 🕐 → ✓✓ en el DOM
       const divs = document.querySelectorAll('.msg-g.mine');
       divs.forEach(d => {
