@@ -2431,54 +2431,58 @@ function checkMsg(el) {
 function enterSend2(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();enviarMsg();}}
 
 // ══ CHAT CON SUPABASE ══
-async function abrirChatConConductor(conductorId, conductorNombre, precio, origen, destino) {
-  if(!usuarioActual) { toast('Debes iniciar sesión','error'); return; }
-  // Conductores no pueden chatear con otros conductores desde rutas
-  // Clientes no pueden ofertar en cargas de otros clientes
-  if(!perfilActual) { toast('Cargando perfil...','error'); return; }
+async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, destino) {
+  if(!usuarioActual || !perfilActual) { toast('Debes iniciar sesión','error'); return; }
+
   irApp('s-chat');
-  // Actualizar header
-  document.getElementById('chat-nombre').textContent = conductorNombre.trim();
-  document.getElementById('chat-sub').textContent = (origen&&destino) ? `${origen} → ${destino}` : 'Conversación';
-  document.getElementById('chat-acciones').style.display = 'flex';
-  document.getElementById('escrow-bar').style.display = 'flex';
-  if(precio>0) actualizarMonto(precio);
-  // Limpiar estado
-  document.getElementById('chat-empty-state').style.display = 'none';
-  const wrap = document.getElementById('msgs-wrap');
-  // Quitar mensajes anteriores
-  Array.from(wrap.children).forEach(c => { if(c.id !== 'chat-empty-state') c.remove(); });
-  // Si es demo (sin Supabase real), mostrar modo demo
-  if(!conductorId || conductorId.startsWith('demo-')) {
-    convActual = { id: 'demo', conductor_nombre: conductorNombre };
-    addMsg('¡Hola! Estoy interesado en tu servicio. ¿Podemos negociar el precio?', 'mine');
-    setTimeout(()=>addMsg('¡Hola! Con gusto, cuéntame más sobre tu carga y te doy un precio.','other'),1200);
-    return;
-  }
-  // Buscar o crear conversación real
+
+  // Determinar quién es cliente y quién conductor
+  const soyCliente = perfilActual.rol === 'cliente';
+  const clienteId  = soyCliente ? perfilActual.id : otroUserId;
+  const conductorId = soyCliente ? otroUserId : perfilActual.id;
+
   try {
-    let { data: conv } = await sb.from('conversaciones')
+    // Buscar conversación existente entre estos dos usuarios
+    let { data: convs } = await sb.from('conversaciones')
       .select('*')
-      .or(`and(cliente_id.eq.${usuarioActual.id},conductor_id.eq.${conductorId}),and(cliente_id.eq.${conductorId},conductor_id.eq.${usuarioActual.id})`)
-      .single();
+      .eq('cliente_id', clienteId)
+      .eq('conductor_id', conductorId);
+
+    let conv = convs?.[0] || null;
+
     if(!conv) {
-      const { data: nueva } = await sb.from('conversaciones').insert({
-        cliente_id: usuarioActual.id,
+      const { data: nueva, error } = await sb.from('conversaciones').insert({
+        cliente_id:  clienteId,
         conductor_id: conductorId,
-        origen: origen||'',
+        origen:  origen||'',
         destino: destino||'',
         precio_base: precio||0
       }).select().single();
+      if(error) { console.error('Error creando conv:', error); toast('Error al abrir chat: '+error.message, 'error'); return; }
       conv = nueva;
     }
+
     convActual = conv;
+    mostrarHeaderChat(otroNombre, origen, destino, conv.precio_acordado||precio);
     await cargarMensajes(conv.id);
     suscribirMensajes(conv.id);
-    await cargarConversaciones();
+    await cargarConversaciones(conv.id);
   } catch(e) {
     console.error('Chat error:', e);
     toast('Error abriendo chat', 'error');
   }
+}
+
+function mostrarHeaderChat(nombre, origen, destino, precio) {
+  document.getElementById('chat-nombre').textContent = nombre||'Conversación';
+  document.getElementById('chat-sub').textContent = (origen&&destino) ? `${origen} → ${destino}` : 'Conversación';
+  document.getElementById('chat-acciones').style.display = 'flex';
+  document.getElementById('escrow-bar').style.display = 'flex';
+  document.getElementById('chat-empty-state').style.display = 'none';
+  if(precio>0) actualizarMonto(precio);
+  // limpiar mensajes anteriores
+  const wrap = document.getElementById('msgs-wrap');
+  Array.from(wrap.children).forEach(c => { if(c.id !== 'chat-empty-state') c.remove(); });
 }
 
 async function cargarMensajes(convId) {
@@ -2493,7 +2497,7 @@ async function cargarMensajes(convId) {
 }
 
 function renderMensaje(m) {
-  const esMio = m.remitente_id === usuarioActual?.id;
+  const esMio = m.remitente_id === perfilActual?.id;
   const tipo = esMio ? 'mine' : 'other';
   const wrap = document.getElementById('msgs-wrap');
   const hora = new Date(m.created_at).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
@@ -2513,7 +2517,7 @@ function suscribirMensajes(convId) {
   chatSub = sb.channel('mensajes-'+convId)
     .on('postgres_changes', { event:'INSERT', schema:'public', table:'mensajes_chat', filter:`conversacion_id=eq.${convId}` },
       (payload) => {
-        if(payload.new.remitente_id !== usuarioActual?.id) {
+        if(payload.new.remitente_id !== perfilActual?.id) {
           renderMensaje(payload.new);
           document.getElementById('msgs-wrap').scrollTop = 99999;
         }
@@ -2521,44 +2525,65 @@ function suscribirMensajes(convId) {
     .subscribe();
 }
 
-async function cargarConversaciones() {
-  if(!usuarioActual) return;
-  const { data: convs } = await sb.from('conversaciones')
-    .select('*, mensajes_chat(contenido, created_at, remitente_id)')
-    .or(`cliente_id.eq.${usuarioActual.id},conductor_id.eq.${usuarioActual.id}`)
+async function cargarConversaciones(convActivaId) {
+  if(!perfilActual) return;
+  const { data: convs, error } = await sb.from('conversaciones')
+    .select(`*,
+      cliente:usuarios!conversaciones_cliente_id_fkey(nombre, apellido),
+      conductor:usuarios!conversaciones_conductor_id_fkey(nombre, apellido),
+      mensajes_chat(contenido, created_at, remitente_id, tipo)
+    `)
+    .or(`cliente_id.eq.${perfilActual.id},conductor_id.eq.${perfilActual.id}`)
     .order('updated_at', { ascending: false });
+
+  if(error) { console.error('Error convs:', error); return; }
+
   const list = document.getElementById('conv-list');
   if(!convs || convs.length === 0) {
-    list.innerHTML = `<div class="empty" style="padding:24px 16px;"><div class="empty-icon" style="font-size:32px;">💬</div><div class="empty-title" style="font-size:14px;">Sin conversaciones</div><div class="empty-sub" style="font-size:12px;">Negocia con un conductor desde la sección de rutas.</div></div>`;
+    list.innerHTML = `<div class="empty" style="padding:24px 16px;"><div class="empty-icon" style="font-size:32px;">💬</div><div class="empty-title" style="font-size:14px;">Sin conversaciones</div><div class="empty-sub" style="font-size:12px;">Negocia desde la sección de rutas.</div></div>`;
     return;
   }
+
   list.innerHTML = convs.map(c => {
-    const esCliente = c.cliente_id === usuarioActual.id;
-    const nombre = esCliente ? (c.conductor_nombre||'Conductor') : (c.cliente_nombre||'Cliente');
-    const ultimo = c.mensajes_chat?.slice(-1)[0];
-    return `<div onclick="abrirConvExistente('${c.id}')" style="padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;display:flex;gap:10px;align-items:center;">
-      <div style="width:36px;height:36px;border-radius:50%;background:var(--gris3);display:flex;align-items:center;justify-content:center;font-size:16px;">👤</div>
+    const soyCliente = c.cliente_id === perfilActual.id;
+    const otro = soyCliente ? c.conductor : c.cliente;
+    const nombreOtro = otro ? `${otro.nombre||''} ${otro.apellido||''}`.trim() : (soyCliente ? 'Conductor' : 'Cliente');
+    const msgs = c.mensajes_chat || [];
+    const ultimo = msgs.sort((a,b) => new Date(b.created_at)-new Date(a.created_at))[0];
+    const ultimoTxt = ultimo ? (ultimo.tipo==='oferta' ? '💰 Oferta enviada' : ultimo.contenido) : `${c.origen} → ${c.destino}`;
+    const hora = ultimo ? new Date(ultimo.created_at).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) : '';
+    const activo = c.id === convActivaId;
+
+    return `<div onclick="abrirConvExistente('${c.id}')" style="padding:13px 14px;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;display:flex;gap:10px;align-items:center;background:${activo?'rgba(245,196,0,0.06)':'transparent'};">
+      <div style="width:40px;height:40px;border-radius:50%;background:var(--gris3);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;">${soyCliente?'🚛':'📦'}</div>
       <div style="flex:1;min-width:0;">
-        <div style="font-weight:700;font-size:12px;margin-bottom:2px;">${nombre}</div>
-        <div style="font-size:11px;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.origen||''} → ${c.destino||''}</div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;">
+          <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;">${nombreOtro}</div>
+          <div style="font-size:10px;color:var(--texto);flex-shrink:0;">${hora}</div>
+        </div>
+        <div style="font-size:11px;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ultimoTxt}</div>
       </div>
     </div>`;
   }).join('');
 }
 
 async function abrirConvExistente(convId) {
-  const { data: conv } = await sb.from('conversaciones').select('*').eq('id', convId).single();
-  if(!conv) return;
+  const { data: conv, error } = await sb.from('conversaciones')
+    .select(`*,
+      cliente:usuarios!conversaciones_cliente_id_fkey(nombre, apellido),
+      conductor:usuarios!conversaciones_conductor_id_fkey(nombre, apellido)
+    `)
+    .eq('id', convId)
+    .single();
+  if(!conv || error) return;
   convActual = conv;
-  const esCliente = conv.cliente_id === usuarioActual.id;
-  const nombre = esCliente ? (conv.conductor_nombre||'Conductor') : (conv.cliente_nombre||'Cliente');
-  document.getElementById('chat-nombre').textContent = nombre;
-  document.getElementById('chat-sub').textContent = `${conv.origen||''} → ${conv.destino||''}`;
-  document.getElementById('chat-acciones').style.display = 'flex';
-  document.getElementById('chat-empty-state').style.display = 'none';
-  if(conv.precio_acordado>0) actualizarMonto(conv.precio_acordado);
+  const soyCliente = conv.cliente_id === perfilActual?.id;
+  const otro = soyCliente ? conv.conductor : conv.cliente;
+  const nombre = otro ? `${otro.nombre||''} ${otro.apellido||''}`.trim() : (soyCliente?'Conductor':'Cliente');
+  mostrarHeaderChat(nombre, conv.origen, conv.destino, conv.precio_acordado||0);
   await cargarMensajes(convId);
   suscribirMensajes(convId);
+  await cargarConversaciones(convId);
 }
 
 async function enviarMsg() {
@@ -2569,20 +2594,14 @@ async function enviarMsg() {
   for(const p of PATRONES){p.r.lastIndex=0;if(p.r.test(txt)){bloq=true;break;}}
   if(bloq){toast('🚫 Mensaje bloqueado','error');return;}
   el.value='';el.style.height='auto';
-  if(!convActual || convActual.id === 'demo') {
-    addMsg(txt,'mine');
-    setTimeout(()=>{
-      const rs=['Entendido, ¿confirmamos?','Perfecto, cuando pagues te confirmo.','De acuerdo, sin problema.'];
-      addMsg(rs[Math.floor(Math.random()*rs.length)],'other');
-    },1200);
-    return;
-  }
-  const { data: msg } = await sb.from('mensajes_chat').insert({
+  if(!convActual) { toast('Selecciona una conversación primero','error'); return; }
+  const { data: msg, error: errMsg } = await sb.from('mensajes_chat').insert({
     conversacion_id: convActual.id,
-    remitente_id: usuarioActual.id,
+    remitente_id: perfilActual.id,
     contenido: txt,
     tipo: 'texto'
   }).select().single();
+  if(errMsg) { console.error('Error enviando:', errMsg); toast('Error al enviar: '+errMsg.message,'error'); return; }
   if(msg) renderMensaje(msg);
   document.getElementById('msgs-wrap').scrollTop = 99999;
 }
@@ -2603,7 +2622,7 @@ async function aceptarOfertaReal(monto) {
     await sb.from('conversaciones').update({ precio_acordado: monto }).eq('id', convActual.id);
     await sb.from('mensajes_chat').insert({
       conversacion_id: convActual.id,
-      remitente_id: usuarioActual.id,
+      remitente_id: perfilActual.id,
       contenido: `✅ Oferta de $${parseInt(monto).toLocaleString('es-CO')} aceptada. Procede con el pago.`,
       tipo: 'texto'
     });
@@ -2629,7 +2648,7 @@ async function hacerOferta() {
   }
   const { data: msg } = await sb.from('mensajes_chat').insert({
     conversacion_id: convActual.id,
-    remitente_id: usuarioActual.id,
+    remitente_id: perfilActual.id,
     contenido: `💰 Oferta: $${monto.toLocaleString('es-CO')} COP`,
     tipo: 'oferta',
     monto_oferta: monto
