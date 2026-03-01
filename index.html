@@ -2663,12 +2663,14 @@ async function abrirConvExistente(convId) {
 async function enviarMsg() {
   const el=document.getElementById('m-input2');
   const txt=el.value.trim();
-  if(!txt) return;
+  console.log('enviarMsg llamado, txt:', txt, 'convActual:', convActual?.id, 'perfilActual:', perfilActual?.id);
+  if(!txt) { console.log('Sin texto'); return; }
+  if(!convActual) { toast('Selecciona una conversación primero','error'); return; }
+  if(!perfilActual) { toast('Error: perfil no cargado','error'); return; }
   let bloq=false;
   for(const p of PATRONES){p.r.lastIndex=0;if(p.r.test(txt)){bloq=true;break;}}
   if(bloq){toast('🚫 Mensaje bloqueado','error');return;}
   el.value='';el.style.height='auto';
-  if(!convActual) { toast('Selecciona una conversación primero','error'); return; }
 
   const { data: msg, error: errMsg } = await sb.from('mensajes').insert({
     conversacion_id: convActual.id,
