@@ -1122,15 +1122,60 @@ function showLoginScreen(msg) {
 async function adminLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
   const btn = document.getElementById('login-btn');
+
+  errEl.textContent = '';
+  if(!email || !pass) { errEl.textContent = 'Completa todos los campos'; return; }
+
   btn.textContent = 'Verificando...'; btn.disabled = true;
-  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
-  if (error) {
-    document.getElementById('login-error').textContent = 'Correo o contraseña incorrectos';
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+
+    if(error) {
+      errEl.textContent = 'Correo o contraseña incorrectos';
+      btn.textContent = 'Entrar'; btn.disabled = false;
+      return;
+    }
+
+    if(!data?.user) {
+      errEl.textContent = 'No se pudo autenticar. Intenta de nuevo.';
+      btn.textContent = 'Entrar'; btn.disabled = false;
+      return;
+    }
+
+    // Verificar rol admin directamente con el user del login
+    btn.textContent = 'Cargando panel...';
+    const { data: perfil, error: perfilError } = await sb.from('usuarios')
+      .select('rol')
+      .eq('auth_id', data.user.id)
+      .single();
+
+    if(perfilError || !perfil) {
+      errEl.textContent = 'No se encontró tu perfil en la base de datos.';
+      btn.textContent = 'Entrar'; btn.disabled = false;
+      await sb.auth.signOut();
+      return;
+    }
+
+    if(perfil.rol !== 'admin') {
+      errEl.textContent = 'No tienes permisos de administrador. Rol actual: ' + perfil.rol;
+      btn.textContent = 'Entrar'; btn.disabled = false;
+      await sb.auth.signOut();
+      return;
+    }
+
+    // Todo OK — mostrar panel
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-wrap').style.display = 'flex';
+    document.getElementById('admin-wrap').style.flexDirection = 'row';
+    renderTables();
+
+  } catch(e) {
+    errEl.textContent = 'Error de conexión: ' + e.message;
     btn.textContent = 'Entrar'; btn.disabled = false;
-    return;
   }
-  checkAdmin();
 }
 
 // Esperar a que el DOM y Supabase estén listos
