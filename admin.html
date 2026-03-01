@@ -1053,15 +1053,18 @@ function verDocs(id) {
       <div class="u-doc">${u.rol==='conductor'?'🚛 Conductor':'📦 Cliente'} · ${u.email||''}</div>
     </div>`;
 
-  // Documentos reales guardados en Supabase Storage
+  // Construir URL completa de Supabase Storage
+  const STORAGE_URL = 'https://sorldaixuzpqlyqdcedi.supabase.co/storage/v1/object/public/documentos/';
+  const docUrl = (path) => path ? STORAGE_URL + path : null;
+
   const docs = [
-    { label: '🪪 Cédula frontal',      url: u.doc_cedula_frontal   },
-    { label: '🪪 Cédula posterior',    url: u.doc_cedula_posterior  },
-    { label: '🤳 Selfie con cédula',   url: u.doc_selfie            },
-    { label: '🚛 Foto vehículo',       url: u.doc_foto_vehiculo     },
-    { label: '🚛 Foto vehículo 2',     url: u.doc_foto_vehiculo2    },
-    { label: '📋 SOAT',               url: u.doc_soat              },
-  ].filter(d => d.url); // solo los que tienen URL
+    { label: '🪪 Cédula frontal',      url: docUrl(u.doc_cedula_frontal)   },
+    { label: '🪪 Cédula posterior',    url: docUrl(u.doc_cedula_posterior)  },
+    { label: '🤳 Selfie con cédula',   url: docUrl(u.doc_selfie)            },
+    { label: '🚛 Foto vehículo',       url: docUrl(u.doc_foto_vehiculo)     },
+    { label: '🚛 Foto vehículo 2',     url: docUrl(u.doc_foto_vehiculo2)    },
+    { label: '📋 SOAT',               url: docUrl(u.doc_soat)              },
+  ].filter(d => d.url);
 
   if(docs.length === 0) {
     document.getElementById('modal-docs-list').innerHTML = `
