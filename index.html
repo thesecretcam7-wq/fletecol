@@ -892,7 +892,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
         </div>
         <div style="display:flex;gap:8px;align-items:flex-end;">
           <textarea class="msg-input2" id="m-input2" rows="1" placeholder="Escribe tu mensaje..." oninput="checkMsg(this)" onkeydown="enterSend2(event)"></textarea>
-          <button class="btn-send2" id="btn-send2">➤</button>
+          <button class="btn-send2" id="btn-send2" onclick="enviarMsg()">➤</button>
         </div>
       </div>
     </div>
@@ -1210,10 +1210,9 @@ document.addEventListener('visibilitychange', async () => {
       }
     }
     if(convActual?.id) {
-      await cargarMensajes(convActual.id);
       suscribirMensajes(convActual.id);
+      await cargarConversaciones(convActual?.id);
     }
-    await cargarConversaciones(convActual?.id);
   } catch(e) {
     console.log('Reconexión:', e);
   }
@@ -2477,22 +2476,7 @@ function checkMsg(el) {
 
 function enterSend2(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();enviarMsg();}}
 
-// Asignar eventos del chat por JS para que no se pierdan
-document.addEventListener('DOMContentLoaded', () => {
-  const btnSend = document.getElementById('btn-send2');
-  if(btnSend) {
-    btnSend.addEventListener('click', () => { enviarMsg(); });
-  }
-});
 
-// Reasignar evento al volver de otra pestaña
-document.addEventListener('visibilitychange', () => {
-  if(document.visibilityState !== 'visible') return;
-  const btnSend = document.getElementById('btn-send2');
-  if(btnSend) {
-    btnSend.onclick = () => { enviarMsg(); };
-  }
-});
 
 // ══ CHAT CON SUPABASE ══
 async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, destino) {
