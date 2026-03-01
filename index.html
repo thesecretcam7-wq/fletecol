@@ -1126,7 +1126,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
 <nav class="bottom-nav" id="bottom-nav">
   <button class="bnav-item" onclick="irApp('s-rutas')"><span class="bi-icon">🔍</span><span class="bi-label">Buscar</span></button>
   <button class="bnav-item" onclick="irApp('s-publicar')"><span class="bi-icon">➕</span><span class="bi-label">Publicar</span></button>
-  <button class="bnav-item" onclick="irApp('s-chat')"><span class="bnav-rel"><span class="bi-icon">💬</span></span><span class="bi-label">Chat</span></button>
+  <button class="bnav-item" onclick="irApp('s-chat')"><span class="bnav-rel"><span class="bi-icon">💬</span><span class="bnav-badge" id="chat-badge" style="display:none;">0</span></span><span class="bi-label">Chat</span></button>
   <button class="bnav-item" onclick="irApp('s-pagos')"><span class="bi-icon">💰</span><span class="bi-label">Pagos</span></button>
   <button class="bnav-item" onclick="irApp('s-perfil')"><span class="bi-icon" id="bnav-perfil-icon">🧑</span><span class="bi-label">Perfil</span></button>
 </nav>
@@ -1329,7 +1329,6 @@ async function cargarPerfil() {
     if(data) {
       perfilActual = data;
       actualizarUIperfil();
-      mostrarAvatares(data);
       if(!data.notificacion_vista) {
         if(data.estado === 'aprobado') mostrarBannerEstado('aprobado', data.nombre);
         if(data.estado === 'rechazado') mostrarBannerEstado('rechazado', data.nombre, data.motivo_rechazo);
@@ -1783,7 +1782,10 @@ async function actualizarFotoPerfil(input) {
 }
 
 // ══ RUTAS — DATOS REALES DE SUPABASE ══
+let cargandoRutas = false;
 async function cargarRutas() {
+  if(cargandoRutas) return; // evitar llamadas simultáneas
+  cargandoRutas = true;
   const list = document.getElementById('rutas-list');
   list.innerHTML = '<div class="empty"><div class="empty-icon" style="font-size:32px;">⏳</div><div class="empty-title">Cargando...</div></div>';
 
@@ -1807,12 +1809,22 @@ async function cargarRutas() {
   if(origen)  qCargas = qCargas.ilike('origen',  `%${origen}%`);
   if(destino) qCargas = qCargas.ilike('destino', `%${destino}%`);
 
-  const [{ data: rutas }, { data: cargas }] = await Promise.all([qRutas.limit(20), qCargas.limit(20)]);
+  let rutas = [], cargas = [];
+  try {
+    const [resRutas, resCargas] = await Promise.all([qRutas.limit(20), qCargas.limit(20)]);
+    rutas = resRutas.data || [];
+    cargas = resCargas.data || [];
+  } catch(e) {
+    console.error('Error cargando rutas/cargas:', e);
+    list.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Error cargando</div><div class="empty-sub">Revisa tu conexión e intenta de nuevo.</div></div>';
+    return;
+  }
 
-  const totalItems = (rutas?.length || 0) + (cargas?.length || 0);
+  const totalItems = rutas.length + cargas.length;
   document.getElementById('count-r').textContent = totalItems;
 
   if(totalItems === 0) {
+    cargandoRutas = false;
     renderRutasDemo();
     return;
   }
@@ -1885,6 +1897,7 @@ async function cargarRutas() {
     ${htmlRutas}` : '';
 
   list.innerHTML = secCargas + secRutas || '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">Sin resultados</div></div>';
+  cargandoRutas = false;
 }
 
 function renderRutasDemo() {
@@ -2493,6 +2506,14 @@ async function cargarMensajes(convId) {
   Array.from(wrap.children).forEach(c => { if(c.id !== 'chat-empty-state') c.remove(); });
   (msgs||[]).forEach(m => renderMensaje(m));
   wrap.scrollTop = wrap.scrollHeight;
+  // Marcar como leídos los mensajes del otro
+  await sb.from('mensajes')
+    .update({ leido: true })
+    .eq('conversacion_id', convId)
+    .neq('emisor_id', perfilActual.id)
+    .eq('leido', false);
+  // Actualizar badge
+  await cargarConversaciones(convId);
 }
 
 function renderMensaje(m) {
@@ -2515,11 +2536,14 @@ function suscribirMensajes(convId) {
   if(chatSub) chatSub.unsubscribe();
   chatSub = sb.channel('mensajes-'+convId)
     .on('postgres_changes', { event:'INSERT', schema:'public', table:'mensajes', filter:`conversacion_id=eq.${convId}` },
-      (payload) => {
+      async (payload) => {
         if(payload.new.emisor_id !== perfilActual?.id) {
           renderMensaje(payload.new);
           document.getElementById('msgs-wrap').scrollTop = 99999;
+          // Marcar como leído inmediatamente si estamos viendo esta conv
+          await sb.from('mensajes').update({ leido: true }).eq('id', payload.new.id);
         }
+        await cargarConversaciones(convActual?.id);
       })
     .subscribe();
 }
@@ -2530,7 +2554,7 @@ async function cargarConversaciones(convActivaId) {
     .select(`*,
       usuario1:usuarios!conversaciones_usuario1_id_fkey(nombre, apellido),
       usuario2:usuarios!conversaciones_usuario2_id_fkey(nombre, apellido),
-      mensajes(contenido, created_at, emisor_id, tipo)
+      mensajes(contenido, created_at, emisor_id, tipo, leido)
     `)
     .or(`usuario1_id.eq.${perfilActual.id},usuario2_id.eq.${perfilActual.id}`)
     .order('created_at', { ascending: false });
@@ -2543,10 +2567,27 @@ async function cargarConversaciones(convActivaId) {
     return;
   }
 
+  // Contar mensajes no leídos en todas las conversaciones
+  let totalNoLeidos = 0;
+  convs.forEach(c => {
+    const msgs = c.mensajes || [];
+    totalNoLeidos += msgs.filter(m => !m.leido && m.emisor_id !== perfilActual.id).length;
+  });
+  const badge = document.getElementById('chat-badge');
+  if(badge) {
+    if(totalNoLeidos > 0) {
+      badge.textContent = totalNoLeidos > 9 ? '9+' : totalNoLeidos;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
   list.innerHTML = convs.map(c => {
     const soyUno = c.usuario1_id === perfilActual.id;
     const otro = soyUno ? c.usuario2 : c.usuario1;
     const nombreOtro = otro ? `${otro.nombre||''} ${otro.apellido||''}`.trim() : 'Usuario';
+    const noLeidos = (c.mensajes||[]).filter(m => !m.leido && m.emisor_id !== perfilActual.id).length;
     const msgs = c.mensajes || [];
     const ultimo = msgs.sort((a,b) => new Date(b.created_at)-new Date(a.created_at))[0];
     const ultimoTxt = ultimo ? (ultimo.tipo==='oferta' ? '💰 Oferta enviada' : ultimo.contenido) : `${c.origen} → ${c.destino}`;
@@ -2558,9 +2599,12 @@ async function cargarConversaciones(convActivaId) {
       <div style="flex:1;min-width:0;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;">
           <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;">${nombreOtro}</div>
-          <div style="font-size:10px;color:var(--texto);flex-shrink:0;">${hora}</div>
+          <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">
+            ${noLeidos > 0 ? `<span style="background:var(--rojo);color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;">${noLeidos > 9 ? '9+' : noLeidos}</span>` : ''}
+            <div style="font-size:10px;color:var(--texto);">${hora}</div>
+          </div>
         </div>
-        <div style="font-size:11px;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ultimoTxt}</div>
+        <div style="font-size:11px;color:${noLeidos>0?'var(--blanco)':'var(--texto)'};font-weight:${noLeidos>0?'600':'400'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ultimoTxt}</div>
       </div>
     </div>`;
   }).join('');
