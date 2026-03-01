@@ -2645,6 +2645,7 @@ async function enviarMsg() {
     tipo: 'texto'
   }).select().single();
   if(errMsg) { console.error('Error enviando:', errMsg); toast('Error al enviar: '+errMsg.message,'error'); return; }
+  console.log('Mensaje enviado OK:', msg, 'convActual:', convActual?.id, 'perfilActual:', perfilActual?.id);
   if(msg) renderMensaje(msg);
   document.getElementById('msgs-wrap').scrollTop = 99999;
 }
