@@ -1259,6 +1259,14 @@ function suscribirEstado() {
 
 async function redirigirSegunEstado() {
   if(!perfilActual) { ir('s-landing'); return; }
+
+  // Si es admin, cerrar sesión y mandar al landing — no pertenece a esta app
+  if(perfilActual.rol === 'admin') {
+    await sb.auth.signOut();
+    ir('s-landing');
+    return;
+  }
+
   const estado = perfilActual.estado;
   if(estado === 'aprobado') {
     await irApp('s-rutas');
@@ -1266,7 +1274,7 @@ async function redirigirSegunEstado() {
     // pendiente, rechazado, baneado → pantalla de espera con mensaje según estado
     actualizarPantallaPendiente(estado, perfilActual.motivo_rechazo, perfilActual.rol);
     ir('s-pendiente');
-    if(estado === 'pendiente') iniciarPolling(); // verificar automáticamente
+    if(estado === 'pendiente') iniciarPolling();
     else detenerPolling();
   }
 }
