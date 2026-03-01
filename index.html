@@ -1194,20 +1194,27 @@ async function init() {
 
 // Reconectar chat cuando la página vuelve a estar activa
 document.addEventListener('visibilitychange', async () => {
-  if(document.visibilityState === 'visible') {
-    try {
-      // Reconectar suscripción si había conv activa
-      if(convActual?.id) {
-        suscribirMensajes(convActual.id); // reconectar canal
-        await cargarMensajes(convActual.id); // traer mensajes perdidos
-      }
-      // Actualizar badge
-      if(perfilActual) await cargarConversaciones(convActual?.id);
-    } catch(e) {
-      console.log('Reconexión realtime:', e);
+  if(document.visibilityState !== 'visible') return;
+  if(!perfilActual) return;
+  try {
+    if(convActual?.id) {
+      // Traer mensajes que llegaron mientras estaba en otra pestaña
+      await cargarMensajes(convActual.id);
+      // Reconectar canal realtime
+      suscribirMensajes(convActual.id);
     }
+    await cargarConversaciones(convActual?.id);
+  } catch(e) {
+    console.log('Reconexión:', e);
   }
 });
+
+// Keepalive: reconectar realtime cada 30s si hay conv activa
+setInterval(async () => {
+  if(document.visibilityState !== 'visible') return;
+  if(!convActual?.id || !perfilActual) return;
+  suscribirMensajes(convActual.id);
+}, 30000);
 
 // Polling automático — verifica estado cada 10 segundos mientras está en pantalla pendiente
 let pollingInterval = null;
@@ -2662,8 +2669,7 @@ async function enviarMsg() {
   if(bloq){toast('🚫 Mensaje bloqueado','error');return;}
   el.value='';el.style.height='auto';
   if(!convActual) { toast('Selecciona una conversación primero','error'); return; }
-  // Refrescar sesión por si expiró al estar en otra pestaña
-  try { await sb.auth.refreshSession(); } catch(e) {}
+
   const { data: msg, error: errMsg } = await sb.from('mensajes').insert({
     conversacion_id: convActual.id,
     emisor_id: perfilActual.id,
