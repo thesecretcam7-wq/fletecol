@@ -2573,15 +2573,19 @@ function suscribirMensajes(convId) {
 async function cargarConversaciones(convActivaId) {
   if(!perfilActual) return;
   const { data: convs, error } = await sb.from('conversaciones')
-    .select(`*,
-      usuario1:usuarios!conversaciones_usuario1_id_fkey(nombre, apellido),
-      usuario2:usuarios!conversaciones_usuario2_id_fkey(nombre, apellido),
-      mensajes(contenido, created_at, emisor_id, tipo, leido)
-    `)
+    .select(`*, mensajes(contenido, created_at, emisor_id, tipo, leido)`)
     .or(`usuario1_id.eq.${perfilActual.id},usuario2_id.eq.${perfilActual.id}`)
     .order('created_at', { ascending: false });
 
   if(error) { console.error('Error convs:', error); return; }
+
+  // Obtener IDs de los otros usuarios para buscar sus nombres
+  const otrosIds = convs.map(c => c.usuario1_id === perfilActual.id ? c.usuario2_id : c.usuario1_id).filter(Boolean);
+  let nombresMap = {};
+  if(otrosIds.length > 0) {
+    const { data: perfiles } = await sb.from('usuarios').select('id, nombre, apellido').in('id', otrosIds);
+    (perfiles||[]).forEach(p => { nombresMap[p.id] = `${p.nombre||''} ${p.apellido||''}`.trim(); });
+  }
 
   const list = document.getElementById('conv-list');
   if(!convs || convs.length === 0) {
@@ -2607,8 +2611,8 @@ async function cargarConversaciones(convActivaId) {
 
   list.innerHTML = convs.map(c => {
     const soyUno = c.usuario1_id === perfilActual.id;
-    const otro = soyUno ? c.usuario2 : c.usuario1;
-    const nombreOtro = otro ? `${otro.nombre||''} ${otro.apellido||''}`.trim() : 'Usuario';
+    const otroId = soyUno ? c.usuario2_id : c.usuario1_id;
+    const nombreOtro = nombresMap[otroId] || 'Usuario';
     const noLeidos = (c.mensajes||[]).filter(m => !m.leido && m.emisor_id !== perfilActual.id).length;
     const msgs = c.mensajes || [];
     const ultimo = msgs.sort((a,b) => new Date(b.created_at)-new Date(a.created_at))[0];
@@ -2634,17 +2638,15 @@ async function cargarConversaciones(convActivaId) {
 
 async function abrirConvExistente(convId) {
   const { data: conv, error } = await sb.from('conversaciones')
-    .select(`*,
-      usuario1:usuarios!conversaciones_usuario1_id_fkey(nombre, apellido),
-      usuario2:usuarios!conversaciones_usuario2_id_fkey(nombre, apellido)
-    `)
+    .select('*')
     .eq('id', convId)
     .single();
   if(!conv || error) return;
   convActual = conv;
   const soyUno = conv.usuario1_id === perfilActual?.id;
-  const otro = soyUno ? conv.usuario2 : conv.usuario1;
-  const nombre = otro ? `${otro.nombre||''} ${otro.apellido||''}`.trim() : 'Usuario';
+  const otroId = soyUno ? conv.usuario2_id : conv.usuario1_id;
+  const { data: otroUser } = await sb.from('usuarios').select('nombre, apellido').eq('id', otroId).single();
+  const nombre = otroUser ? `${otroUser.nombre||''} ${otroUser.apellido||''}`.trim() : 'Usuario';
   mostrarHeaderChat(nombre, conv.origen, conv.destino, conv.precio_acordado||0);
   await cargarMensajes(convId);
   suscribirMensajes(convId);
