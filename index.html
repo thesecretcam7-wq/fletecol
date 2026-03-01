@@ -2696,26 +2696,44 @@ async function enviarMsg() {
   if(bloq){toast('🚫 Mensaje bloqueado','error');return;}
   el.value='';el.style.height='auto';
 
-  const { data: msg, error: errMsg } = await sb.from('mensajes').insert({
-    conversacion_id: convActual.id,
-    emisor_id: perfilActual.id,
-    contenido: txt,
-    tipo: 'texto'
-  }).select().single();
-  if(errMsg) { console.error('Error enviando:', errMsg); toast('Error al enviar: '+errMsg.message,'error'); return; }
-  console.log('Mensaje enviado OK:', msg);
-  if(msg) {
-    console.log('Llamando renderMensaje...');
-    // Mostrar mensaje directamente sin depender de renderMensaje
-    const wrap = document.getElementById('msgs-wrap');
-    console.log('wrap:', wrap, 'screen activa:', document.querySelector('.screen.active')?.id);
-    const hora = new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
-    const div = document.createElement('div');
-    div.className = 'msg-g mine';
-    div.dataset.msgId = msg.id;
-    div.innerHTML = `<div class="msg-row2" style="flex-direction:row-reverse"><div class="msg-av2">🧑</div><div><div class="bubble">${msg.contenido}</div><div class="msg-time2">${hora} · ✓✓</div></div></div>`;
-    wrap.appendChild(div);
-    wrap.scrollTop = wrap.scrollHeight;
+  // Mostrar mensaje optimistamente ANTES de enviarlo a Supabase
+  const wrap = document.getElementById('msgs-wrap');
+  const hora = new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+  const divTemp = document.createElement('div');
+  divTemp.className = 'msg-g mine';
+  divTemp.id = 'msg-temp';
+  divTemp.innerHTML = `<div class="msg-row2" style="flex-direction:row-reverse"><div class="msg-av2">🧑</div><div><div class="bubble">${txt}</div><div class="msg-time2">${hora} · ⏳</div></div></div>`;
+  wrap.appendChild(divTemp);
+  wrap.scrollTop = wrap.scrollHeight;
+
+  // Enviar a Supabase con timeout de 8 segundos
+  try {
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000));
+    const insertPromise = sb.from('mensajes').insert({
+      conversacion_id: convActual.id,
+      emisor_id: perfilActual.id,
+      contenido: txt,
+      tipo: 'texto'
+    }).select().single();
+
+    const { data: msg, error: errMsg } = await Promise.race([insertPromise, timeoutPromise]);
+
+    const temp = document.getElementById('msg-temp');
+    if(errMsg || !msg) {
+      if(temp) temp.innerHTML = temp.innerHTML.replace('⏳','❌');
+      toast('Error al enviar mensaje','error');
+      return;
+    }
+    // Actualizar el mensaje temporal con el ID real
+    if(temp) {
+      temp.removeAttribute('id');
+      temp.dataset.msgId = msg.id;
+      temp.innerHTML = temp.innerHTML.replace('⏳','✓✓');
+    }
+  } catch(e) {
+    const temp = document.getElementById('msg-temp');
+    if(temp) temp.innerHTML = temp.innerHTML.replace('⏳','❌ (sin conexión)');
+    toast('Sin conexión — intenta de nuevo','error');
   }
 }
 
