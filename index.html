@@ -2254,7 +2254,7 @@ async function publicarCarga() {
   if(!perfilActual) { toast('Debes iniciar sesión', 'error'); return; }
 
   const { error } = await sb.from('cargas').insert({
-    cliente_id:         usuarioActual.id,
+    cliente_id:         perfilActual.id,
     tipo,
     descripcion:        descripcionFinal,
     origen,
