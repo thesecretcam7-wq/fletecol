@@ -2566,6 +2566,7 @@ function renderMensaje(m) {
   const esMio = m.emisor_id === perfilActual?.id;
   const tipo = esMio ? 'mine' : 'other';
   const wrap = document.getElementById('msgs-wrap');
+  console.log('renderMensaje:', m.id, 'esMio:', esMio, 'wrap existe:', !!wrap, 'wrap hijos:', wrap?.children.length);
   const hora = new Date(m.created_at).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
   const div = document.createElement('div');
   div.className = `msg-g ${tipo}`;
