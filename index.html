@@ -590,6 +590,9 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
       </div>
     </div>
 
+    <button onclick="verificarEstadoManual()" style="background:var(--amarillo);color:var(--negro);border:none;border-radius:14px;padding:12px 32px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:12px;">
+      🔄 Verificar estado
+    </button>
     <button class="btn-secondary" onclick="logout()" style="font-size:13px;padding:12px 32px;border-radius:14px;">
       Cerrar sesión
     </button>
@@ -1149,6 +1152,8 @@ let convActual = null;
 let chatSub = null;
 
 // ══ INIT ══
+let estadoSub = null; // suscripción realtime al estado del usuario
+
 async function init() {
   try {
     const { data: { session } } = await sb.auth.getSession();
@@ -1158,6 +1163,7 @@ async function init() {
       usuarioActual = session.user;
       await cargarPerfil();
       await redirigirSegunEstado();
+      suscribirEstado(); // escuchar cambios en tiempo real
     } else {
       ir('s-landing');
     }
@@ -1165,15 +1171,16 @@ async function init() {
     sb.auth.onAuthStateChange(async (event, session) => {
       if(event === 'SIGNED_IN' && session) {
         usuarioActual = session.user;
-        // Si estamos en el flujo de registro, NO redirigir automáticamente
         if(enRegistro) return;
         await cargarPerfil();
         await redirigirSegunEstado();
+        suscribirEstado();
       }
       if(event === 'SIGNED_OUT') {
         usuarioActual = null;
         perfilActual = null;
         enRegistro = false;
+        if(estadoSub) { sb.removeChannel(estadoSub); estadoSub = null; }
         ir('s-landing');
       }
     });
@@ -1182,6 +1189,50 @@ async function init() {
     document.getElementById('loading').style.display = 'none';
     ir('s-landing');
   }
+}
+
+// Verificación manual del estado (botón en pantalla pendiente)
+async function verificarEstadoManual() {
+  const btn = document.querySelector('[onclick="verificarEstadoManual()"]');
+  if(btn) { btn.textContent = '⏳ Verificando...'; btn.disabled = true; }
+  await cargarPerfil();
+  await redirigirSegunEstado();
+  if(btn) { btn.textContent = '🔄 Verificar estado'; btn.disabled = false; }
+}
+
+// Escucha en tiempo real si el admin cambia el estado del usuario
+function suscribirEstado() {
+  if(!usuarioActual) return;
+  if(estadoSub) { sb.removeChannel(estadoSub); }
+
+  estadoSub = sb.channel('estado-usuario-' + usuarioActual.id)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'usuarios',
+      filter: 'auth_id=eq.' + usuarioActual.id
+    }, async (payload) => {
+      const nuevoEstado = payload.new?.estado;
+      const estadoViejo = perfilActual?.estado;
+
+      // Actualizar perfil local
+      perfilActual = { ...perfilActual, ...payload.new };
+
+      if(nuevoEstado === estadoViejo) return; // sin cambio real
+
+      if(nuevoEstado === 'aprobado') {
+        // Mostrar banner de bienvenida y entrar a la app
+        mostrarBannerEstado('aprobado', perfilActual.nombre);
+        setTimeout(() => irApp('s-rutas'), 2000);
+      } else if(nuevoEstado === 'rechazado') {
+        actualizarPantallaPendiente('rechazado', payload.new?.motivo_rechazo, perfilActual.rol);
+        ir('s-pendiente');
+      } else if(nuevoEstado === 'baneado') {
+        actualizarPantallaPendiente('baneado', payload.new?.motivo_rechazo, perfilActual.rol);
+        ir('s-pendiente');
+      }
+    })
+    .subscribe();
 }
 
 async function redirigirSegunEstado() {
