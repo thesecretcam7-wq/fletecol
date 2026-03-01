@@ -2485,7 +2485,7 @@ function mostrarHeaderChat(nombre, origen, destino, precio) {
 }
 
 async function cargarMensajes(convId) {
-  const { data: msgs } = await sb.from('mensajes_chat')
+  const { data: msgs } = await sb.from('mensajes')
     .select('*')
     .eq('conversacion_id', convId)
     .order('created_at', { ascending: true });
@@ -2496,7 +2496,7 @@ async function cargarMensajes(convId) {
 }
 
 function renderMensaje(m) {
-  const esMio = m.remitente_id === perfilActual?.id;
+  const esMio = m.emisor_id === perfilActual?.id;
   const tipo = esMio ? 'mine' : 'other';
   const wrap = document.getElementById('msgs-wrap');
   const hora = new Date(m.created_at).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
@@ -2504,7 +2504,7 @@ function renderMensaje(m) {
   div.className = `msg-g ${tipo}`;
   div.dataset.msgId = m.id;
   if(m.tipo === 'oferta') {
-    div.innerHTML = `<div class="msg-row2" style="${esMio?'flex-direction:row-reverse':''}"><div class="msg-av2">${esMio?'🧑':'👨'}</div><div><div style="background:rgba(245,196,0,0.07);border:1px solid rgba(245,196,0,0.18);border-radius:13px;padding:13px 15px;"><div style="font-weight:700;font-size:12px;color:var(--amarillo);margin-bottom:3px;">💰 ${esMio?'Mi oferta':'Oferta recibida'}</div><div style="font-family:'Syne',sans-serif;font-weight:800;font-size:22px;margin-bottom:5px;">$${parseInt(m.monto_oferta).toLocaleString('es-CO')} COP</div>${!esMio?`<div style="display:flex;gap:8px;margin-top:8px;"><button onclick="aceptarOfertaReal(${m.monto_oferta})" style="background:var(--verde);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">✅ Aceptar</button></div>`:''}</div><div class="msg-time2">${hora}</div></div></div>`;
+    div.innerHTML = `<div class="msg-row2" style="${esMio?'flex-direction:row-reverse':''}"><div class="msg-av2">${esMio?'🧑':'👨'}</div><div><div style="background:rgba(245,196,0,0.07);border:1px solid rgba(245,196,0,0.18);border-radius:13px;padding:13px 15px;"><div style="font-weight:700;font-size:12px;color:var(--amarillo);margin-bottom:3px;">💰 ${esMio?'Mi oferta':'Oferta recibida'}</div><div style="font-family:'Syne',sans-serif;font-weight:800;font-size:22px;margin-bottom:5px;">$${parseInt(m.oferta_monto).toLocaleString('es-CO')} COP</div>${!esMio?`<div style="display:flex;gap:8px;margin-top:8px;"><button onclick="aceptarOfertaReal(${m.oferta_monto})" style="background:var(--verde);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">✅ Aceptar</button></div>`:''}</div><div class="msg-time2">${hora}</div></div></div>`;
   } else {
     div.innerHTML = `<div class="msg-row2" style="${esMio?'flex-direction:row-reverse':''}"><div class="msg-av2">${esMio?'🧑':'👨'}</div><div><div class="bubble">${m.contenido}</div><div class="msg-time2">${hora}${esMio?' · ✓✓':''}</div></div></div>`;
   }
@@ -2514,9 +2514,9 @@ function renderMensaje(m) {
 function suscribirMensajes(convId) {
   if(chatSub) chatSub.unsubscribe();
   chatSub = sb.channel('mensajes-'+convId)
-    .on('postgres_changes', { event:'INSERT', schema:'public', table:'mensajes_chat', filter:`conversacion_id=eq.${convId}` },
+    .on('postgres_changes', { event:'INSERT', schema:'public', table:'mensajes', filter:`conversacion_id=eq.${convId}` },
       (payload) => {
-        if(payload.new.remitente_id !== perfilActual?.id) {
+        if(payload.new.emisor_id !== perfilActual?.id) {
           renderMensaje(payload.new);
           document.getElementById('msgs-wrap').scrollTop = 99999;
         }
@@ -2530,7 +2530,7 @@ async function cargarConversaciones(convActivaId) {
     .select(`*,
       usuario1:usuarios!conversaciones_usuario1_id_fkey(nombre, apellido),
       usuario2:usuarios!conversaciones_usuario2_id_fkey(nombre, apellido),
-      mensajes_chat(contenido, created_at, remitente_id, tipo)
+      mensajes(contenido, created_at, emisor_id, tipo)
     `)
     .or(`usuario1_id.eq.${perfilActual.id},usuario2_id.eq.${perfilActual.id}`)
     .order('created_at', { ascending: false });
@@ -2547,7 +2547,7 @@ async function cargarConversaciones(convActivaId) {
     const soyUno = c.usuario1_id === perfilActual.id;
     const otro = soyUno ? c.usuario2 : c.usuario1;
     const nombreOtro = otro ? `${otro.nombre||''} ${otro.apellido||''}`.trim() : 'Usuario';
-    const msgs = c.mensajes_chat || [];
+    const msgs = c.mensajes || [];
     const ultimo = msgs.sort((a,b) => new Date(b.created_at)-new Date(a.created_at))[0];
     const ultimoTxt = ultimo ? (ultimo.tipo==='oferta' ? '💰 Oferta enviada' : ultimo.contenido) : `${c.origen} → ${c.destino}`;
     const hora = ultimo ? new Date(ultimo.created_at).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) : '';
@@ -2594,9 +2594,9 @@ async function enviarMsg() {
   if(bloq){toast('🚫 Mensaje bloqueado','error');return;}
   el.value='';el.style.height='auto';
   if(!convActual) { toast('Selecciona una conversación primero','error'); return; }
-  const { data: msg, error: errMsg } = await sb.from('mensajes_chat').insert({
+  const { data: msg, error: errMsg } = await sb.from('mensajes').insert({
     conversacion_id: convActual.id,
-    remitente_id: perfilActual.id,
+    emisor_id: perfilActual.id,
     contenido: txt,
     tipo: 'texto'
   }).select().single();
@@ -2619,9 +2619,9 @@ async function aceptarOfertaReal(monto) {
   actualizarMonto(monto);
   if(convActual && convActual.id !== 'demo') {
     await sb.from('conversaciones').update({ precio_acordado: monto }).eq('id', convActual.id);
-    await sb.from('mensajes_chat').insert({
+    await sb.from('mensajes').insert({
       conversacion_id: convActual.id,
-      remitente_id: perfilActual.id,
+      emisor_id: perfilActual.id,
       contenido: `✅ Oferta de $${parseInt(monto).toLocaleString('es-CO')} aceptada. Procede con el pago.`,
       tipo: 'texto'
     });
@@ -2645,12 +2645,12 @@ async function hacerOferta() {
     toast('💰 Oferta enviada','info');
     return;
   }
-  const { data: msg } = await sb.from('mensajes_chat').insert({
+  const { data: msg } = await sb.from('mensajes').insert({
     conversacion_id: convActual.id,
-    remitente_id: perfilActual.id,
+    emisor_id: perfilActual.id,
     contenido: `💰 Oferta: $${monto.toLocaleString('es-CO')} COP`,
     tipo: 'oferta',
-    monto_oferta: monto
+    oferta_monto: monto
   }).select().single();
   if(msg) { renderMensaje(msg); document.getElementById('msgs-wrap').scrollTop = 99999; }
   actualizarMonto(monto);
