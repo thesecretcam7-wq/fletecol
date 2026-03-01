@@ -2706,34 +2706,37 @@ async function enviarMsg() {
   wrap.appendChild(divTemp);
   wrap.scrollTop = wrap.scrollHeight;
 
-  // Enviar a Supabase con timeout de 8 segundos
-  try {
-    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000));
-    const insertPromise = sb.from('mensajes').insert({
-      conversacion_id: convActual.id,
-      emisor_id: perfilActual.id,
-      contenido: txt,
-      tipo: 'texto'
-    }).select().single();
+  // Reintentar hasta 3 veces con pausa entre intentos
+  let enviado = false;
+  for(let intento = 1; intento <= 3; intento++) {
+    try {
+      const { data: msg, error: errMsg } = await sb.from('mensajes').insert({
+        conversacion_id: convActual.id,
+        emisor_id: perfilActual.id,
+        contenido: txt,
+        tipo: 'texto'
+      }).select().single();
 
-    const { data: msg, error: errMsg } = await Promise.race([insertPromise, timeoutPromise]);
+      if(errMsg) throw new Error(errMsg.message);
 
-    const temp = document.getElementById('msg-temp');
-    if(errMsg || !msg) {
-      if(temp) temp.innerHTML = temp.innerHTML.replace('⏳','❌');
-      toast('Error al enviar mensaje','error');
-      return;
+      const temp = document.getElementById('msg-temp');
+      if(temp) {
+        temp.removeAttribute('id');
+        temp.dataset.msgId = msg.id;
+        temp.innerHTML = temp.innerHTML.replace('⏳','✓✓');
+      }
+      enviado = true;
+      break;
+    } catch(e) {
+      console.log(`Intento ${intento} fallido:`, e.message);
+      if(intento < 3) await new Promise(r => setTimeout(r, 1000 * intento));
     }
-    // Actualizar el mensaje temporal con el ID real
-    if(temp) {
-      temp.removeAttribute('id');
-      temp.dataset.msgId = msg.id;
-      temp.innerHTML = temp.innerHTML.replace('⏳','✓✓');
-    }
-  } catch(e) {
+  }
+
+  if(!enviado) {
     const temp = document.getElementById('msg-temp');
-    if(temp) temp.innerHTML = temp.innerHTML.replace('⏳','❌ (sin conexión)');
-    toast('Sin conexión — intenta de nuevo','error');
+    if(temp) temp.innerHTML = temp.innerHTML.replace('⏳','❌');
+    toast('No se pudo enviar — recarga la página','error');
   }
 }
 
