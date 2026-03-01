@@ -1043,22 +1043,41 @@ async function desbanear(id) {
 
 function verDocs(id) {
   const u = usuarios.find(x => x.id === id);
-  document.getElementById('modal-docs-sub').textContent = `Documentos de ${u.nombre} · C.C. ${u.cedula}`;
+  if(!u) return;
+
+  document.getElementById('modal-docs-sub').textContent = `Documentos de ${nombreCompleto(u)}`;
   document.getElementById('modal-docs-user').innerHTML = `
-    <div class="u-av">${u.emoji}</div>
-    <div><div class="u-name">${u.nombre}</div><div class="u-doc">${u.rol === 'conductor' ? '🚛 Conductor' : '📦 Cliente'} · ${u.ciudad}</div></div>`;
-  const docNames = {
-    cedula_frente:'🪪 Cédula — cara frontal',
-    cedula_reverso:'🪪 Cédula — cara posterior',
-    selfie:'🤳 Selfie con cédula en mano',
-    licencia:'📋 Licencia de conducción',
-    vehiculo:'🚛 Foto del vehículo'
-  };
-  document.getElementById('modal-docs-list').innerHTML = u.docs.map(d => `
-    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--gris3);border-radius:10px;padding:11px 14px;">
-      <span style="font-size:13px">${docNames[d] || d}</span>
-      <span style="color:var(--azul);font-size:12px;cursor:pointer">👁️ Ver</span>
-    </div>`).join('');
+    <div class="u-av">${u.rol==='conductor'?'🚛':'📦'}</div>
+    <div>
+      <div class="u-name">${nombreCompleto(u)}</div>
+      <div class="u-doc">${u.rol==='conductor'?'🚛 Conductor':'📦 Cliente'} · ${u.email||''}</div>
+    </div>`;
+
+  // Documentos reales guardados en Supabase Storage
+  const docs = [
+    { label: '🪪 Cédula frontal',      url: u.doc_cedula_frontal   },
+    { label: '🪪 Cédula posterior',    url: u.doc_cedula_posterior  },
+    { label: '🤳 Selfie con cédula',   url: u.doc_selfie            },
+    { label: '🚛 Foto vehículo',       url: u.doc_foto_vehiculo     },
+    { label: '🚛 Foto vehículo 2',     url: u.doc_foto_vehiculo2    },
+    { label: '📋 SOAT',               url: u.doc_soat              },
+  ].filter(d => d.url); // solo los que tienen URL
+
+  if(docs.length === 0) {
+    document.getElementById('modal-docs-list').innerHTML = `
+      <div style="text-align:center;padding:20px;color:var(--texto);font-size:13px;">
+        ⚠️ Este usuario no ha subido documentos todavía.
+      </div>`;
+  } else {
+    document.getElementById('modal-docs-list').innerHTML = docs.map(d => `
+      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--gris3);border-radius:10px;padding:11px 14px;gap:12px;">
+        <span style="font-size:13px;flex:1;">${d.label}</span>
+        <a href="${d.url}" target="_blank" style="color:var(--amarillo);font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;">
+          👁️ Ver documento
+        </a>
+      </div>`).join('');
+  }
+
   document.getElementById('btn-aprobar-desde-docs').onclick = () => aprobar(id);
   abrirModal('modal-docs');
 }
