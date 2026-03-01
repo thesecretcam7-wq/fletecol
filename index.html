@@ -2274,7 +2274,7 @@ async function publicarCarga() {
 
   btn.disabled = false; btn.textContent = '📦 Publicar carga';
   if(error) { toast('Error al publicar: '+error.message, 'error'); return; }
-  toast('✅ Carga publicada. Los conductores te contactarán.', 'success');
+  toast('✅ ¡Carga publicada! Los conductores te contactarán pronto.', 'success');
   const iconos = { mudanza:'🛋️', mercancia:'📦', industrial:'🏭', agricola:'🌾', construccion:'🚧' };
   misCargas.push({ titulo: tipo, sub: origen + ' → ' + destino, icon: iconos[tipo]||'📦' });
   // Limpiar form
@@ -2282,7 +2282,13 @@ async function publicarCarga() {
   document.querySelectorAll('[id^="ct-"]').forEach(v => v.classList.remove('sel'));
   document.getElementById('c-tipo').value = '';
   document.getElementById('sec-mudanza').style.display = 'none';
-  setTimeout(() => irApp('s-mis'), 1000);
+  document.getElementById('c-origen').value = '';
+  document.getElementById('c-destino').value = '';
+  document.getElementById('c-peso').value = '';
+  document.getElementById('c-fecha').value = '';
+  document.getElementById('c-desc').value = '';
+  // Ir al buscador de cargas
+  setTimeout(() => irApp('s-rutas'), 800);
 }
 
 async function cargarMisPubs() {
