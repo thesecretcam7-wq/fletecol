@@ -1204,15 +1204,12 @@ async function init() {
 document.addEventListener('visibilitychange', async () => {
   if(document.visibilityState === 'visible') {
     try {
-      // Forzar reconexión de todos los canales realtime
-      await sb.realtime.connect();
-
-      // Reconectar suscripción de mensajes si había una conv activa
+      // Reconectar suscripción si había conv activa
       if(convActual?.id) {
-        suscribirMensajes(convActual.id);
-        await cargarMensajes(convActual.id);
+        suscribirMensajes(convActual.id); // reconectar canal
+        await cargarMensajes(convActual.id); // traer mensajes perdidos
       }
-      // Actualizar badge de chat
+      // Actualizar badge
       if(perfilActual) await cargarConversaciones(convActual?.id);
     } catch(e) {
       console.log('Reconexión realtime:', e);
@@ -2561,19 +2558,24 @@ function renderMensaje(m) {
 }
 
 function suscribirMensajes(convId) {
-  if(chatSub) chatSub.unsubscribe();
-  chatSub = sb.channel('mensajes-'+convId)
-    .on('postgres_changes', { event:'INSERT', schema:'public', table:'mensajes', filter:`conversacion_id=eq.${convId}` },
-      async (payload) => {
-        if(payload.new.emisor_id !== perfilActual?.id) {
-          renderMensaje(payload.new);
-          document.getElementById('msgs-wrap').scrollTop = 99999;
-          // Marcar como leído inmediatamente si estamos viendo esta conv
-          await sb.from('mensajes').update({ leido: true }).eq('id', payload.new.id);
-        }
-        await cargarConversaciones(convActual?.id);
-      })
-    .subscribe();
+  if(chatSub) { sb.removeChannel(chatSub); chatSub = null; }
+  chatSub = sb.channel('chat-conv-' + convId, { config: { broadcast: { self: false } } })
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'mensajes',
+      filter: `conversacion_id=eq.${convId}`
+    }, async (payload) => {
+      if(payload.new.emisor_id !== perfilActual?.id) {
+        renderMensaje(payload.new);
+        document.getElementById('msgs-wrap').scrollTop = 99999;
+        await sb.from('mensajes').update({ leido: true }).eq('id', payload.new.id);
+      }
+      await cargarConversaciones(convActual?.id);
+    })
+    .subscribe((status) => {
+      console.log('Realtime status:', status);
+    });
 }
 
 async function cargarConversaciones(convActivaId) {
