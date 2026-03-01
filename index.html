@@ -2703,9 +2703,20 @@ async function enviarMsg() {
     tipo: 'texto'
   }).select().single();
   if(errMsg) { console.error('Error enviando:', errMsg); toast('Error al enviar: '+errMsg.message,'error'); return; }
-  console.log('Mensaje enviado OK:', msg, 'convActual:', convActual?.id, 'perfilActual:', perfilActual?.id);
-  if(msg) renderMensaje(msg);
-  document.getElementById('msgs-wrap').scrollTop = 99999;
+  console.log('Mensaje enviado OK:', msg);
+  if(msg) {
+    console.log('Llamando renderMensaje...');
+    // Mostrar mensaje directamente sin depender de renderMensaje
+    const wrap = document.getElementById('msgs-wrap');
+    console.log('wrap:', wrap, 'screen activa:', document.querySelector('.screen.active')?.id);
+    const hora = new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+    const div = document.createElement('div');
+    div.className = 'msg-g mine';
+    div.dataset.msgId = msg.id;
+    div.innerHTML = `<div class="msg-row2" style="flex-direction:row-reverse"><div class="msg-av2">🧑</div><div><div class="bubble">${msg.contenido}</div><div class="msg-time2">${hora} · ✓✓</div></div></div>`;
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+  }
 }
 
 function addMsg(txt,tipo) {
