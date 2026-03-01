@@ -826,29 +826,49 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
 
 <script>
 // ══ DATOS DEMO ══
-let usuarios = [
-  { id:1, nombre:'Carlos Mendoza',    cedula:'80.123.456', rol:'conductor', vehiculo:'camioneta', ciudad:'Bogotá',    estado:'Pendiente', fecha:'Hoy 9:14am',   emoji:'👨', docs:['cedula_frente','cedula_reverso','selfie','licencia','vehiculo'] },
-  { id:2, nombre:'Luisa Jiménez',     cedula:'52.987.654', rol:'cliente',   vehiculo:null,        ciudad:'Medellín',  estado:'Pendiente', fecha:'Hoy 8:50am',   emoji:'👩', docs:['cedula_frente','cedula_reverso','selfie'] },
-  { id:3, nombre:'Pedro Transportes', cedula:'NIT 900.123',rol:'conductor', vehiculo:'mula',      ciudad:'Cali',      estado:'Pendiente', fecha:'Ayer 4:22pm',  emoji:'👨‍🦱',docs:['cedula_frente','cedula_reverso','selfie','licencia','vehiculo'] },
-];
+let usuarios = [];
+let baneados  = [];
+let accionUsuario = null;
 
-let baneados = [
-  { id:99, nombre:'Usuario Ejemplo', cedula:'11.222.333', motivo:'Compartió datos de contacto en el chat', fecha:'Hace 3 días', emoji:'👤' }
-];
+// ══ CARGAR DATOS REALES DESDE SUPABASE ══
+async function cargarUsuarios() {
+  try {
+    const { data, error } = await sb.from('usuarios')
+      .select('*')
+      .neq('rol', 'admin')
+      .order('created_at', { ascending: false });
 
-let accionUsuario = null; // referencia al usuario en modal activo
+    if(error) { console.error('Error cargando usuarios:', error); return; }
+
+    usuarios = (data || []).filter(u => u.estado !== 'baneado');
+    baneados  = (data || []).filter(u => u.estado === 'baneado');
+
+    renderTables();
+  } catch(e) {
+    console.error('Error en cargarUsuarios:', e);
+  }
+}
+
+// ══ HELPERS ══
+function nombreCompleto(u) { return ((u.nombre||'') + ' ' + (u.apellido||'')).trim() || 'Sin nombre'; }
+function fechaRelativa(f) {
+  if(!f) return '—';
+  const d = new Date(f), now = new Date();
+  const diff = Math.floor((now - d) / 60000);
+  if(diff < 2) return 'Ahora';
+  if(diff < 60) return `Hace ${diff} min`;
+  if(diff < 1440) return `Hace ${Math.floor(diff/60)}h`;
+  return d.toLocaleDateString('es-CO', {day:'numeric', month:'short'});
+}
 
 // ══ RENDER TABLAS ══
 function renderTables() {
-  const pendientes = usuarios.filter(u => u.estado === 'Pendiente');
-  const aprobados  = usuarios.filter(u => u.estado === 'Aprobado').length;
+  const pendientes = usuarios.filter(u => u.estado === 'pendiente');
+  const aprobados  = usuarios.filter(u => u.estado === 'aprobado').length;
 
-  // Badge nav
   document.getElementById('badge-pendientes').textContent = pendientes.length;
   document.getElementById('badge-baneados').textContent   = baneados.length;
   document.getElementById('notif-dot').style.display      = pendientes.length > 0 ? 'block' : 'none';
-
-  // Dashboard stats
   document.getElementById('d-pendientes').textContent = pendientes.length;
   document.getElementById('d-aprobados').textContent  = aprobados;
 
@@ -857,20 +877,18 @@ function renderTables() {
   tbPend.innerHTML = pendientes.length === 0
     ? `<tr><td colspan="6"><div class="empty"><div class="empty-icon">🎉</div><div class="empty-title">Sin pendientes</div><div class="empty-sub">Todos los usuarios han sido revisados.</div></div></td></tr>`
     : pendientes.map(u => `
-      <tr data-nombre="${u.nombre.toLowerCase()}" data-cedula="${u.cedula}">
-        <td><div class="user-cell"><div class="u-av">${u.emoji}</div><div><div class="u-name">${u.nombre}</div><div class="u-doc">C.C. ${u.cedula}</div></div></div></td>
+      <tr data-nombre="${nombreCompleto(u).toLowerCase()}" data-cedula="${u.cedula||''}">
+        <td><div class="user-cell"><div class="u-av">${u.rol==='conductor'?'🚛':'📦'}</div><div><div class="u-name">${nombreCompleto(u)}</div><div class="u-doc">${u.cedula ? 'C.C. '+u.cedula : u.email||''}</div></div></div></td>
         <td>${u.rol === 'conductor' ? '🚛 Conductor' : '📦 Cliente'}</td>
         <td>${u.vehiculo ? `<span class="badge ${u.vehiculo}">${vehEmoji(u.vehiculo)} ${cap(u.vehiculo)}</span>` : '<span style="color:var(--texto)">—</span>'}</td>
-        <td>
-          <a class="doc-link" onclick="verDocs(${u.id})">📄 Ver docs (${u.docs.length})</a>
-        </td>
-        <td style="color:var(--texto);font-size:12px">${u.fecha}</td>
+        <td><a class="doc-link" onclick="verDocs('${u.id}')">📄 Ver docs</a></td>
+        <td style="color:var(--texto);font-size:12px">${fechaRelativa(u.created_at)}</td>
         <td>
           <div class="actions">
-            <button class="btn-icon green" title="Aprobar" onclick="aprobar(${u.id})">✓</button>
-            <button class="btn-icon red"   title="Rechazar" onclick="abrirModalRechazar(${u.id})">✗</button>
-            <button class="btn-icon orange" title="Banear" onclick="abrirModalBanear(${u.id})">🚫</button>
-            <button class="btn-icon blue"  title="Ver docs" onclick="verDocs(${u.id})">📄</button>
+            <button class="btn-icon green"  title="Aprobar"  onclick="aprobar('${u.id}')">✓</button>
+            <button class="btn-icon red"    title="Rechazar" onclick="abrirModalRechazar('${u.id}')">✗</button>
+            <button class="btn-icon orange" title="Banear"   onclick="abrirModalBanear('${u.id}')">🚫</button>
+            <button class="btn-icon blue"   title="Ver docs" onclick="verDocs('${u.id}')">📄</button>
           </div>
         </td>
       </tr>`).join('');
@@ -881,32 +899,37 @@ function renderTables() {
     ? `<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">Sin pendientes</div></div>`
     : pendientes.map(u => `
       <div style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <div class="u-av">${u.emoji}</div>
-        <div style="flex:1;min-width:120px"><div class="u-name">${u.nombre}</div><div class="u-doc">${u.rol === 'conductor' ? '🚛 Conductor' : '📦 Cliente'} · ${u.ciudad} · ${u.fecha}</div></div>
+        <div class="u-av">${u.rol==='conductor'?'🚛':'📦'}</div>
+        <div style="flex:1;min-width:120px">
+          <div class="u-name">${nombreCompleto(u)}</div>
+          <div class="u-doc">${u.rol==='conductor'?'🚛 Conductor':'📦 Cliente'} · ${u.ciudad||'—'} · ${fechaRelativa(u.created_at)}</div>
+        </div>
         <div class="actions">
-          <button class="btn-icon green" title="Aprobar" onclick="aprobar(${u.id})">✓</button>
-          <button class="btn-icon red" title="Rechazar" onclick="abrirModalRechazar(${u.id})">✗</button>
-          <button class="btn-icon blue" title="Ver docs" onclick="verDocs(${u.id})">📄</button>
+          <button class="btn-icon green" title="Aprobar"  onclick="aprobar('${u.id}')">✓</button>
+          <button class="btn-icon red"   title="Rechazar" onclick="abrirModalRechazar('${u.id}')">✗</button>
+          <button class="btn-icon blue"  title="Ver docs" onclick="verDocs('${u.id}')">📄</button>
         </div>
       </div>`).join('');
 
   // Tabla todos usuarios
   const tbU = document.getElementById('tbody-usuarios');
-  tbU.innerHTML = usuarios.map(u => `
-    <tr data-estado="${u.estado}" data-nombre="${u.nombre.toLowerCase()}">
-      <td><div class="user-cell"><div class="u-av">${u.emoji}</div><div><div class="u-name">${u.nombre}</div><div class="u-doc">C.C. ${u.cedula}</div></div></div></td>
-      <td>${u.rol === 'conductor' ? '🚛 Conductor' : '📦 Cliente'}</td>
-      <td>${u.ciudad}</td>
-      <td><span class="badge ${u.estado === 'Aprobado' ? 'approved' : u.estado === 'Rechazado' ? 'rejected' : 'pending'}">${u.estado}</span></td>
-      <td style="color:var(--texto);font-size:12px">${u.fecha}</td>
-      <td>
-        <div class="actions">
-          ${u.estado !== 'Aprobado'  ? `<button class="btn-icon green"  title="Aprobar"  onclick="aprobar(${u.id})">✓</button>` : ''}
-          ${u.estado !== 'Rechazado' ? `<button class="btn-icon red"    title="Rechazar" onclick="abrirModalRechazar(${u.id})">✗</button>` : ''}
-          <button class="btn-icon orange" title="Banear" onclick="abrirModalBanear(${u.id})">🚫</button>
-        </div>
-      </td>
-    </tr>`).join('');
+  tbU.innerHTML = usuarios.length === 0
+    ? `<tr><td colspan="6"><div class="empty"><div class="empty-icon">👥</div><div class="empty-title">Sin usuarios</div></div></td></tr>`
+    : usuarios.map(u => `
+      <tr data-estado="${u.estado}" data-nombre="${nombreCompleto(u).toLowerCase()}">
+        <td><div class="user-cell"><div class="u-av">${u.rol==='conductor'?'🚛':'📦'}</div><div><div class="u-name">${nombreCompleto(u)}</div><div class="u-doc">${u.cedula?'C.C. '+u.cedula:u.email||''}</div></div></div></td>
+        <td>${u.rol==='conductor'?'🚛 Conductor':'📦 Cliente'}</td>
+        <td>${u.ciudad||'—'}</td>
+        <td><span class="badge ${u.estado==='aprobado'?'approved':u.estado==='rechazado'?'rejected':'pending'}">${cap(u.estado||'pendiente')}</span></td>
+        <td style="color:var(--texto);font-size:12px">${fechaRelativa(u.created_at)}</td>
+        <td>
+          <div class="actions">
+            ${u.estado!=='aprobado'  ? `<button class="btn-icon green"  title="Aprobar"  onclick="aprobar('${u.id}')">✓</button>` : ''}
+            ${u.estado!=='rechazado' ? `<button class="btn-icon red"    title="Rechazar" onclick="abrirModalRechazar('${u.id}')">✗</button>` : ''}
+            <button class="btn-icon orange" title="Banear" onclick="abrirModalBanear('${u.id}')">🚫</button>
+          </div>
+        </td>
+      </tr>`).join('');
 
   // Baneados
   const tbB = document.getElementById('tbody-baneados');
@@ -914,69 +937,88 @@ function renderTables() {
     ? `<tr><td colspan="4"><div class="empty"><div class="empty-icon">✅</div><div class="empty-title">Sin usuarios baneados</div></div></td></tr>`
     : baneados.map(b => `
       <tr>
-        <td><div class="user-cell"><div class="u-av">${b.emoji}</div><div><div class="u-name">${b.nombre}</div><div class="u-doc">C.C. ${b.cedula}</div></div></div></td>
-        <td style="color:var(--rojo);font-size:13px">${b.motivo}</td>
-        <td style="color:var(--texto);font-size:12px">${b.fecha}</td>
-        <td><button class="btn-icon green" title="Desbanear" onclick="desbanear(${b.id})">↩️</button></td>
+        <td><div class="user-cell"><div class="u-av">🚫</div><div><div class="u-name">${nombreCompleto(b)}</div><div class="u-doc">${b.cedula?'C.C. '+b.cedula:b.email||''}</div></div></div></td>
+        <td style="color:var(--rojo);font-size:13px">${b.motivo_rechazo||'—'}</td>
+        <td style="color:var(--texto);font-size:12px">${fechaRelativa(b.updated_at)}</td>
+        <td><button class="btn-icon green" title="Desbanear" onclick="desbanear('${b.id}')">↩️</button></td>
       </tr>`).join('');
 }
 
-// ══ ACCIONES ══
-function aprobar(id) {
+// ══ ACCIONES REALES CON SUPABASE ══
+async function aprobar(id) {
   const u = usuarios.find(x => x.id === id);
   if(!u) return;
-  u.estado = 'Aprobado';
+  const { error } = await sb.from('usuarios').update({ estado: 'aprobado', motivo_rechazo: null }).eq('id', id);
+  if(error) { toast('Error al aprobar: ' + error.message, 'error'); return; }
+  u.estado = 'aprobado';
   renderTables();
   cerrarModal('modal-docs');
-  toast(`✅ ${u.nombre} aprobado correctamente`, 'success');
+  toast(`✅ ${nombreCompleto(u)} aprobado correctamente`, 'success');
 }
 
 function abrirModalRechazar(id) {
   accionUsuario = id;
   const u = usuarios.find(x => x.id === id);
+  if(!u) return;
   document.getElementById('modal-rech-user').innerHTML = `
-    <div class="u-av">${u.emoji}</div>
-    <div><div class="u-name">${u.nombre}</div><div class="u-doc">C.C. ${u.cedula} · ${u.ciudad}</div></div>`;
+    <div class="u-av">${u.rol==='conductor'?'🚛':'📦'}</div>
+    <div><div class="u-name">${nombreCompleto(u)}</div><div class="u-doc">${u.cedula?'C.C. '+u.cedula:u.email} · ${u.ciudad||'—'}</div></div>`;
   document.getElementById('btn-confirmar-rechazo').onclick = () => confirmarRechazo(id);
   abrirModal('modal-rechazar');
 }
 
-function confirmarRechazo(id) {
+async function confirmarRechazo(id) {
   const motivo = document.getElementById('motivo-rechazo').value;
   if(!motivo) { toast('Selecciona un motivo de rechazo', 'error'); return; }
   const u = usuarios.find(x => x.id === id);
-  u.estado = 'Rechazado';
+  const { error } = await sb.from('usuarios').update({ estado: 'rechazado', motivo_rechazo: motivo }).eq('id', id);
+  if(error) { toast('Error al rechazar: ' + error.message, 'error'); return; }
+  u.estado = 'rechazado';
+  u.motivo_rechazo = motivo;
   renderTables();
   cerrarModal('modal-rechazar');
-  toast(`❌ ${u.nombre} rechazado. Se enviará correo de notificación.`, 'error');
+  toast(`❌ ${nombreCompleto(u)} rechazado.`, 'error');
 }
 
 function abrirModalBanear(id) {
   accionUsuario = id;
-  const u = usuarios.find(x => x.id === id);
+  const u = usuarios.find(x => x.id === id) || baneados.find(x => x.id === id);
+  if(!u) return;
   document.getElementById('modal-ban-user').innerHTML = `
-    <div class="u-av">${u.emoji}</div>
-    <div><div class="u-name">${u.nombre}</div><div class="u-doc">C.C. ${u.cedula} · ${u.ciudad}</div></div>`;
+    <div class="u-av">🚫</div>
+    <div><div class="u-name">${nombreCompleto(u)}</div><div class="u-doc">${u.cedula?'C.C. '+u.cedula:u.email} · ${u.ciudad||'—'}</div></div>`;
   document.getElementById('btn-confirmar-ban').onclick = () => confirmarBan(id);
   abrirModal('modal-banear');
 }
 
-function confirmarBan(id) {
+async function confirmarBan(id) {
   const motivo = document.getElementById('motivo-ban').value;
   if(!motivo) { toast('Selecciona un motivo de baneo', 'error'); return; }
   const u = usuarios.find(x => x.id === id);
-  baneados.push({ id:u.id, nombre:u.nombre, cedula:u.cedula, motivo, fecha:'Ahora', emoji:u.emoji });
-  usuarios = usuarios.filter(x => x.id !== id);
+  const { error } = await sb.from('usuarios').update({ estado: 'baneado', motivo_rechazo: motivo }).eq('id', id);
+  if(error) { toast('Error al banear: ' + error.message, 'error'); return; }
+  if(u) {
+    u.estado = 'baneado';
+    u.motivo_rechazo = motivo;
+    baneados.push(u);
+    usuarios = usuarios.filter(x => x.id !== id);
+  }
   renderTables();
   cerrarModal('modal-banear');
-  toast(`🚫 ${u.nombre} ha sido baneado de la plataforma.`, 'error');
+  toast(`🚫 ${u ? nombreCompleto(u) : 'Usuario'} ha sido baneado.`, 'error');
 }
 
-function desbanear(id) {
+async function desbanear(id) {
   const b = baneados.find(x => x.id === id);
-  baneados = baneados.filter(x => x.id !== id);
+  const { error } = await sb.from('usuarios').update({ estado: 'pendiente', motivo_rechazo: null }).eq('id', id);
+  if(error) { toast('Error al desbanear: ' + error.message, 'error'); return; }
+  if(b) {
+    b.estado = 'pendiente';
+    usuarios.push(b);
+    baneados = baneados.filter(x => x.id !== id);
+  }
   renderTables();
-  toast(`↩️ ${b.nombre} desbaneado. Puede volver a registrarse.`, 'info');
+  toast(`↩️ ${b ? nombreCompleto(b) : 'Usuario'} desbaneado.`, 'info');
 }
 
 function verDocs(id) {
@@ -1107,7 +1149,7 @@ async function checkAdmin() {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('admin-wrap').style.display = 'flex';
     document.getElementById('admin-wrap').style.flexDirection = 'row';
-    renderTables();
+    await cargarUsuarios();
   } catch(e) {
     showLoginScreen('Error de conexión: ' + e.message);
   }
@@ -1170,7 +1212,7 @@ async function adminLogin() {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('admin-wrap').style.display = 'flex';
     document.getElementById('admin-wrap').style.flexDirection = 'row';
-    renderTables();
+    await cargarUsuarios();
 
   } catch(e) {
     errEl.textContent = 'Error de conexión: ' + e.message;
