@@ -1138,15 +1138,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
 const { createClient } = supabase;
 const sb = createClient(
   'https://sorldaixuzpqlyqdcedi.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvcmxkYWl4dXpwcWx5cWRjZWRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMjkxODIsImV4cCI6MjA4NzcwNTE4Mn0.L1RjnhY62XiBltYHaT0vciFY9SHSrKbiM3GA8Buy89Q',
-  {
-    realtime: {
-      params: { eventsPerSecond: 10 }
-    },
-    global: {
-      headers: { 'x-client-info': 'fletecol' }
-    }
-  }
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvcmxkYWl4dXpwcWx5cWRjZWRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMjkxODIsImV4cCI6MjA4NzcwNTE4Mn0.L1RjnhY62XiBltYHaT0vciFY9SHSrKbiM3GA8Buy89Q'
 );
 
 let usuarioActual = null;
