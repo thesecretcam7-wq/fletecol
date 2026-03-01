@@ -1197,10 +1197,20 @@ document.addEventListener('visibilitychange', async () => {
   if(document.visibilityState !== 'visible') return;
   if(!perfilActual) return;
   try {
+    // Restaurar convActual si se perdió
+    if(!convActual) {
+      const saved = sessionStorage.getItem('convActual');
+      if(saved) {
+        convActual = JSON.parse(saved);
+        const soyUno = convActual.usuario1_id === perfilActual.id;
+        const otroId = soyUno ? convActual.usuario2_id : convActual.usuario1_id;
+        const { data: otroUser } = await sb.from('usuarios').select('nombre, apellido').eq('id', otroId).single();
+        const nombre = otroUser ? `${otroUser.nombre||''} ${otroUser.apellido||''}`.trim() : 'Usuario';
+        mostrarHeaderChat(nombre, convActual.origen, convActual.destino, convActual.precio_acordado||0);
+      }
+    }
     if(convActual?.id) {
-      // Traer mensajes que llegaron mientras estaba en otra pestaña
       await cargarMensajes(convActual.id);
-      // Reconectar canal realtime
       suscribirMensajes(convActual.id);
     }
     await cargarConversaciones(convActual?.id);
@@ -2516,6 +2526,7 @@ async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, des
     }
 
     convActual = conv;
+    sessionStorage.setItem('convActual', JSON.stringify(conv));
     mostrarHeaderChat(otroNombre, origen, destino, conv.precio_acordado||precio);
     await cargarMensajes(conv.id);
     suscribirMensajes(conv.id);
@@ -2667,6 +2678,7 @@ async function abrirConvExistente(convId) {
     .single();
   if(!conv || error) return;
   convActual = conv;
+  sessionStorage.setItem('convActual', JSON.stringify(conv));
   const soyUno = conv.usuario1_id === perfilActual?.id;
   const otroId = soyUno ? conv.usuario2_id : conv.usuario1_id;
   const { data: otroUser } = await sb.from('usuarios').select('nombre, apellido').eq('id', otroId).single();
