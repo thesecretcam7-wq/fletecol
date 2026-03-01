@@ -1180,6 +1180,7 @@ async function init() {
         usuarioActual = null;
         perfilActual = null;
         enRegistro = false;
+        detenerPolling();
         if(estadoSub) { sb.removeChannel(estadoSub); estadoSub = null; }
         ir('s-landing');
       }
@@ -1189,6 +1190,27 @@ async function init() {
     document.getElementById('loading').style.display = 'none';
     ir('s-landing');
   }
+}
+
+// Polling automático — verifica estado cada 10 segundos mientras está en pantalla pendiente
+let pollingInterval = null;
+
+function iniciarPolling() {
+  if(pollingInterval) return; // ya está corriendo
+  pollingInterval = setInterval(async () => {
+    if(!usuarioActual) { detenerPolling(); return; }
+    const estadoAntes = perfilActual?.estado;
+    await cargarPerfil();
+    // Si el estado cambió, redirigir
+    if(perfilActual?.estado !== estadoAntes) {
+      detenerPolling();
+      await redirigirSegunEstado();
+    }
+  }, 8000); // cada 8 segundos
+}
+
+function detenerPolling() {
+  if(pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
 }
 
 // Verificación manual del estado (botón en pantalla pendiente)
@@ -1244,6 +1266,8 @@ async function redirigirSegunEstado() {
     // pendiente, rechazado, baneado → pantalla de espera con mensaje según estado
     actualizarPantallaPendiente(estado, perfilActual.motivo_rechazo, perfilActual.rol);
     ir('s-pendiente');
+    if(estado === 'pendiente') iniciarPolling(); // verificar automáticamente
+    else detenerPolling();
   }
 }
 
@@ -1374,6 +1398,7 @@ function ir(screenId) {
 }
 
 async function irApp(screenId) {
+  detenerPolling(); // ya no necesitamos verificar
   ir(screenId);
   document.getElementById('bottom-nav').classList.add('visible');
   const map = {'s-rutas':0,'s-publicar':1,'s-chat':2,'s-pagos':3,'s-perfil':4};
