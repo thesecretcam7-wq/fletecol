@@ -1192,6 +1192,19 @@ async function init() {
   }
 }
 
+// Reconectar chat cuando la página vuelve a estar activa
+document.addEventListener('visibilitychange', async () => {
+  if(document.visibilityState === 'visible') {
+    // Reconectar suscripción de mensajes si había una conv activa
+    if(convActual?.id) {
+      suscribirMensajes(convActual.id);
+      await cargarMensajes(convActual.id);
+    }
+    // Actualizar badge de chat
+    if(perfilActual) await cargarConversaciones(convActual?.id);
+  }
+});
+
 // Polling automático — verifica estado cada 10 segundos mientras está en pantalla pendiente
 let pollingInterval = null;
 
