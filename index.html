@@ -1135,6 +1135,13 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
 
 <script>
 // ══ SUPABASE INIT ══
+// Registrar Service Worker
+if('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').then(r => {
+    console.log('SW registrado');
+  }).catch(e => console.log('SW error:', e));
+}
+
 const { createClient } = supabase;
 const sb = createClient(
   'https://sorldaixuzpqlyqdcedi.supabase.co',
