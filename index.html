@@ -2455,7 +2455,7 @@ async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, des
         usuario1_id: miId,
         usuario2_id: otroUserId,
         precio_acordado: precio||0,
-        estado: 'activa'
+        estado: 'negociando'
       }).select().single();
       if(error) { console.error('Error creando conv:', error); toast('Error al abrir chat: '+error.message, 'error'); return; }
       conv = nueva;
