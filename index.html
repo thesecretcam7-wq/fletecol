@@ -648,7 +648,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
 
   <div class="rutas-wrap" style="flex:1;overflow:hidden;">
     <div class="rutas-list" id="rutas-list">
-      <div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">Cargando rutas...</div></div>
+      <div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">Cargando...</div></div>
     </div>
     <div class="conductor-panel">
       <div id="cp-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;color:var(--texto);padding:20px;">
@@ -1782,54 +1782,106 @@ async function actualizarFotoPerfil(input) {
 // ══ RUTAS — DATOS REALES DE SUPABASE ══
 async function cargarRutas() {
   const list = document.getElementById('rutas-list');
-  list.innerHTML = '<div class="empty"><div class="empty-icon" style="font-size:32px;">⏳</div><div class="empty-title">Cargando rutas...</div></div>';
-
-  let query = sb.from('rutas')
-    .select(`*, conductor:usuarios(nombre,apellido,estrellas,num_reviews,viajes_completados,vehiculo,ciudad)`)
-    .eq('estado','activa')
-    .order('created_at', { ascending: false });
-
-  if(filtroVehActual !== 'todos') query = query.eq('vehiculo', filtroVehActual);
+  list.innerHTML = '<div class="empty"><div class="empty-icon" style="font-size:32px;">⏳</div><div class="empty-title">Cargando...</div></div>';
 
   const origen  = document.getElementById('f-origen')?.value.trim();
   const destino = document.getElementById('f-destino')?.value.trim();
-  if(origen)  query = query.ilike('origen', `%${origen}%`);
-  if(destino) query = query.ilike('destino', `%${destino}%`);
 
-  const { data: rutas, error } = await query.limit(20);
+  // Cargar rutas de conductores
+  let qRutas = sb.from('rutas')
+    .select(`*, conductor:usuarios(nombre,apellido,estrellas,num_reviews,viajes_completados,vehiculo,ciudad)`)
+    .eq('estado','activa')
+    .order('created_at', { ascending: false });
+  if(filtroVehActual !== 'todos') qRutas = qRutas.eq('vehiculo', filtroVehActual);
+  if(origen)  qRutas = qRutas.ilike('origen',  `%${origen}%`);
+  if(destino) qRutas = qRutas.ilike('destino', `%${destino}%`);
 
-  if(error || !rutas || rutas.length === 0) {
-    // Mostrar rutas demo si no hay datos reales aún
+  // Cargar cargas publicadas por clientes
+  let qCargas = sb.from('cargas')
+    .select(`*, cliente:usuarios(nombre,apellido,estrellas,num_reviews)`)
+    .eq('estado','activa')
+    .order('created_at', { ascending: false });
+  if(origen)  qCargas = qCargas.ilike('origen',  `%${origen}%`);
+  if(destino) qCargas = qCargas.ilike('destino', `%${destino}%`);
+
+  const [{ data: rutas }, { data: cargas }] = await Promise.all([qRutas.limit(20), qCargas.limit(20)]);
+
+  const totalItems = (rutas?.length || 0) + (cargas?.length || 0);
+  document.getElementById('count-r').textContent = totalItems;
+
+  if(totalItems === 0) {
     renderRutasDemo();
     return;
   }
 
-  document.getElementById('count-r').textContent = rutas.length;
-  list.innerHTML = rutas.map(r => `
+  document.getElementById('count-r').textContent = totalItems;
+
+  // Renderizar rutas de conductores
+  const htmlRutas = (rutas||[]).map(r => `
     <div class="ruta-card" onclick="selRuta(${JSON.stringify(r).replace(/"/g,'&quot;')})">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:10px;">
-          <div class="rc-av">👨</div>
+          <div class="rc-av">🚛</div>
           <div>
-            <div style="font-weight:700;font-size:13px;">${r.conductor?.nombre} ${r.conductor?.apellido}</div>
+            <div style="font-weight:700;font-size:13px;">${r.conductor?.nombre||'Conductor'} ${r.conductor?.apellido||''}</div>
             <div style="font-size:11px;color:var(--texto);">${'★'.repeat(Math.floor(r.conductor?.estrellas||5))} ${r.conductor?.estrellas||5} · ${r.conductor?.num_reviews||0} reseñas</div>
           </div>
         </div>
-        <div style="background:var(--gris3);border-radius:20px;padding:4px 11px;font-size:11px;font-weight:600;">${r.vehiculo === 'moto' ? '🏍️' : r.vehiculo === 'camioneta' ? '🚐' : r.vehiculo === 'camion' ? '🚚' : '🚛'} ${r.vehiculo}</div>
+        <div style="background:var(--gris3);border-radius:20px;padding:4px 11px;font-size:11px;font-weight:600;">${r.vehiculo==='moto'?'🏍️':r.vehiculo==='camioneta'?'🚐':r.vehiculo==='camion'?'🚚':'🚛'} ${r.vehiculo}</div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
         <div><div style="font-size:10px;color:var(--texto)">Origen</div><div class="route-city">${r.origen}</div></div>
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;"><div class="arrow-line"></div><div style="font-size:10px;color:var(--texto);">${r.fecha} · ${r.hora||''}</div></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;"><div class="arrow-line"></div><div style="font-size:10px;color:var(--texto);">${r.fecha||''} · ${r.hora||''}</div></div>
         <div style="text-align:right"><div style="font-size:10px;color:var(--texto)">Destino</div><div class="route-city">${r.destino}</div></div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <div style="background:var(--gris3);padding:4px 10px;border-radius:20px;font-size:11px;color:var(--texto);">⚖️ ${r.capacidad||'—'}</div>
         <div style="display:flex;align-items:center;gap:10px;">
-          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:17px;color:var(--amarillo);">${r.precio > 0 ? '$'+r.precio.toLocaleString('es-CO') : 'Negociable'}</div>
-          <button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;" onclick="event.stopPropagation();abrirChatConConductor('${r.usuario_id||''}','${(r.conductor?.nombre||'Conductor')+' '+(r.conductor?.apellido||'')}',${r.precio||0},'${r.origen||''}','${r.destino||''}')" >Negociar →</button>
+          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:17px;color:var(--amarillo);">${r.precio>0?'$'+r.precio.toLocaleString('es-CO'):'Negociable'}</div>
+          <button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;" onclick="event.stopPropagation();abrirChatConConductor('${r.conductor_id||''}','${(r.conductor?.nombre||'Conductor')+' '+(r.conductor?.apellido||'')}',${r.precio||0},'${r.origen||''}','${r.destino||''}')">Negociar →</button>
         </div>
       </div>
     </div>`).join('');
+
+  // Renderizar cargas publicadas por clientes
+  const tipoIcono = { mudanza:'🛋️', mercancia:'📦', industrial:'🏭', agricola:'🌾', construccion:'🚧' };
+  const htmlCargas = (cargas||[]).map(c => `
+    <div class="ruta-card" style="border-left:3px solid var(--amarillo);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="rc-av">${tipoIcono[c.tipo]||'📦'}</div>
+          <div>
+            <div style="font-weight:700;font-size:13px;">${c.cliente?.nombre||'Cliente'} ${c.cliente?.apellido||''}</div>
+            <div style="font-size:11px;color:var(--texto);">📦 Necesita conductor · ${c.tipo||'carga'}</div>
+          </div>
+        </div>
+        <div style="background:rgba(245,196,0,0.12);border:1px solid rgba(245,196,0,0.3);border-radius:20px;padding:4px 11px;font-size:11px;font-weight:600;color:var(--amarillo);">Busca conductor</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div><div style="font-size:10px;color:var(--texto)">Origen</div><div class="route-city">${c.origen||'—'}</div></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;"><div class="arrow-line"></div><div style="font-size:10px;color:var(--texto);">${c.fecha||''} · ${c.peso?c.peso+' kg':''}</div></div>
+        <div style="text-align:right"><div style="font-size:10px;color:var(--texto)">Destino</div><div class="route-city">${c.destino||'—'}</div></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div style="font-size:12px;color:var(--texto);flex:1;">${c.descripcion?c.descripcion.substring(0,60)+'...':''}</div>
+        <button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;" onclick="abrirChatConConductor('${c.cliente_id||''}','${(c.cliente?.nombre||'Cliente')+' '+(c.cliente?.apellido||'')}',0,'${c.origen||''}','${c.destino||''}')">Ofrecer precio →</button>
+      </div>
+    </div>`).join('');
+
+  // Mostrar sección de cargas si hay
+  const secCargas = cargas?.length > 0 ? `
+    <div style="padding:12px 0 6px;font-size:12px;font-weight:700;color:var(--texto);text-transform:uppercase;letter-spacing:1px;">
+      📦 Cargas buscando conductor (${cargas.length})
+    </div>
+    ${htmlCargas}` : '';
+
+  const secRutas = rutas?.length > 0 ? `
+    <div style="padding:12px 0 6px;font-size:12px;font-weight:700;color:var(--texto);text-transform:uppercase;letter-spacing:1px;">
+      🚛 Conductores disponibles (${rutas.length})
+    </div>
+    ${htmlRutas}` : '';
+
+  list.innerHTML = secCargas + secRutas || '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">Sin resultados</div></div>';
 }
 
 function renderRutasDemo() {
