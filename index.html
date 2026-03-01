@@ -2255,7 +2255,6 @@ async function publicarCarga() {
 
   const { error } = await sb.from('cargas').insert({
     cliente_id:         usuarioActual.id,
-    usuario_id:         usuarioActual.id,
     tipo,
     descripcion:        descripcionFinal,
     origen,
