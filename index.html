@@ -1206,7 +1206,7 @@ document.addEventListener('visibilitychange', async () => {
         const otroId = soyUno ? convActual.usuario2_id : convActual.usuario1_id;
         const { data: otroUser } = await sb.from('usuarios').select('nombre, apellido').eq('id', otroId).single();
         const nombre = otroUser ? `${otroUser.nombre||''} ${otroUser.apellido||''}`.trim() : 'Usuario';
-        mostrarHeaderChat(nombre, convActual.origen, convActual.destino, convActual.precio_acordado||0);
+        mostrarHeaderChat(nombre, convActual.origen, convActual.destino, convActual.precio_acordado||0, false);
       }
     }
     if(convActual?.id) {
@@ -2537,16 +2537,18 @@ async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, des
   }
 }
 
-function mostrarHeaderChat(nombre, origen, destino, precio) {
+function mostrarHeaderChat(nombre, origen, destino, precio, limpiar=true) {
   document.getElementById('chat-nombre').textContent = nombre||'Conversación';
   document.getElementById('chat-sub').textContent = (origen&&destino) ? `${origen} → ${destino}` : 'Conversación';
   document.getElementById('chat-acciones').style.display = 'flex';
   document.getElementById('escrow-bar').style.display = 'flex';
   document.getElementById('chat-empty-state').style.display = 'none';
   if(precio>0) actualizarMonto(precio);
-  // limpiar mensajes anteriores
-  const wrap = document.getElementById('msgs-wrap');
-  Array.from(wrap.children).forEach(c => { if(c.id !== 'chat-empty-state') c.remove(); });
+  // limpiar mensajes solo si se pide explícitamente
+  if(limpiar) {
+    const wrap = document.getElementById('msgs-wrap');
+    Array.from(wrap.children).forEach(c => { if(c.id !== 'chat-empty-state') c.remove(); });
+  }
 }
 
 async function cargarMensajes(convId) {
@@ -2555,8 +2557,16 @@ async function cargarMensajes(convId) {
     .eq('conversacion_id', convId)
     .order('created_at', { ascending: true });
   const wrap = document.getElementById('msgs-wrap');
-  Array.from(wrap.children).forEach(c => { if(c.id !== 'chat-empty-state') c.remove(); });
-  (msgs||[]).forEach(m => renderMensaje(m));
+  // Obtener IDs de mensajes ya renderizados para no duplicar
+  const idsExistentes = new Set(Array.from(wrap.querySelectorAll('[data-msg-id]')).map(el => el.dataset.msgId));
+  if(idsExistentes.size === 0) {
+    // Primera carga — limpiar y renderizar todo
+    Array.from(wrap.children).forEach(c => { if(c.id !== 'chat-empty-state') c.remove(); });
+    (msgs||[]).forEach(m => renderMensaje(m));
+  } else {
+    // Reconexión — solo agregar mensajes nuevos
+    (msgs||[]).forEach(m => { if(!idsExistentes.has(m.id)) renderMensaje(m); });
+  }
   wrap.scrollTop = wrap.scrollHeight;
   // Marcar como leídos los mensajes del otro
   await sb.from('mensajes')
