@@ -2442,21 +2442,20 @@ async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, des
   const conductorId = soyCliente ? otroUserId : perfilActual.id;
 
   try {
+    const miId = perfilActual.id;
     // Buscar conversación existente entre estos dos usuarios
     let { data: convs } = await sb.from('conversaciones')
       .select('*')
-      .eq('cliente_id', clienteId)
-      .eq('conductor_id', conductorId);
+      .or(`and(usuario1_id.eq.${miId},usuario2_id.eq.${otroUserId}),and(usuario1_id.eq.${otroUserId},usuario2_id.eq.${miId})`);
 
     let conv = convs?.[0] || null;
 
     if(!conv) {
       const { data: nueva, error } = await sb.from('conversaciones').insert({
-        cliente_id:  clienteId,
-        conductor_id: conductorId,
-        origen:  origen||'',
-        destino: destino||'',
-        precio_base: precio||0
+        usuario1_id: miId,
+        usuario2_id: otroUserId,
+        precio_acordado: precio||0,
+        estado: 'activa'
       }).select().single();
       if(error) { console.error('Error creando conv:', error); toast('Error al abrir chat: '+error.message, 'error'); return; }
       conv = nueva;
@@ -2529,12 +2528,12 @@ async function cargarConversaciones(convActivaId) {
   if(!perfilActual) return;
   const { data: convs, error } = await sb.from('conversaciones')
     .select(`*,
-      cliente:usuarios!conversaciones_cliente_id_fkey(nombre, apellido),
-      conductor:usuarios!conversaciones_conductor_id_fkey(nombre, apellido),
+      usuario1:usuarios!conversaciones_usuario1_id_fkey(nombre, apellido),
+      usuario2:usuarios!conversaciones_usuario2_id_fkey(nombre, apellido),
       mensajes_chat(contenido, created_at, remitente_id, tipo)
     `)
-    .or(`cliente_id.eq.${perfilActual.id},conductor_id.eq.${perfilActual.id}`)
-    .order('updated_at', { ascending: false });
+    .or(`usuario1_id.eq.${perfilActual.id},usuario2_id.eq.${perfilActual.id}`)
+    .order('created_at', { ascending: false });
 
   if(error) { console.error('Error convs:', error); return; }
 
@@ -2545,9 +2544,9 @@ async function cargarConversaciones(convActivaId) {
   }
 
   list.innerHTML = convs.map(c => {
-    const soyCliente = c.cliente_id === perfilActual.id;
-    const otro = soyCliente ? c.conductor : c.cliente;
-    const nombreOtro = otro ? `${otro.nombre||''} ${otro.apellido||''}`.trim() : (soyCliente ? 'Conductor' : 'Cliente');
+    const soyUno = c.usuario1_id === perfilActual.id;
+    const otro = soyUno ? c.usuario2 : c.usuario1;
+    const nombreOtro = otro ? `${otro.nombre||''} ${otro.apellido||''}`.trim() : 'Usuario';
     const msgs = c.mensajes_chat || [];
     const ultimo = msgs.sort((a,b) => new Date(b.created_at)-new Date(a.created_at))[0];
     const ultimoTxt = ultimo ? (ultimo.tipo==='oferta' ? '💰 Oferta enviada' : ultimo.contenido) : `${c.origen} → ${c.destino}`;
@@ -2555,7 +2554,7 @@ async function cargarConversaciones(convActivaId) {
     const activo = c.id === convActivaId;
 
     return `<div onclick="abrirConvExistente('${c.id}')" style="padding:13px 14px;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;display:flex;gap:10px;align-items:center;background:${activo?'rgba(245,196,0,0.06)':'transparent'};">
-      <div style="width:40px;height:40px;border-radius:50%;background:var(--gris3);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;">${soyCliente?'🚛':'📦'}</div>
+      <div style="width:40px;height:40px;border-radius:50%;background:var(--gris3);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;">💬</div>
       <div style="flex:1;min-width:0;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;">
           <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;">${nombreOtro}</div>
@@ -2570,16 +2569,16 @@ async function cargarConversaciones(convActivaId) {
 async function abrirConvExistente(convId) {
   const { data: conv, error } = await sb.from('conversaciones')
     .select(`*,
-      cliente:usuarios!conversaciones_cliente_id_fkey(nombre, apellido),
-      conductor:usuarios!conversaciones_conductor_id_fkey(nombre, apellido)
+      usuario1:usuarios!conversaciones_usuario1_id_fkey(nombre, apellido),
+      usuario2:usuarios!conversaciones_usuario2_id_fkey(nombre, apellido)
     `)
     .eq('id', convId)
     .single();
   if(!conv || error) return;
   convActual = conv;
-  const soyCliente = conv.cliente_id === perfilActual?.id;
-  const otro = soyCliente ? conv.conductor : conv.cliente;
-  const nombre = otro ? `${otro.nombre||''} ${otro.apellido||''}`.trim() : (soyCliente?'Conductor':'Cliente');
+  const soyUno = conv.usuario1_id === perfilActual?.id;
+  const otro = soyUno ? conv.usuario2 : conv.usuario1;
+  const nombre = otro ? `${otro.nombre||''} ${otro.apellido||''}`.trim() : 'Usuario';
   mostrarHeaderChat(nombre, conv.origen, conv.destino, conv.precio_acordado||0);
   await cargarMensajes(convId);
   suscribirMensajes(convId);
