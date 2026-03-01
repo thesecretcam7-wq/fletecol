@@ -404,6 +404,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
             </select>
           </div>
           <div class="form-group"><label class="form-label">🔒 Contraseña</label><input class="form-input" type="password" id="reg-pass" placeholder="Mínimo 8 caracteres"></div>
+          <div class="form-group"><label class="form-label">🔒 Confirmar contraseña</label><input class="form-input" type="password" id="reg-pass2" placeholder="Repite tu contraseña"></div>
           <div id="conductor-extra" style="display:none;">
             <div style="background:rgba(245,196,0,0.05);border:1px solid rgba(245,196,0,0.15);border-radius:12px;padding:14px;margin-bottom:14px;">
               <div style="font-size:12px;font-weight:700;color:var(--amarillo);margin-bottom:10px;">🚛 Información del vehículo</div>
@@ -1538,13 +1539,15 @@ async function registrar() {
   const apellido = document.getElementById('reg-apellido').value.trim();
   const email    = document.getElementById('reg-email').value.trim();
   const pass     = document.getElementById('reg-pass').value;
+  const pass2    = document.getElementById('reg-pass2').value;
   const errEl    = document.getElementById('reg-error');
   const btn      = document.getElementById('btn-reg');
 
-  if(!nombre||!apellido||!email||!pass||!rolSeleccionado) {
+  if(!nombre||!apellido||!email||!pass||!pass2||!rolSeleccionado) {
     errEl.textContent='Completa todos los campos y selecciona tu rol'; errEl.style.display='block'; return;
   }
   if(pass.length < 8) { errEl.textContent='La contraseña debe tener mínimo 8 caracteres'; errEl.style.display='block'; return; }
+  if(pass !== pass2) { errEl.textContent='Las contraseñas no coinciden'; errEl.style.display='block'; return; }
 
   btn.disabled = true; btn.textContent = 'Creando cuenta...';
   enRegistro = true; // Evitar redirect automático durante registro
