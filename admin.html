@@ -948,8 +948,28 @@ function renderTables() {
 async function aprobar(id) {
   const u = usuarios.find(x => x.id === id);
   if(!u) return;
-  const { error } = await sb.from('usuarios').update({ estado: 'aprobado', motivo_rechazo: null }).eq('id', id);
-  if(error) { toast('Error al aprobar: ' + error.message, 'error'); return; }
+
+  console.log('Aprobando usuario:', id, u);
+
+  const { data, error } = await sb.from('usuarios')
+    .update({ estado: 'aprobado', motivo_rechazo: null })
+    .eq('id', id)
+    .select();
+
+  console.log('Resultado update:', { data, error });
+
+  if(error) {
+    toast('Error al aprobar: ' + error.message, 'error');
+    console.error('Error RLS o BD:', error);
+    return;
+  }
+
+  if(!data || data.length === 0) {
+    toast('⚠️ El update no afectó ninguna fila. Revisa RLS o el ID.', 'error');
+    console.warn('Update sin efecto. ID usado:', id);
+    return;
+  }
+
   u.estado = 'aprobado';
   renderTables();
   cerrarModal('modal-docs');
