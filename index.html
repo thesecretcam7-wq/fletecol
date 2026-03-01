@@ -1841,7 +1841,7 @@ async function cargarRutas() {
         <div style="background:var(--gris3);padding:4px 10px;border-radius:20px;font-size:11px;color:var(--texto);">⚖️ ${r.capacidad||'—'}</div>
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:17px;color:var(--amarillo);">${r.precio>0?'$'+r.precio.toLocaleString('es-CO'):'Negociable'}</div>
-          <button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;" onclick="event.stopPropagation();abrirChatConConductor('${r.conductor_id||''}','${(r.conductor?.nombre||'Conductor')+' '+(r.conductor?.apellido||'')}',${r.precio||0},'${r.origen||''}','${r.destino||''}')">Negociar →</button>
+          ${perfilActual?.rol === 'cliente' ? `<button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;" onclick="event.stopPropagation();abrirChatConConductor('${r.conductor_id||''}','${(r.conductor?.nombre||'Conductor')+' '+(r.conductor?.apellido||'')}',${r.precio||0},'${r.origen||''}','${r.destino||''}')">Negociar →</button>` : `<span style="font-size:11px;color:var(--texto);padding:8px;">Tu propia ruta</span>`}
         </div>
       </div>
     </div>`).join('');
@@ -1867,7 +1867,7 @@ async function cargarRutas() {
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <div style="font-size:12px;color:var(--texto);flex:1;">${c.descripcion?c.descripcion.substring(0,60)+'...':''}</div>
-        <button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;" onclick="abrirChatConConductor('${c.cliente_id||''}','${(c.cliente?.nombre||'Cliente')+' '+(c.cliente?.apellido||'')}',0,'${c.origen||''}','${c.destino||''}')">Ofrecer precio →</button>
+        ${perfilActual?.rol === 'conductor' ? `<button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;" onclick="abrirChatConConductor('${c.cliente_id||''}','${(c.cliente?.nombre||'Cliente')+' '+(c.cliente?.apellido||'')}',0,'${c.origen||''}','${c.destino||''}')">Ofrecer precio →</button>` : `<span style="font-size:11px;color:var(--texto);padding:8px;">Tu publicación</span>`}
       </div>
     </div>`).join('');
 
@@ -2433,6 +2433,9 @@ function enterSend2(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();envia
 // ══ CHAT CON SUPABASE ══
 async function abrirChatConConductor(conductorId, conductorNombre, precio, origen, destino) {
   if(!usuarioActual) { toast('Debes iniciar sesión','error'); return; }
+  // Conductores no pueden chatear con otros conductores desde rutas
+  // Clientes no pueden ofertar en cargas de otros clientes
+  if(!perfilActual) { toast('Cargando perfil...','error'); return; }
   irApp('s-chat');
   // Actualizar header
   document.getElementById('chat-nombre').textContent = conductorNombre.trim();
