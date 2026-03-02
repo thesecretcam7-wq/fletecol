@@ -1222,12 +1222,14 @@ document.addEventListener('visibilitychange', async () => {
         mostrarHeaderChat(nombre, convActual.origen, convActual.destino, convActual.precio_acordado||0, false);
       }
     }
-      // Reenviar mensajes que fallaron mientras estaba en otra pestaña
-    await enviarPendientes();
-    if(convActual?.id) {
+      if(convActual?.id) {
       suscribirMensajes(convActual.id);
       await cargarConversaciones(convActual?.id);
     }
+    // Esperar 1.5s a que Supabase reconecte, luego reenviar pendientes
+    setTimeout(async () => {
+      await enviarPendientes();
+    }, 1500);
   } catch(e) {
     console.log('Reconexión:', e);
   }
@@ -1239,6 +1241,13 @@ setInterval(async () => {
   if(!convActual?.id || !perfilActual) return;
   suscribirMensajes(convActual.id);
 }, 30000);
+
+// Reintentar mensajes pendientes cada 5 segundos
+setInterval(async () => {
+  if(document.visibilityState !== 'visible') return;
+  if(!mensajesPendientes.length || !perfilActual) return;
+  await enviarPendientes();
+}, 5000);
 
 // Polling automático — verifica estado cada 10 segundos mientras está en pantalla pendiente
 let pollingInterval = null;
