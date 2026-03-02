@@ -1014,6 +1014,83 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
       </div>
     </div>
 
+    <!-- Cuenta bancaria conductor -->
+    <div id="seccion-cuenta-bancaria" style="display:none;margin-bottom:20px;">
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:16px;margin-bottom:4px;">🏦 Mi cuenta de pagos</div>
+      <div style="font-size:12px;color:var(--texto);margin-bottom:14px;">Aquí recibirás tus pagos por los servicios completados</div>
+
+      <div id="cuenta-guardada" style="display:none;background:var(--gris2);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:16px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div style="font-weight:700;font-size:14px;">✅ Cuenta registrada</div>
+          <button onclick="editarCuenta()" style="background:transparent;border:1px solid var(--gris4);color:var(--texto);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;">Editar</button>
+        </div>
+        <div style="font-size:13px;color:var(--texto);display:flex;flex-direction:column;gap:7px;">
+          <div style="display:flex;justify-content:space-between;">
+            <span>Tipo</span><span id="cuenta-tipo-disp" style="font-weight:600;color:var(--blanco);">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>Banco / Operador</span><span id="cuenta-banco-disp" style="font-weight:600;color:var(--blanco);">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>Número</span><span id="cuenta-numero-disp" style="font-weight:600;color:var(--blanco);">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>Titular</span><span id="cuenta-titular-disp" style="font-weight:600;color:var(--blanco);">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>Cédula / NIT</span><span id="cuenta-cedula-disp" style="font-weight:600;color:var(--blanco);">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="form-cuenta" style="background:var(--gris2);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:16px;">
+        <div style="font-weight:700;font-size:14px;margin-bottom:14px;">Registrar cuenta</div>
+
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;color:var(--texto);display:block;margin-bottom:6px;">Tipo de cuenta</label>
+          <select id="cuenta-tipo" onchange="toggleBancoNequi(this.value)" style="width:100%;padding:10px 14px;background:var(--gris3);border:1px solid var(--gris4);border-radius:10px;color:var(--blanco);font-size:13px;box-sizing:border-box;">
+            <option value="">Seleccionar...</option>
+            <option value="nequi">📱 Nequi</option>
+            <option value="daviplata">📱 Daviplata</option>
+            <option value="bancolombia_ah">🏦 Bancolombia — Ahorros</option>
+            <option value="bancolombia_cc">🏦 Bancolombia — Corriente</option>
+            <option value="davivienda_ah">🏦 Davivienda — Ahorros</option>
+            <option value="davivienda_cc">🏦 Davivienda — Corriente</option>
+            <option value="bbva_ah">🏦 BBVA — Ahorros</option>
+            <option value="bbva_cc">🏦 BBVA — Corriente</option>
+            <option value="bogota_ah">🏦 Banco de Bogotá — Ahorros</option>
+            <option value="bogota_cc">🏦 Banco de Bogotá — Corriente</option>
+            <option value="popular_ah">🏦 Banco Popular — Ahorros</option>
+            <option value="occidente_ah">🏦 Banco de Occidente — Ahorros</option>
+            <option value="colpatria_ah">🏦 Colpatria — Ahorros</option>
+            <option value="itau_ah">🏦 Itaú — Ahorros</option>
+            <option value="efecty">💵 Efecty (número de cédula)</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;color:var(--texto);display:block;margin-bottom:6px;" id="label-numero-cuenta">Número de cuenta / celular</label>
+          <input id="cuenta-numero" type="text" inputmode="numeric" placeholder="Ej: 3001234567" style="width:100%;padding:10px 14px;background:var(--gris3);border:1px solid var(--gris4);border-radius:10px;color:var(--blanco);font-size:13px;box-sizing:border-box;">
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;color:var(--texto);display:block;margin-bottom:6px;">Nombre del titular</label>
+          <input id="cuenta-titular" type="text" placeholder="Como aparece en la cuenta" style="width:100%;padding:10px 14px;background:var(--gris3);border:1px solid var(--gris4);border-radius:10px;color:var(--blanco);font-size:13px;box-sizing:border-box;">
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="font-size:12px;color:var(--texto);display:block;margin-bottom:6px;">Cédula / NIT del titular</label>
+          <input id="cuenta-cedula" type="text" inputmode="numeric" placeholder="Sin puntos ni espacios" style="width:100%;padding:10px 14px;background:var(--gris3);border:1px solid var(--gris4);border-radius:10px;color:var(--blanco);font-size:13px;box-sizing:border-box;">
+        </div>
+
+        <div style="background:rgba(245,196,0,0.07);border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--texto);line-height:1.6;">
+          🔒 Tu información bancaria está segura. Solo el administrador puede verla para procesar tus pagos.
+        </div>
+
+        <button onclick="guardarCuenta()" style="width:100%;padding:13px;background:var(--amarillo);color:var(--negro);border:none;border-radius:12px;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;cursor:pointer;">Guardar cuenta</button>
+      </div>
+    </div>
+
     <!-- Aviso Wompi -->
     <div style="background:rgba(245,196,0,0.04);border:1px solid rgba(245,196,0,0.15);border-radius:14px;padding:16px;margin-bottom:20px;">
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;margin-bottom:10px;">⏳ Pagos — Próximamente</div>
@@ -1168,10 +1245,11 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
 <script>
 // ══ SUPABASE INIT ══
 // Registrar Service Worker
+// Service Worker desactivado — no compatible con dominios externos (Supabase)
 if('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').then(r => {
-    console.log('SW registrado');
-  }).catch(e => console.log('SW error:', e));
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => r.unregister());
+  });
 }
 
 const { createClient } = supabase;
@@ -1545,6 +1623,7 @@ async function irApp(screenId) {
   if(screenId === 's-rutas') cargarRutas();
   if(screenId === 's-chat') cargarConversaciones();
   if(screenId === 's-rutas') cargarCarrusel();
+  if(screenId === 's-pagos') cargarCuentaBancaria();
   // Enviar pendientes al entrar a cualquier pantalla
   if(mensajesPendientes.length > 0) enviarPendientes();
   // Verificar si debe mostrar banner de documentos
@@ -2181,6 +2260,92 @@ function carruselPrev() {
 
 function abrirBanner(url) {
   if(url) window.open(url, '_blank');
+}
+
+// ══ CUENTA BANCARIA ══
+const TIPOS_CUENTA = {
+  'nequi': 'Nequi', 'daviplata': 'Daviplata',
+  'bancolombia_ah': 'Bancolombia — Ahorros', 'bancolombia_cc': 'Bancolombia — Corriente',
+  'davivienda_ah': 'Davivienda — Ahorros', 'davivienda_cc': 'Davivienda — Corriente',
+  'bbva_ah': 'BBVA — Ahorros', 'bbva_cc': 'BBVA — Corriente',
+  'bogota_ah': 'Banco de Bogotá — Ahorros', 'bogota_cc': 'Banco de Bogotá — Corriente',
+  'popular_ah': 'Banco Popular — Ahorros', 'occidente_ah': 'Banco de Occidente — Ahorros',
+  'colpatria_ah': 'Colpatria — Ahorros', 'itau_ah': 'Itaú — Ahorros',
+  'efecty': 'Efecty'
+};
+
+function toggleBancoNequi(val) {
+  const label = document.getElementById('label-numero-cuenta');
+  if(val === 'nequi' || val === 'daviplata') {
+    label.textContent = 'Número de celular';
+  } else if(val === 'efecty') {
+    label.textContent = 'Número de cédula';
+  } else {
+    label.textContent = 'Número de cuenta';
+  }
+}
+
+async function cargarCuentaBancaria() {
+  if(!perfilActual) return;
+  // Solo mostrar para conductores
+  const seccion = document.getElementById('seccion-cuenta-bancaria');
+  if(!seccion) return;
+  if(perfilActual.rol !== 'conductor') { seccion.style.display = 'none'; return; }
+  seccion.style.display = 'block';
+
+  const { data } = await sb.from('cuentas_bancarias')
+    .select('*')
+    .eq('usuario_id', perfilActual.id)
+    .single();
+
+  if(data) {
+    mostrarCuentaGuardada(data);
+  } else {
+    document.getElementById('cuenta-guardada').style.display = 'none';
+    document.getElementById('form-cuenta').style.display = 'block';
+    // Prefill titular con nombre del perfil
+    document.getElementById('cuenta-titular').value = `${perfilActual.nombre} ${perfilActual.apellido}`.trim();
+  }
+}
+
+function mostrarCuentaGuardada(data) {
+  document.getElementById('cuenta-guardada').style.display = 'block';
+  document.getElementById('form-cuenta').style.display = 'none';
+  document.getElementById('cuenta-tipo-disp').textContent = TIPOS_CUENTA[data.tipo] || data.tipo;
+  document.getElementById('cuenta-banco-disp').textContent = TIPOS_CUENTA[data.tipo]?.split('—')[0]?.trim() || data.tipo;
+  document.getElementById('cuenta-numero-disp').textContent = data.numero;
+  document.getElementById('cuenta-titular-disp').textContent = data.titular;
+  document.getElementById('cuenta-cedula-disp').textContent = data.cedula;
+}
+
+function editarCuenta() {
+  document.getElementById('cuenta-guardada').style.display = 'none';
+  document.getElementById('form-cuenta').style.display = 'block';
+}
+
+async function guardarCuenta() {
+  const tipo = document.getElementById('cuenta-tipo').value;
+  const numero = document.getElementById('cuenta-numero').value.trim();
+  const titular = document.getElementById('cuenta-titular').value.trim();
+  const cedula = document.getElementById('cuenta-cedula').value.trim();
+
+  if(!tipo || !numero || !titular || !cedula) {
+    toast('Completa todos los campos', 'error'); return;
+  }
+
+  const datos = {
+    usuario_id: perfilActual.id,
+    tipo, numero, titular, cedula,
+    updated_at: new Date().toISOString()
+  };
+
+  // Upsert por usuario_id
+  const { error } = await sb.from('cuentas_bancarias').upsert(datos, { onConflict: 'usuario_id' });
+
+  if(error) { toast('Error al guardar', 'error'); console.error(error); return; }
+
+  toast('✅ Cuenta guardada correctamente', 'success');
+  mostrarCuentaGuardada(datos);
 }
 
 // ══ RUTAS — DATOS REALES DE SUPABASE ══
