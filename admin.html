@@ -446,6 +446,10 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
       <span class="nav-icon">📦</span> Cargas publicadas
     </div>
 
+    <div class="nav-section-label" style="margin-top:12px;">Publicidad</div>
+    <div class="nav-item" onclick="irA('p-banners', this)">
+      <span class="nav-icon">🖼️</span> Banners publicitarios
+    </div>
     <div class="nav-section-label" style="margin-top:12px;">Finanzas</div>
     <div class="nav-item" onclick="irA('p-pagos', this)">
       <span class="nav-icon">💰</span> Pagos y comisiones
@@ -710,6 +714,69 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
     </div>
 
     <!-- ══════════════ PAGOS ══════════════ -->
+    <div class="pantalla" id="p-banners">
+      <div class="section-header">
+        <div>
+          <div class="section-title">🖼️ Banners publicitarios</div>
+          <div class="section-sub">Gestiona los banners del carrusel en la pantalla de búsqueda</div>
+        </div>
+        <button class="btn-action btn-approve" onclick="abrirModalBanner()">+ Nuevo banner</button>
+      </div>
+      <div id="banners-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;padding:4px 0;">
+        <div style="text-align:center;color:#888;padding:40px;">Cargando banners...</div>
+      </div>
+    </div>
+
+    <div id="modal-banner" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+      <div style="background:#1a1d23;border-radius:16px;padding:24px;max-width:460px;width:100%;border:1px solid #2a2d35;">
+        <div style="font-weight:800;font-size:18px;margin-bottom:20px;" id="modal-banner-title">Nuevo banner</div>
+        <input type="hidden" id="banner-edit-id">
+        <div style="margin-bottom:14px;">
+          <label style="font-size:12px;color:#888;display:block;margin-bottom:6px;">URL de la imagen *</label>
+          <input id="banner-imagen" type="text" placeholder="https://ejemplo.com/imagen.jpg" oninput="previewBanner(this.value)" style="width:100%;padding:10px 14px;background:#0d0f14;border:1px solid #2a2d35;border-radius:8px;color:#fff;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:14px;">
+          <label style="font-size:12px;color:#888;display:block;margin-bottom:6px;">URL del link (al hacer clic)</label>
+          <input id="banner-link" type="text" placeholder="https://empresa.com" style="width:100%;padding:10px 14px;background:#0d0f14;border:1px solid #2a2d35;border-radius:8px;color:#fff;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:14px;">
+          <label style="font-size:12px;color:#888;display:block;margin-bottom:6px;">Segmentación por ciudad</label>
+          <select id="banner-ciudad" onchange="toggleCiudadCustom(this.value)" style="width:100%;padding:10px 14px;background:#0d0f14;border:1px solid #2a2d35;border-radius:8px;color:#fff;font-size:13px;box-sizing:border-box;">
+            <option value="todas">🌎 Todas las ciudades</option>
+            <option value="Bogotá">Bogotá</option>
+            <option value="Medellín">Medellín</option>
+            <option value="Cali">Cali</option>
+            <option value="Barranquilla">Barranquilla</option>
+            <option value="Cartagena">Cartagena</option>
+            <option value="Bucaramanga">Bucaramanga</option>
+            <option value="Pereira">Pereira</option>
+            <option value="Manizales">Manizales</option>
+            <option value="Cúcuta">Cúcuta</option>
+            <option value="otra">✏️ Otra ciudad...</option>
+          </select>
+          <input id="banner-ciudad-custom" type="text" placeholder="Escribe la ciudad" style="display:none;width:100%;margin-top:8px;padding:10px 14px;background:#0d0f14;border:1px solid #2a2d35;border-radius:8px;color:#fff;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+          <div>
+            <label style="font-size:12px;color:#888;display:block;margin-bottom:6px;">Orden</label>
+            <input id="banner-orden" type="number" value="1" min="1" style="width:100%;padding:10px 14px;background:#0d0f14;border:1px solid #2a2d35;border-radius:8px;color:#fff;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#888;display:block;margin-bottom:6px;">Estado</label>
+            <select id="banner-activo" style="width:100%;padding:10px 14px;background:#0d0f14;border:1px solid #2a2d35;border-radius:8px;color:#fff;font-size:13px;box-sizing:border-box;">
+              <option value="true">Activo</option>
+              <option value="false">Inactivo</option>
+            </select>
+          </div>
+        </div>
+        <div id="banner-preview" style="display:none;margin-bottom:14px;border-radius:10px;height:100px;background-size:cover;background-position:center;border:1px solid #2a2d35;"></div>
+        <div style="display:flex;gap:10px;">
+          <button onclick="cerrarModalBanner()" style="flex:1;padding:11px;background:#2a2d35;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Cancelar</button>
+          <button onclick="guardarBanner()" style="flex:2;padding:11px;background:#F5C400;color:#080A0F;border:none;border-radius:8px;cursor:pointer;font-weight:700;">Guardar</button>
+        </div>
+      </div>
+    </div>
+
     <div class="pantalla" id="p-pagos">
       <div class="section-header">
         <div>
@@ -1096,7 +1163,7 @@ function eliminarRuta(btn) {
 // ══ NAVEGACIÓN ══
 const pageTitles = {
   'p-dashboard':'Dashboard','p-pendientes':'Pendientes',
-  'p-usuarios':'Todos los usuarios','p-baneados':'Usuarios baneados',
+  'p-usuarios':'Todos los usuarios','p-baneados':'Usuarios baneados','p-banners':'Banners publicitarios',
   'p-rutas':'Rutas publicadas','p-cargas':'Cargas publicadas','p-pagos':'Pagos y comisiones'
 };
 
@@ -1267,6 +1334,106 @@ if(document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', checkAdmin);
 } else {
   checkAdmin();
+}
+
+// ══ BANNERS ══
+async function cargarBanners() {
+  const grid = document.getElementById('banners-grid');
+  if(!grid) return;
+  const { data: banners } = await sb.from('banners').select('*').order('orden');
+  if(!banners || banners.length === 0) {
+    grid.innerHTML = '<div style="text-align:center;color:#888;padding:40px;grid-column:1/-1;">No hay banners. Crea el primero.</div>';
+    return;
+  }
+  grid.innerHTML = banners.map(b => `
+    <div style="background:#1a1d23;border-radius:14px;overflow:hidden;border:1px solid #2a2d35;">
+      <div style="height:120px;background-image:url('${b.imagen_url}');background-size:cover;background-position:center;background-color:#2a2d35;"></div>
+      <div style="padding:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-weight:700;font-size:13px;">Banner #${b.orden}</span>
+          <span style="font-size:11px;padding:3px 10px;border-radius:20px;background:${b.activo?'rgba(34,197,94,0.15)':'rgba(239,68,68,0.15)'};color:${b.activo?'#22c55e':'#ef4444'};">${b.activo?'Activo':'Inactivo'}</span>
+        </div>
+        <div style="font-size:11px;color:#888;margin-bottom:6px;">📍 ${b.ciudad === 'todas' || !b.ciudad ? 'Todas las ciudades' : b.ciudad}</div>
+        ${b.link_url?`<div style="font-size:11px;color:#888;margin-bottom:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🔗 ${b.link_url}</div>`:''}
+        <div style="display:flex;gap:8px;">
+          <button onclick='editarBanner(${JSON.stringify(b)})' style="flex:1;padding:7px;background:#2a2d35;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;">✏️ Editar</button>
+          <button onclick="eliminarBanner('${b.id}')" style="flex:1;padding:7px;background:rgba(239,68,68,0.15);color:#ef4444;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;">🗑️ Eliminar</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function toggleCiudadCustom(val) {
+  const custom = document.getElementById('banner-ciudad-custom');
+  custom.style.display = val === 'otra' ? 'block' : 'none';
+}
+
+function abrirModalBanner() {
+  document.getElementById('modal-banner-title').textContent = 'Nuevo banner';
+  document.getElementById('banner-edit-id').value = '';
+  document.getElementById('banner-imagen').value = '';
+  document.getElementById('banner-link').value = '';
+  document.getElementById('banner-orden').value = '1';
+  document.getElementById('banner-activo').value = 'true';
+  document.getElementById('banner-ciudad').value = 'todas';
+  document.getElementById('banner-ciudad-custom').style.display = 'none';
+  document.getElementById('banner-preview').style.display = 'none';
+  document.getElementById('modal-banner').style.display = 'flex';
+}
+
+function editarBanner(b) {
+  document.getElementById('modal-banner-title').textContent = 'Editar banner';
+  document.getElementById('banner-edit-id').value = b.id;
+  document.getElementById('banner-imagen').value = b.imagen_url || '';
+  document.getElementById('banner-link').value = b.link_url || '';
+  document.getElementById('banner-orden').value = b.orden || 1;
+  document.getElementById('banner-activo').value = b.activo ? 'true' : 'false';
+  // Restaurar ciudad
+  const ciudadEl = document.getElementById('banner-ciudad');
+  const ciudades = Array.from(ciudadEl.options).map(o => o.value);
+  if(!b.ciudad || b.ciudad === 'todas') {
+    ciudadEl.value = 'todas';
+  } else if(ciudades.includes(b.ciudad)) {
+    ciudadEl.value = b.ciudad;
+  } else {
+    ciudadEl.value = 'otra';
+    document.getElementById('banner-ciudad-custom').style.display = 'block';
+    document.getElementById('banner-ciudad-custom').value = b.ciudad;
+  }
+  previewBanner(b.imagen_url);
+  document.getElementById('modal-banner').style.display = 'flex';
+}
+
+function cerrarModalBanner() {
+  document.getElementById('modal-banner').style.display = 'none';
+}
+
+function previewBanner(url) {
+  const prev = document.getElementById('banner-preview');
+  if(url) { prev.style.display = 'block'; prev.style.backgroundImage = "url('"+url+"')"; }
+  else { prev.style.display = 'none'; }
+}
+
+async function guardarBanner() {
+  const id = document.getElementById('banner-edit-id').value;
+  const imagen_url = document.getElementById('banner-imagen').value.trim();
+  const link_url = document.getElementById('banner-link').value.trim();
+  const orden = parseInt(document.getElementById('banner-orden').value) || 1;
+  const activo = document.getElementById('banner-activo').value === 'true';
+  let ciudad = document.getElementById('banner-ciudad').value;
+  if(ciudad === 'otra') ciudad = document.getElementById('banner-ciudad-custom').value.trim() || 'todas';
+  if(!imagen_url) { alert('La URL de imagen es requerida'); return; }
+  const datos = { imagen_url, link_url, orden, activo, ciudad };
+  if(id) { await sb.from('banners').update(datos).eq('id', id); }
+  else { await sb.from('banners').insert(datos); }
+  cerrarModalBanner();
+  cargarBanners();
+}
+
+async function eliminarBanner(id) {
+  if(!confirm('¿Eliminar este banner?')) return;
+  await sb.from('banners').delete().eq('id', id);
+  cargarBanners();
 }
 </script>
 
