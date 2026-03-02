@@ -446,6 +446,10 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
       <span class="nav-icon">📦</span> Cargas publicadas
     </div>
 
+    <div class="nav-section-label" style="margin-top:12px;">Pagos</div>
+    <div class="nav-item" onclick="irA('p-cuentas', this)">
+      <span class="nav-icon">🏦</span> Cuentas bancarias
+    </div>
     <div class="nav-section-label" style="margin-top:12px;">Publicidad</div>
     <div class="nav-item" onclick="irA('p-banners', this)">
       <span class="nav-icon">🖼️</span> Banners publicitarios
@@ -714,6 +718,31 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
     </div>
 
     <!-- ══════════════ PAGOS ══════════════ -->
+    <div class="pantalla" id="p-cuentas">
+      <div class="section-header">
+        <div>
+          <div class="section-title">🏦 Cuentas bancarias</div>
+          <div class="section-sub">Cuentas de conductores para transferir pagos</div>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="search-box">
+            <span>🔍</span>
+            <input type="text" placeholder="Buscar conductor..." oninput="filtrarTabla(this,'tb-cuentas')">
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="tb-cuentas">
+            <thead><tr>
+              <th>Conductor</th><th>Tipo de cuenta</th><th>Número</th><th>Titular</th><th>Cédula/NIT</th><th>Actualizado</th>
+            </tr></thead>
+            <tbody id="tbody-cuentas"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <div class="pantalla" id="p-banners">
       <div class="section-header">
         <div>
@@ -1163,7 +1192,7 @@ function eliminarRuta(btn) {
 // ══ NAVEGACIÓN ══
 const pageTitles = {
   'p-dashboard':'Dashboard','p-pendientes':'Pendientes',
-  'p-usuarios':'Todos los usuarios','p-baneados':'Usuarios baneados','p-banners':'Banners publicitarios',
+  'p-usuarios':'Todos los usuarios','p-baneados':'Usuarios baneados','p-banners':'Banners publicitarios','p-cuentas':'Cuentas bancarias',
   'p-rutas':'Rutas publicadas','p-cargas':'Cargas publicadas','p-pagos':'Pagos y comisiones'
 };
 
@@ -1177,6 +1206,8 @@ function irA(id, navEl) {
   document.getElementById('page-title').textContent = pageTitles[id] || 'Panel';
   document.getElementById('page-breadcrumb').textContent = `FleteCOL › ${pageTitles[id] || ''}`;
   closeSidebar();
+  if(id === 'p-banners') cargarBanners();
+  if(id === 'p-cuentas') cargarCuentas();
 }
 
 // ══ FILTROS ══
@@ -1334,6 +1365,47 @@ if(document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', checkAdmin);
 } else {
   checkAdmin();
+}
+
+// ══ CUENTAS BANCARIAS ══
+const TIPOS_CUENTA_ADMIN = {
+  'nequi':'📱 Nequi','daviplata':'📱 Daviplata',
+  'bancolombia_ah':'🏦 Bancolombia Ahorros','bancolombia_cc':'🏦 Bancolombia Corriente',
+  'davivienda_ah':'🏦 Davivienda Ahorros','davivienda_cc':'🏦 Davivienda Corriente',
+  'bbva_ah':'🏦 BBVA Ahorros','bbva_cc':'🏦 BBVA Corriente',
+  'bogota_ah':'🏦 Bgotá Ahorros','bogota_cc':'🏦 Bgotá Corriente',
+  'popular_ah':'🏦 Popular Ahorros','occidente_ah':'🏦 Occidente Ahorros',
+  'colpatria_ah':'🏦 Colpatria Ahorros','itau_ah':'🏦 Itaú Ahorros',
+  'efecty':'💵 Efecty'
+};
+
+async function cargarCuentas() {
+  const tbody = document.getElementById('tbody-cuentas');
+  if(!tbody) return;
+  const { data } = await sb
+    .from('cuentas_bancarias')
+    .select('*, usuarios(nombre, apellido, email)')
+    .order('updated_at', { ascending: false });
+
+  if(!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:30px;">No hay cuentas registradas</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = data.map(c => {
+    const u = c.usuarios || {};
+    const nombre = `${u.nombre || ''} ${u.apellido || ''}`.trim() || c.usuario_id;
+    const tipo = TIPOS_CUENTA_ADMIN[c.tipo] || c.tipo;
+    const fecha = c.updated_at ? new Date(c.updated_at).toLocaleDateString('es-CO') : '—';
+    return `<tr>
+      <td><div style="font-weight:600;">${nombre}</div><div style="font-size:11px;color:#888;">${u.email||''}</div></td>
+      <td>${tipo}</td>
+      <td><strong>${c.numero}</strong></td>
+      <td>${c.titular}</td>
+      <td>${c.cedula}</td>
+      <td style="font-size:12px;color:#888;">${fecha}</td>
+    </tr>`;
+  }).join('');
 }
 
 // ══ BANNERS ══
