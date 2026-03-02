@@ -150,6 +150,9 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
 .loc-banner.gps{background:rgba(0,212,106,0.05);border-bottom-color:rgba(0,212,106,0.15);}
 .rutas-wrap{display:grid;grid-template-columns:1fr 340px;flex:1;overflow:hidden;}
 .rutas-list{padding:20px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
+.carrusel-slide{min-width:100%;height:110px;background-size:cover;background-position:center;cursor:pointer;border-radius:14px;}
+.carrusel-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.4);cursor:pointer;transition:all 0.2s;}
+.carrusel-dot.active{background:#fff;width:18px;border-radius:3px;}
 .ruta-card{background:var(--gris2);border:1px solid rgba(255,255,255,0.05);border-radius:16px;padding:18px;cursor:pointer;transition:all 0.2s;position:relative;}
 .ruta-card::before{content:'';position:absolute;left:0;top:15%;bottom:15%;width:3px;background:transparent;transition:background 0.2s;border-radius:0 2px 2px 0;}
 .ruta-card:hover{border-color:rgba(255,255,255,0.1);}
@@ -339,8 +342,13 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
         </div>
         <div id="login-error" class="form-error" style="margin-bottom:10px;display:none;"></div>
         <button class="btn-full" id="btn-login" onclick="login()">Iniciar sesión</button>
+        <div id="btn-biometric-wrap" style="display:none;margin-top:10px;">
+          <button class="btn-full" id="btn-biometric" onclick="loginBiometrico()" style="background:var(--gris3);border:1px solid var(--gris4);color:var(--blanco);display:flex;align-items:center;justify-content:center;gap:8px;">
+            <span id="bio-icon">🔒</span> <span id="bio-txt">Usar Face ID / Huella</span>
+          </button>
+        </div>
         <div class="divider">o</div>
-        <button class="social-btn" onclick="loginGoogle()">🇬 Continuar con Google</button>
+        <button class="social-btn" onclick="mostrarModalRolGoogle()">🇬 Continuar con Google</button>
         <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--texto);">¿Olvidaste tu contraseña? <span style="color:var(--amarillo);cursor:pointer;" onclick="resetPassword()">Recuperar</span></div>
       </div>
 
@@ -614,15 +622,18 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
   <div class="loc-banner" id="loc-banner">
     <div style="display:flex;align-items:center;gap:8px;">
       <span id="loc-icon2">📍</span>
-      <div><div style="font-weight:700;font-size:13px;" id="loc-title2">Selecciona tu departamento</div><div style="font-size:11px;color:var(--texto);">Para ver cargas cerca de ti</div></div>
+      <div><div style="font-weight:700;font-size:13px;" id="loc-title2">Selecciona tu ciudad</div><div style="font-size:11px;color:var(--texto);">Para ver cargas cerca de ti</div></div>
     </div>
     <div style="display:flex;align-items:center;gap:7px;">
       <select id="depto-sel" onchange="setDepto(this.value)" style="background:var(--gris3);border:1.5px solid var(--gris4);border-radius:9px;padding:7px 12px;color:var(--blanco);font-size:12px;font-family:'DM Sans',sans-serif;outline:none;cursor:pointer;">
-        <option value="">Tu departamento...</option>
-        <option>Bogotá D.C.</option><option>Cundinamarca</option><option>Antioquia</option>
-        <option>Valle del Cauca</option><option>Santander</option><option>Atlántico</option>
-        <option>Bolívar</option><option>Nariño</option><option>Tolima</option><option>Meta</option>
-        <option>Risaralda</option><option>Caldas</option><option>Quindío</option><option>Boyacá</option>
+        <option value="">Tu ciudad...</option>
+        <option>Bogotá</option><option>Medellín</option><option>Cali</option>
+        <option>Barranquilla</option><option>Cartagena</option><option>Bucaramanga</option>
+        <option>Cúcuta</option><option>Pereira</option><option>Manizales</option>
+        <option>Ibagué</option><option>Villavicencio</option><option>Pasto</option>
+        <option>Montería</option><option>Neiva</option><option>Armenia</option>
+        <option>Popayán</option><option>Valledupar</option><option>Santa Marta</option>
+        <option>Tunja</option><option>Florencia</option>
       </select>
       <button onclick="pedirGPS()" id="gps-btn" style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;">📡 GPS</button>
     </div>
@@ -645,6 +656,18 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
     <button class="ftag" onclick="filtVeh('camion',this)">🚚 Camión</button>
     <button class="ftag" onclick="filtVeh('mula',this)">🚛 Mula</button>
     <div style="margin-left:auto;font-size:12px;color:var(--texto);">Mostrando <strong id="count-r" style="color:var(--blanco)">0</strong> rutas</div>
+  </div>
+
+  <!-- CARRUSEL PUBLICITARIO -->
+  <div id="carrusel-wrap" style="padding:0 16px 12px;display:none;">
+    <div style="position:relative;border-radius:14px;overflow:hidden;height:110px;background:var(--gris2);" id="carrusel-container">
+      <div id="carrusel-slides" style="display:flex;transition:transform 0.4s ease;height:100%;"></div>
+      <!-- Dots -->
+      <div id="carrusel-dots" style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:5px;"></div>
+      <!-- Flechas -->
+      <button onclick="carruselPrev()" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.5);border:none;color:#fff;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:14px;">‹</button>
+      <button onclick="carruselNext()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.5);border:none;color:#fff;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:14px;">›</button>
+    </div>
   </div>
 
   <div class="rutas-wrap" style="flex:1;overflow:hidden;">
@@ -835,7 +858,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
           <div class="toggle-row"><div><div style="font-weight:600;font-size:13px;">⚡ Envío urgente</div><div style="font-size:11px;color:var(--texto);margin-top:2px;">Necesito que sea hoy o mañana</div></div><div class="toggle" id="t-urgente" onclick="this.classList.toggle('on')"></div></div>
         </div>
 
-        <div class="aviso"><span>💡</span><span>Los conductores de tu departamento recibirán una notificación inmediatamente.</span></div>
+        <div class="aviso"><span>💡</span><span>Los conductores de tu ciudad recibirán una notificación inmediatamente.</span></div>
         <div id="carga-error" style="font-size:12px;color:var(--rojo);display:none;margin-bottom:10px;"></div>
         <button class="btn-full" id="btn-pub-carga" onclick="publicarCarga()">📦 Publicar carga</button>
       </div>
@@ -1116,13 +1139,22 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
       <div style="font-size:11px;color:var(--texto);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;">Información</div>
       <div class="cp-row"><span style="color:var(--texto);">Email</span><span id="perfil-email" style="font-weight:600;">—</span></div>
       <div class="cp-row"><span style="color:var(--texto);">Ciudad</span><span id="perfil-ciudad" style="font-weight:600;">—</span></div>
-      <div class="cp-row"><span style="color:var(--texto);">Departamento</span><span id="perfil-depto" style="font-weight:600;">—</span></div>
+      <div class="cp-row"><span style="color:var(--texto);">Ciudad</span><span id="perfil-depto" style="font-weight:600;">—</span></div>
     </div>
     <button class="btn-full" style="background:var(--rojo);margin-top:8px;" onclick="logout()">Cerrar sesión</button>
   </div>
 </div>
 
 <!-- BOTTOM NAV -->
+<!-- Banner documentos pendientes -->
+<div id="banner-docs" style="display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:linear-gradient(135deg,#F5C400,#e6b800);padding:10px 16px;align-items:center;justify-content:space-between;gap:10px;">
+  <div style="flex:1;">
+    <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:13px;color:#080A0F;">⚠️ Completa tu perfil</div>
+    <div style="font-size:11px;color:#080A0F;opacity:0.8;">Sube tus documentos para usar todas las funciones</div>
+  </div>
+  <button onclick="irApp('s-perfil')" style="background:#080A0F;color:#F5C400;border:none;border-radius:8px;padding:7px 14px;font-family:'Syne',sans-serif;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">Subir docs →</button>
+</div>
+
 <nav class="bottom-nav" id="bottom-nav">
   <button class="bnav-item" onclick="irApp('s-rutas')"><span class="bi-icon">🔍</span><span class="bi-label">Buscar</span></button>
   <button class="bnav-item" onclick="irApp('s-publicar')"><span class="bi-icon">➕</span><span class="bi-label">Publicar</span></button>
@@ -1186,6 +1218,28 @@ async function init() {
         usuarioActual = session.user;
         if(enRegistro) return;
         await cargarPerfil();
+        // Si viene de Google y no tiene perfil, crear uno con el rol guardado
+        if(!perfilActual) {
+          const rolPendiente = localStorage.getItem('google_rol_pendiente');
+          if(rolPendiente && session.user.email) {
+            const nombreCompleto = session.user.user_metadata?.full_name || '';
+            const partes = nombreCompleto.split(' ');
+            const nombre = partes[0] || 'Usuario';
+            const apellido = partes.slice(1).join(' ') || '';
+            const { error } = await sb.from('usuarios').insert({
+              auth_id: session.user.id,
+              nombre, apellido,
+              email: session.user.email,
+              rol: rolPendiente,
+              estado: 'pendiente',
+              foto_perfil: session.user.user_metadata?.avatar_url || null
+            });
+            if(!error) {
+              localStorage.removeItem('google_rol_pendiente');
+              await cargarPerfil();
+            }
+          }
+        }
         await redirigirSegunEstado();
         suscribirEstado();
       }
@@ -1451,7 +1505,8 @@ function actualizarUIperfil() {
   const estadoBadge = document.getElementById('perfil-estado');
   const estados = { pendiente:'⏳ Pendiente de aprobación', aprobado:'✅ Aprobado', rechazado:'❌ Rechazado', baneado:'🚫 Baneado' };
   estadoBadge.textContent = estados[perfilActual.estado] || perfilActual.estado;
-  if(perfilActual.departamento) { document.getElementById('depto-sel').value = perfilActual.departamento; setDepto(perfilActual.departamento); }
+  if(perfilActual.ciudad) { document.getElementById('depto-sel').value = perfilActual.ciudad; setDepto(perfilActual.ciudad); }
+  else if(perfilActual.departamento) { document.getElementById('depto-sel').value = perfilActual.departamento; setDepto(perfilActual.departamento); }
 }
 
 // ══ NAVEGACIÓN ══
@@ -1459,6 +1514,26 @@ function ir(screenId) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('activa'));
   document.getElementById(screenId).classList.add('activa');
   document.getElementById('bottom-nav').classList.remove('visible');
+  if(screenId === 's-auth') setTimeout(iniciarBiometrico, 300);
+}
+
+function verificarBannerDocs() {
+  if(!perfilActual) return;
+  const banner = document.getElementById('banner-docs');
+  if(!banner) return;
+  // Mostrar banner si está pendiente (sin docs o sin aprobar)
+  if(perfilActual.estado === 'pendiente') {
+    banner.style.display = 'flex';
+    // Agregar padding-top al contenido para no tapar con el banner
+    document.querySelectorAll('.screen.activa').forEach(s => {
+      s.style.paddingTop = '56px';
+    });
+  } else {
+    banner.style.display = 'none';
+    document.querySelectorAll('.screen').forEach(s => {
+      s.style.paddingTop = '';
+    });
+  }
 }
 
 async function irApp(screenId) {
@@ -1469,8 +1544,11 @@ async function irApp(screenId) {
   document.querySelectorAll('.bnav-item').forEach((b,i) => b.classList.toggle('active', i === map[screenId]));
   if(screenId === 's-rutas') cargarRutas();
   if(screenId === 's-chat') cargarConversaciones();
+  if(screenId === 's-rutas') cargarCarrusel();
   // Enviar pendientes al entrar a cualquier pantalla
   if(mensajesPendientes.length > 0) enviarPendientes();
+  // Verificar si debe mostrar banner de documentos
+  verificarBannerDocs();
   if(screenId === 's-mis') cargarMisPubs();
   if(screenId === 's-publicar') {
     if(!perfilActual && usuarioActual) await cargarPerfil();
@@ -1484,6 +1562,7 @@ function showAuthTab(tab, btn) {
   document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('auth-'+tab).classList.add('active');
+  if(tab === 'login') iniciarBiometrico();
 }
 
 async function login() {
@@ -1522,6 +1601,10 @@ async function login() {
         return;
       }
       await redirigirSegunEstado();
+      // Ofrecer activar biométrico si no está activado
+      if(!localStorage.getItem('bio_cred_id')) {
+        setTimeout(() => activarBiometrico(email, pass), 1000);
+      }
     }
 
     btn.disabled = false; btn.textContent = 'Iniciar sesión';
@@ -1534,8 +1617,175 @@ async function login() {
   }
 }
 
+// ══ BIOMÉTRICO (WebAuthn) ══
+function bioDisponible() {
+  return window.PublicKeyCredential !== undefined;
+}
+
+async function iniciarBiometrico() {
+  if(!bioDisponible()) return;
+  const wrap = document.getElementById('btn-biometric-wrap');
+  if(!wrap) return;
+  // Verificar si ya hay credencial guardada
+  const credId = localStorage.getItem('bio_cred_id');
+  if(credId) {
+    wrap.style.display = 'block';
+    // Detectar tipo de biométrico disponible
+    try {
+      const disponible = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      if(disponible) {
+        document.getElementById('bio-icon').textContent = '👆';
+        document.getElementById('bio-txt').textContent = 'Usar Face ID / Huella dactilar';
+      }
+    } catch(e) {}
+  }
+}
+
+async function loginBiometrico() {
+  const btn = document.getElementById('btn-biometric');
+  const credId = localStorage.getItem('bio_cred_id');
+  const email  = localStorage.getItem('bio_email');
+  const passEnc = localStorage.getItem('bio_pass');
+  if(!credId || !email || !passEnc) {
+    toast('No hay biométrico configurado','error');
+    return;
+  }
+  btn.textContent = '⏳ Verificando...';
+  btn.disabled = true;
+  try {
+    // Desafío aleatorio
+    const challenge = new Uint8Array(32);
+    crypto.getRandomValues(challenge);
+    const credIdArr = Uint8Array.from(atob(credId), c => c.charCodeAt(0));
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        allowCredentials: [{ type: 'public-key', id: credIdArr }],
+        userVerification: 'required',
+        timeout: 60000
+      }
+    });
+    if(assertion) {
+      // Biométrico verificado — hacer login con credenciales guardadas
+      const pass = atob(passEnc);
+      const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+      if(error) throw error;
+      usuarioActual = data.user;
+      await cargarPerfil();
+      await redirigirSegunEstado();
+    }
+  } catch(e) {
+    if(e.name === 'NotAllowedError') {
+      toast('Biométrico cancelado','error');
+    } else {
+      console.error('Bio error:', e);
+      toast('Error biométrico — usa email y contraseña','error');
+    }
+  } finally {
+    btn.textContent = '👆 Usar Face ID / Huella dactilar';
+    btn.disabled = false;
+  }
+}
+
+async function activarBiometrico(email, pass) {
+  if(!bioDisponible()) return;
+  try {
+    const disponible = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    if(!disponible) return;
+  } catch(e) { return; }
+
+  // Preguntar al usuario
+  const confirmar = confirm('¿Activar Face ID / Huella para entrar más rápido?');
+  if(!confirmar) return;
+
+  try {
+    const userId = new Uint8Array(16);
+    crypto.getRandomValues(userId);
+    const challenge = new Uint8Array(32);
+    crypto.getRandomValues(challenge);
+
+    const cred = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: { name: 'FleteCOL', id: window.location.hostname },
+        user: {
+          id: userId,
+          name: email,
+          displayName: email
+        },
+        pubKeyCredParams: [
+          { type: 'public-key', alg: -7 },
+          { type: 'public-key', alg: -257 }
+        ],
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',
+          userVerification: 'required'
+        },
+        timeout: 60000
+      }
+    });
+
+    if(cred) {
+      // Guardar credencial y email/pass encriptados localmente
+      const credIdB64 = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
+      localStorage.setItem('bio_cred_id', credIdB64);
+      localStorage.setItem('bio_email', email);
+      localStorage.setItem('bio_pass', btoa(pass)); // ofuscado, no encriptado fuerte
+      toast('✅ Face ID / Huella activado','success');
+    }
+  } catch(e) {
+    console.log('Bio activación cancelada:', e.message);
+  }
+}
+
+function mostrarModalRolGoogle() {
+  const modal = document.createElement('div');
+  modal.id = 'modal-rol-google';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML = `
+    <div style="background:var(--gris1);border-radius:20px;padding:28px 24px;max-width:340px;width:100%;border:1px solid var(--gris3);">
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:20px;margin-bottom:6px;text-align:center;">¿Cómo usarás FleteCOL?</div>
+      <div style="font-size:13px;color:var(--texto);text-align:center;margin-bottom:24px;">Selecciona tu rol antes de continuar</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+        <div id="grole-cliente" onclick="selRolGoogle('cliente')" style="border:2px solid var(--gris3);border-radius:14px;padding:20px 12px;text-align:center;cursor:pointer;transition:all 0.2s;">
+          <div style="font-size:36px;margin-bottom:8px;">📦</div>
+          <div style="font-weight:700;font-size:14px;">Soy cliente</div>
+          <div style="font-size:11px;color:var(--texto);margin-top:4px;">Necesito transportar carga</div>
+        </div>
+        <div id="grole-conductor" onclick="selRolGoogle('conductor')" style="border:2px solid var(--gris3);border-radius:14px;padding:20px 12px;text-align:center;cursor:pointer;transition:all 0.2s;">
+          <div style="font-size:36px;margin-bottom:8px;">🚛</div>
+          <div style="font-weight:700;font-size:14px;">Soy conductor</div>
+          <div style="font-size:11px;color:var(--texto);margin-top:4px;">Tengo vehículo disponible</div>
+        </div>
+      </div>
+      <button id="btn-continuar-google" onclick="loginGoogle()" disabled style="width:100%;padding:14px;background:var(--gris3);color:var(--texto);border:none;border-radius:12px;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;cursor:not-allowed;transition:all 0.2s;">Continuar con Google →</button>
+      <button onclick="document.getElementById('modal-rol-google').remove()" style="width:100%;padding:10px;background:transparent;color:var(--texto);border:none;font-size:13px;cursor:pointer;margin-top:8px;">Cancelar</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+let rolGoogle = '';
+function selRolGoogle(rol) {
+  rolGoogle = rol;
+  document.getElementById('grole-cliente').style.border = rol === 'cliente' ? '2px solid var(--amarillo)' : '2px solid var(--gris3)';
+  document.getElementById('grole-conductor').style.border = rol === 'conductor' ? '2px solid var(--amarillo)' : '2px solid var(--gris3)';
+  const btn = document.getElementById('btn-continuar-google');
+  btn.disabled = false;
+  btn.style.background = 'var(--amarillo)';
+  btn.style.color = 'var(--negro)';
+  btn.style.cursor = 'pointer';
+}
+
 async function loginGoogle() {
-  await sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: "https://fletecol.netlify.app" } });
+  const modal = document.getElementById('modal-rol-google');
+  if(modal && !rolGoogle) { toast('Selecciona tu rol primero','error'); return; }
+  if(rolGoogle) localStorage.setItem('google_rol_pendiente', rolGoogle);
+  if(modal) modal.remove();
+  await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin }
+  });
 }
 
 async function resetPassword() {
@@ -1838,6 +2088,99 @@ async function actualizarFotoPerfil(input) {
   const navAv = document.getElementById('nav-avatar');
   if(navAv) setAvatarEl(navAv, url, '🧑');
   toast('✅ Foto actualizada', 'success');
+}
+
+// ══ CARRUSEL PUBLICITARIO ══
+let carruselActual = 0;
+let carruselBanners = [];
+let carruselInterval = null;
+
+async function cargarCarrusel() {
+  try {
+    // Detectar ciudad del usuario
+    let ciudadUsuario = perfilActual?.ciudad || null;
+
+    // Intentar geolocalización para obtener ciudad
+    if(!ciudadUsuario && navigator.geolocation) {
+      try {
+        const pos = await new Promise((res, rej) => 
+          navigator.geolocation.getCurrentPosition(res, rej, { timeout: 3000 })
+        );
+        // Geocodificación inversa con API gratuita
+        const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=es`);
+        const geo = await resp.json();
+        ciudadUsuario = geo.address?.city || geo.address?.town || geo.address?.county || null;
+        console.log('Ciudad por GPS:', ciudadUsuario);
+      } catch(e) {
+        console.log('Geolocalización no disponible, usando ciudad del perfil');
+      }
+    }
+
+    // Cargar banners: los de "todas" siempre + los de la ciudad del usuario
+    const { data: banners } = await sb.from('banners')
+      .select('*')
+      .eq('activo', true)
+      .order('orden', { ascending: true });
+
+    if(!banners || banners.length === 0) return;
+
+    // Filtrar por ciudad
+    const bannersVisibles = banners.filter(b => {
+      if(!b.ciudad || b.ciudad === 'todas') return true;
+      if(!ciudadUsuario) return true; // sin ciudad detectada, mostrar todos
+      return b.ciudad.toLowerCase() === ciudadUsuario.toLowerCase();
+    });
+
+    if(!bannersVisibles.length) return;
+
+    carruselBanners = bannersVisibles;
+    const wrap = document.getElementById('carrusel-wrap');
+    const slides = document.getElementById('carrusel-slides');
+    const dots = document.getElementById('carrusel-dots');
+
+    if(!wrap || !slides) return;
+
+    wrap.style.display = 'block';
+    slides.style.width = `${bannersVisibles.length * 100}%`;
+
+    slides.innerHTML = bannersVisibles.map((b, i) => `
+      <div class="carrusel-slide"
+        style="min-width:${100/bannersVisibles.length}%;background-image:url('${b.imagen_url}');"
+        onclick="abrirBanner('${b.link_url||''}')">
+      </div>`).join('');
+
+    dots.innerHTML = bannersVisibles.map((_, i) => `
+      <div class="carrusel-dot ${i===0?'active':''}" onclick="irSlide(${i})"></div>`).join('');
+
+    // Auto-rotar cada 4 segundos
+    if(carruselInterval) clearInterval(carruselInterval);
+    carruselInterval = setInterval(carruselNext, 4000);
+  } catch(e) {
+    console.log('Carrusel no disponible:', e.message);
+  }
+}
+
+function irSlide(idx) {
+  carruselActual = idx;
+  const slides = document.getElementById('carrusel-slides');
+  if(slides) slides.style.transform = `translateX(-${idx * (100/carruselBanners.length)}%)`;
+  document.querySelectorAll('.carrusel-dot').forEach((d,i) => {
+    d.classList.toggle('active', i === idx);
+  });
+}
+
+function carruselNext() {
+  if(!carruselBanners.length) return;
+  irSlide((carruselActual + 1) % carruselBanners.length);
+}
+
+function carruselPrev() {
+  if(!carruselBanners.length) return;
+  irSlide((carruselActual - 1 + carruselBanners.length) % carruselBanners.length);
+}
+
+function abrirBanner(url) {
+  if(url) window.open(url, '_blank');
 }
 
 // ══ RUTAS — DATOS REALES DE SUPABASE ══
@@ -2324,6 +2667,11 @@ async function publicarRuta() {
 }
 
 async function publicarCarga() {
+  if(perfilActual?.estado === 'pendiente') {
+    toast('⚠️ Debes completar tu perfil para publicar','error');
+    setTimeout(() => irApp('s-perfil'), 1000);
+    return;
+  }
   // Si no hay sesión, pedir login
   if(!usuarioActual) { toast('Debes iniciar sesión para publicar', 'error'); return; }
   // Si el perfil aún no cargó, esperarlo
@@ -2458,11 +2806,9 @@ function pedirGPS() {
       fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=es`)
         .then(r => r.json())
         .then(d => {
-          const estado = d.address?.state || '';
-          const deptos = {'bogotá':'Bogotá D.C.','bogota':'Bogotá D.C.','cundinamarca':'Cundinamarca','antioquia':'Antioquia','valle del cauca':'Valle del Cauca','santander':'Santander','atlántico':'Atlántico','nariño':'Nariño','tolima':'Tolima','huila':'Huila','meta':'Meta','risaralda':'Risaralda','caldas':'Caldas','quindío':'Quindío','boyacá':'Boyacá','cauca':'Cauca'};
-          const depto = deptos[estado.toLowerCase()];
-          if(depto) { setDepto(depto); btn.textContent='✅ GPS'; btn.style.background='var(--verde)'; }
-          else { btn.textContent='📡 GPS'; toast('No se detectó el departamento. Selecciónalo manualmente.','info'); }
+          const ciudad = d.address?.city || d.address?.town || d.address?.village || '';
+          if(ciudad) { setDepto(ciudad); btn.textContent='✅ GPS'; btn.style.background='var(--verde)'; }
+          else { btn.textContent='📡 GPS'; toast('No se detectó la ciudad. Selecciónala manualmente.','info'); }
         }).catch(() => { btn.textContent='📡 GPS'; });
     },
     () => { btn.textContent='📡 GPS'; toast('Permiso de GPS denegado','error'); },
@@ -2470,12 +2816,12 @@ function pedirGPS() {
   );
 }
 
-function setDepto(depto) {
+function setDepto(ciudad) {
   document.getElementById('loc-icon2').textContent = '📍';
-  document.getElementById('loc-title2').textContent = `📍 ${depto}`;
-  document.getElementById('depto-sel').value = depto;
+  document.getElementById('loc-title2').textContent = `📍 ${ciudad}`;
+  document.getElementById('depto-sel').value = ciudad;
   document.getElementById('loc-banner').classList.add('gps');
-  toast(`📍 Mostrando contenido de ${depto}`, 'info');
+  toast(`📍 Mostrando contenido de ${ciudad}`, 'info');
 }
 
 // ══ CHAT — FILTRO ANTI-CONTACTO ══
@@ -2507,6 +2853,11 @@ function enterSend2(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();envia
 // ══ CHAT CON SUPABASE ══
 async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, destino) {
   if(!usuarioActual || !perfilActual) { toast('Debes iniciar sesión','error'); return; }
+  if(perfilActual.estado === 'pendiente') {
+    toast('⚠️ Debes completar tu perfil para chatear','error');
+    setTimeout(() => irApp('s-perfil'), 1000);
+    return;
+  }
 
   irApp('s-chat');
 
