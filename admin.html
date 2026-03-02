@@ -817,29 +817,35 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
       <div class="commission-row">
         <div class="comm-card">
           <div class="comm-label">💰 Comisiones totales</div>
-          <div class="comm-val">$0 COP</div>
+          <div class="comm-val" id="stat-comisiones">$0 COP</div>
           <div class="comm-sub">10% de cada servicio</div>
         </div>
         <div class="comm-card">
           <div class="comm-label">🔒 Dinero en escrow</div>
-          <div class="comm-val" style="color:var(--naranja)">$0 COP</div>
+          <div class="comm-val" style="color:var(--naranja)" id="stat-escrow">$0 COP</div>
           <div class="comm-sub">Retenido, pendiente entrega</div>
         </div>
         <div class="comm-card">
-          <div class="comm-label">✅ Pagos liberados</div>
-          <div class="comm-val" style="color:var(--verde)">$0 COP</div>
-          <div class="comm-sub">Entregas confirmadas</div>
+          <div class="comm-label">✅ Pagos aprobados</div>
+          <div class="comm-val" style="color:var(--verde)" id="stat-aprobados">$0 COP</div>
+          <div class="comm-sub">Aprobados por Wompi</div>
         </div>
       </div>
 
       <div class="table-card">
-        <div style="padding:16px 20px; border-bottom:1px solid rgba(255,255,255,0.05);">
-          <div style="font-weight:700;font-size:14px;">Historial de transacciones</div>
+        <div class="table-toolbar" style="padding:12px 20px;">
+          <div style="font-weight:700;font-size:14px;">Transacciones Wompi</div>
+          <button onclick="cargarPagos()" style="background:var(--gris3);border:none;color:var(--blanco);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:12px;">🔄 Actualizar</button>
         </div>
-        <div class="empty">
-          <div class="empty-icon">💳</div>
-          <div class="empty-title">Sin transacciones aún</div>
-          <div class="empty-sub">Cuando los usuarios completen servicios, las transacciones aparecerán aquí con el desglose de comisiones.</div>
+        <div class="table-wrap">
+          <table id="tb-pagos">
+            <thead><tr>
+              <th>Referencia</th><th>Cliente</th><th>Monto</th><th>Estado</th><th>Fecha</th><th>Acción</th>
+            </tr></thead>
+            <tbody id="tbody-pagos">
+              <tr><td colspan="6" style="text-align:center;padding:30px;color:#888;">Cargando pagos...</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -1208,6 +1214,7 @@ function irA(id, navEl) {
   closeSidebar();
   if(id === 'p-banners') cargarBanners();
   if(id === 'p-cuentas') cargarCuentas();
+  if(id === 'p-pagos') cargarPagos();
 }
 
 // ══ FILTROS ══
@@ -1365,6 +1372,92 @@ if(document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', checkAdmin);
 } else {
   checkAdmin();
+}
+
+// ══ PAGOS WOMPI ══
+const ESTADOS_COLOR = {
+  'pendiente': '#F5A623',
+  'APPROVED': '#00D46A',
+  'DECLINED': '#FF4D4D',
+  'VOIDED': '#888',
+  'ERROR': '#FF4D4D'
+};
+const ESTADOS_LABEL = {
+  'pendiente': '⏳ Pendiente',
+  'APPROVED': '✅ Aprobado',
+  'DECLINED': '❌ Rechazado',
+  'VOIDED': '🚫 Anulado',
+  'ERROR': '⚠️ Error'
+};
+
+async function cargarPagos() {
+  const tbody = document.getElementById('tbody-pagos');
+  if(!tbody) return;
+
+  const { data } = await sb
+    .from('pagos')
+    .select('*, usuarios(nombre, apellido, email)')
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if(!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:30px;">No hay pagos registrados aún</td></tr>';
+    return;
+  }
+
+  // Stats
+  let totalCom = 0, totalEscrow = 0, totalAprobados = 0;
+  data.forEach(p => {
+    if(p.estado === 'APPROVED') { totalAprobados += p.monto; totalCom += Math.round(p.monto * 0.1); }
+    if(p.estado === 'pendiente') totalEscrow += p.monto;
+  });
+  document.getElementById('stat-comisiones').textContent = '$' + totalCom.toLocaleString('es-CO') + ' COP';
+  document.getElementById('stat-escrow').textContent = '$' + totalEscrow.toLocaleString('es-CO') + ' COP';
+  document.getElementById('stat-aprobados').textContent = '$' + totalAprobados.toLocaleString('es-CO') + ' COP';
+
+  tbody.innerHTML = data.map(p => {
+    const u = p.usuarios || {};
+    const nombre = `${u.nombre||''} ${u.apellido||''}`.trim() || p.usuario_id?.slice(0,8);
+    const color = ESTADOS_COLOR[p.estado] || '#888';
+    const label = ESTADOS_LABEL[p.estado] || p.estado;
+    const monto = '$' + (p.monto||0).toLocaleString('es-CO');
+    const fecha = p.created_at ? new Date(p.created_at).toLocaleDateString('es-CO') : '—';
+    const accion = p.estado === 'pendiente' 
+      ? `<button onclick="verificarPagoWompi('${p.referencia}')" style="background:rgba(245,196,0,0.15);color:#F5C400;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:11px;">🔄 Verificar</button>`
+      : (p.wompi_id ? `<span style="font-size:10px;color:#555;">${p.wompi_id.slice(0,12)}...</span>` : '—');
+    return `<tr>
+      <td style="font-family:monospace;font-size:11px;">${p.referencia||'—'}</td>
+      <td><div style="font-weight:600;font-size:12px;">${nombre}</div><div style="font-size:10px;color:#888;">${u.email||''}</div></td>
+      <td style="font-weight:700;">${monto}</td>
+      <td><span style="color:${color};font-weight:700;font-size:12px;">${label}</span></td>
+      <td style="font-size:12px;color:#888;">${fecha}</td>
+      <td>${accion}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function verificarPagoWompi(referencia) {
+  toast('Consultando Wompi...', 'info');
+  try {
+    const res = await fetch(`https://sandbox.wompi.co/v1/transactions?reference=${referencia}`, {
+      headers: { 'Authorization': 'Bearer pub_test_PKG7uFnDqNkrSa6LaITeGmGqQRe8MlCk' }
+    });
+    const data = await res.json();
+    const tx = data?.data?.[0];
+    if(!tx) { toast('No encontrado en Wompi', 'error'); return; }
+
+    await sb.from('pagos').update({
+      estado: tx.status,
+      wompi_id: tx.id,
+      updated_at: new Date().toISOString()
+    }).eq('referencia', referencia);
+
+    toast(`Estado: ${tx.status}`, tx.status === 'APPROVED' ? 'success' : 'info');
+    cargarPagos();
+  } catch(e) {
+    toast('Error al consultar Wompi', 'error');
+    console.error(e);
+  }
 }
 
 // ══ CUENTAS BANCARIAS ══
