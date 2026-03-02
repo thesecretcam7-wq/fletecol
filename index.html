@@ -943,24 +943,22 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
           <div style="font-size:11px;color:var(--texto);line-height:1.7;">1. Pagas → dinero retenido en FleteCOL<br>2. Conductor hace la entrega<br>3. Tú confirmas recibido<br>4. Conductor recibe su 90%</div>
         </div>
 
-        <!-- Aviso Wompi pendiente -->
-        <div style="background:rgba(255,140,0,0.06);border:1px solid rgba(255,140,0,0.2);border-radius:11px;padding:12px;margin-bottom:12px;">
-          <div style="font-weight:700;font-size:12px;color:var(--naranja);margin-bottom:6px;">⏳ Pagos en configuración</div>
-          <div style="font-size:11px;color:var(--texto);line-height:1.6;">La pasarela de pagos Wompi está siendo configurada. Muy pronto podrás pagar directamente desde aquí con:<br><br>
-            <span style="color:var(--blanco);">💳 Tarjeta crédito/débito</span><br>
-            <span style="color:var(--blanco);">🏦 PSE — débito bancario</span><br>
-            <span style="color:var(--blanco);">💵 Efecty / Baloto</span><br>
-            <span style="color:var(--blanco);">📱 Nequi</span>
+        <!-- Wompi Widget -->
+        <div id="wompi-container" style="margin-top:4px;">
+          <div style="font-size:10px;color:var(--texto);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Método de pago</div>
+          <div style="background:rgba(245,196,0,0.05);border:1px solid rgba(245,196,0,0.15);border-radius:11px;padding:12px;margin-bottom:14px;font-size:11px;color:var(--texto);line-height:1.7;">
+            💳 <strong style="color:var(--blanco);">Tarjeta</strong> · 🏦 <strong style="color:var(--blanco);">PSE</strong> · 💵 <strong style="color:var(--blanco);">Efecty</strong> · 📱 <strong style="color:var(--blanco);">Nequi</strong><br>
+            <span style="color:rgba(255,255,255,0.5);">Powered by Wompi · Pago 100% seguro</span>
+          </div>
+          <button class="btn-full" id="pp-btn2" onclick="abrirWompi()" style="margin-top:4px;background:linear-gradient(135deg,#F5C400,#e6a800);color:#080A0F;">
+            🔒 Pagar ahora con Wompi
+          </button>
+          <div style="text-align:center;margin-top:10px;">
+            <img src="https://wompi.com/assets/img/badges/badge-secured-wompi.svg" 
+                 onerror="this.style.display='none'" 
+                 style="height:28px;opacity:0.6;" alt="Wompi Seguro">
           </div>
         </div>
-
-        <!-- Métodos (deshabilitados hasta Wompi) -->
-        <div style="font-size:10px;color:var(--texto);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Método de pago</div>
-        <div class="metodo sel" onclick="selMet(this,'wompi')" style="opacity:0.5;pointer-events:none;"><div style="font-size:20px;width:28px;text-align:center;">💳</div><div style="flex:1;"><div style="font-weight:600;font-size:12px;">Tarjeta — Wompi</div><div style="font-size:10px;color:var(--texto);">Próximamente</div></div><div class="metodo-radio2"></div></div>
-        <div class="metodo" onclick="selMet(this,'pse')" style="opacity:0.5;pointer-events:none;"><div style="font-size:20px;width:28px;text-align:center;">🏦</div><div style="flex:1;"><div style="font-weight:600;font-size:12px;">PSE</div><div style="font-size:10px;color:var(--texto);">Próximamente</div></div><div class="metodo-radio2"></div></div>
-        <div class="metodo" onclick="selMet(this,'efecty')" style="opacity:0.5;pointer-events:none;"><div style="font-size:20px;width:28px;text-align:center;">💵</div><div style="flex:1;"><div style="font-weight:600;font-size:12px;">Efecty / Baloto</div><div style="font-size:10px;color:var(--texto);">Próximamente</div></div><div class="metodo-radio2"></div></div>
-        <div class="metodo" onclick="selMet(this,'nequi')" style="opacity:0.5;pointer-events:none;"><div style="font-size:20px;width:28px;text-align:center;">📱</div><div style="flex:1;"><div style="font-weight:600;font-size:12px;">Nequi</div><div style="font-size:10px;color:var(--texto);">Próximamente</div></div><div class="metodo-radio2"></div></div>
-        <button class="btn-full" id="pp-btn2" style="margin-top:10px;opacity:0.4;pointer-events:none;">🔒 Disponible pronto</button>
       </div>
       <div id="pp-procesando2" style="display:none;text-align:center;padding:30px 0;"><div style="font-size:44px;margin-bottom:14px;">⏳</div><div style="font-family:'Syne',sans-serif;font-weight:800;font-size:16px;margin-bottom:6px;">Procesando...</div></div>
       <div id="pp-exitoso2" style="display:none;text-align:center;padding:20px 0;">
@@ -1245,6 +1243,123 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
 <script>
 // ══ SUPABASE INIT ══
 // Registrar Service Worker
+// ══ WOMPI CONFIG ══
+const WOMPI_PUBLIC_KEY = 'pub_test_PKG7uFnDqNkrSa6LaITeGmGqQRe8MlCk';
+
+async function abrirWompi() {
+  if(!perfilActual) { toast('Debes iniciar sesión', 'error'); return; }
+
+  // Obtener datos del pago
+  const monto = calcularMontoPago(); // en pesos COP
+  if(!monto || monto < 1000) { toast('Monto inválido', 'error'); return; }
+
+  const montoCentavos = monto * 100; // Wompi usa centavos
+  const referencia = `FLETE-${Date.now()}-${perfilActual.id.slice(0,8)}`;
+  const redirectUrl = window.location.href.split('?')[0] + '?pago=ok&ref=' + referencia;
+
+  // Guardar referencia pendiente en Supabase
+  await registrarPagoPendiente(referencia, monto);
+
+  // Construir URL de Wompi Checkout
+  const params = new URLSearchParams({
+    'public-key': WOMPI_PUBLIC_KEY,
+    'currency': 'COP',
+    'amount-in-cents': montoCentavos,
+    'reference': referencia,
+    'redirect-url': redirectUrl,
+    'customer-data:email': perfilActual.email || '',
+    'customer-data:full-name': `${perfilActual.nombre||''} ${perfilActual.apellido||''}`.trim(),
+    'customer-data:phone-number': perfilActual.telefono || '',
+  });
+
+  const wompiUrl = `https://checkout.wompi.co/p/?${params.toString()}`;
+  
+  // Abrir en ventana nueva
+  window.open(wompiUrl, '_blank', 'width=480,height=700,scrollbars=yes');
+  
+  toast('🔗 Se abrió la ventana de pago Wompi', 'info');
+  
+  // Escuchar cuando vuelvan desde Wompi
+  escucharRetornoWompi(referencia);
+}
+
+function calcularMontoPago() {
+  // Leer el monto del resumen de pago visible
+  const el = document.getElementById('r-tot');
+  if(!el) return 0;
+  const txt = el.textContent.replace(/\D/g,'');
+  return parseInt(txt) || 0;
+}
+
+async function registrarPagoPendiente(referencia, monto) {
+  try {
+    await sb.from('pagos').insert({
+      referencia,
+      usuario_id: perfilActual.id,
+      monto,
+      estado: 'pendiente',
+      created_at: new Date().toISOString()
+    });
+  } catch(e) { console.log('registrar pago:', e); }
+}
+
+function escucharRetornoWompi(referencia) {
+  // Verificar cada 3s si el pago fue completado (polling)
+  const intervalo = setInterval(async () => {
+    const { data } = await sb.from('pagos')
+      .select('estado')
+      .eq('referencia', referencia)
+      .single();
+    
+    if(data?.estado === 'APPROVED') {
+      clearInterval(intervalo);
+      pagoWompiExitoso();
+    }
+  }, 3000);
+  
+  // Parar después de 10 min
+  setTimeout(() => clearInterval(intervalo), 600000);
+}
+
+function pagoWompiExitoso() {
+  document.getElementById('pp-form2').style.display = 'none';
+  document.getElementById('pp-exitoso2').style.display = 'block';
+  toast('✅ ¡Pago confirmado! El conductor fue notificado.', 'success');
+}
+
+// Verificar si volvemos de Wompi al cargar la página
+async function verificarRetornoWompi() {
+  const params = new URLSearchParams(window.location.search);
+  const ref = params.get('ref');
+  const estado = params.get('pago');
+  if(!ref || estado !== 'ok') return;
+
+  // Limpiar URL
+  window.history.replaceState({}, '', window.location.pathname);
+
+  // Consultar estado en Wompi API (desde frontend con public key)
+  try {
+    const res = await fetch(`https://production.wompi.co/v1/transactions?reference=${ref}`, {
+      headers: { 'Authorization': `Bearer ${WOMPI_PUBLIC_KEY}` }
+    });
+    const data = await res.json();
+    const tx = data?.data?.[0];
+    
+    if(tx?.status === 'APPROVED') {
+      // Actualizar en Supabase
+      await sb.from('pagos').update({ 
+        estado: 'APPROVED', 
+        wompi_id: tx.id,
+        updated_at: new Date().toISOString()
+      }).eq('referencia', ref);
+      
+      toast('✅ ¡Pago aprobado!', 'success');
+    } else if(tx) {
+      toast(`Estado del pago: ${tx.status}`, 'info');
+    }
+  } catch(e) { console.log('verificar wompi:', e); }
+}
+
 // Service Worker desactivado — no compatible con dominios externos (Supabase)
 if('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => {
@@ -1282,6 +1397,7 @@ async function init() {
     const { data: { session } } = await sb.auth.getSession();
     document.getElementById('loading').style.display = 'none';
 
+    verificarRetornoWompi();
     if(session) {
       usuarioActual = session.user;
       await cargarPerfil();
