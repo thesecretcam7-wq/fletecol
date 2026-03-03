@@ -1287,41 +1287,36 @@ async function prepararWompi() {
     await registrarPagoPendiente(referencia, monto);
     const integrity = await generarIntegridad(referencia, montoCentavos);
 
-    console.log('integrity:', integrity, 'monto:', montoCentavos, 'ref:', referencia);
+    console.log('✅ integrity:', integrity);
+    console.log('✅ monto centavos:', montoCentavos);
+    console.log('✅ referencia:', referencia);
 
-    // Inyectar el botón oficial de Wompi (widget embebido)
-    const wrap = document.getElementById('wompi-form-wrap');
-    wrap.style.display = 'block';
-    document.getElementById('wompi-btn-wrap').style.display = 'none';
+    // Construir URL y redirigir directamente (más confiable que popup)
+    const params = new URLSearchParams();
+    params.set('public-key', WOMPI_PUBLIC_KEY);
+    params.set('currency', 'COP');
+    params.set('amount-in-cents', String(montoCentavos));
+    params.set('reference', referencia);
+    params.set('integrity', integrity);
+    params.set('redirect-url', redirectUrl);
+    params.set('customer-data:email', perfilActual.email || '');
+    params.set('customer-data:full-name', ((perfilActual.nombre||'')+' '+(perfilActual.apellido||'')).trim());
+    params.set('customer-data:phone-number', perfilActual.telefono || '');
 
-    wrap.innerHTML = `
-      <form id="wompi-form">
-        <script
-          src="https://checkout.wompi.co/widget.js"
-          data-render="button"
-          data-public-key="${WOMPI_PUBLIC_KEY}"
-          data-currency="COP"
-          data-amount-in-cents="${montoCentavos}"
-          data-reference="${referencia}"
-          data-integrity="${integrity}"
-          data-redirect-url="${redirectUrl}"
-          data-customer-data:email="${perfilActual.email || ''}"
-          data-customer-data:full-name="${(perfilActual.nombre||'')+' '+(perfilActual.apellido||'')}"
-          data-customer-data:phone-number="${perfilActual.telefono || ''}"
-        ><\/script>
-      </form>`;
+    const wompiUrl = `https://checkout.wompi.co/p/?${params.toString()}`;
+    console.log('✅ URL final:', wompiUrl);
 
-    escucharRetornoWompi(referencia);
+    // Redirigir en la misma pestaña — más confiable que popup
+    window.location.href = wompiUrl;
 
   } catch(e) {
     console.error(e);
-    toast('Error preparando el pago', 'error');
+    toast('Error preparando el pago: ' + e.message, 'error');
     btn.textContent = '🔒 Pagar ahora con Wompi';
     btn.disabled = false;
   }
 }
 
-// Mantener abrirWompi como alias por compatibilidad
 const abrirWompi = prepararWompi;
 
 function calcularMontoPago() {
