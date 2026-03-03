@@ -1524,13 +1524,17 @@ document.addEventListener('visibilitychange', async () => {
   try {
     const { data: refreshData, error: refreshError } = await sb.auth.refreshSession();
     if(refreshError || !refreshData?.session) {
-      console.log('No se pudo refrescar sesión — recargando');
+      console.log('No se pudo refrescar — recargando');
       window.location.reload();
       return;
     }
-    console.log('Sesión refrescada OK, expires:', new Date(refreshData.session.expires_at * 1000).toLocaleTimeString());
-    // Actualizar usuarioActual con el nuevo token
+    // Forzar que el cliente use el nuevo token
+    await sb.auth.setSession({
+      access_token: refreshData.session.access_token,
+      refresh_token: refreshData.session.refresh_token
+    });
     usuarioActual = refreshData.session.user;
+    console.log('Sesión refrescada y aplicada OK');
   } catch(e) {
     console.log('Error refrescando sesión:', e.message);
     window.location.reload();
