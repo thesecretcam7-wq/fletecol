@@ -1520,17 +1520,19 @@ document.addEventListener('visibilitychange', async () => {
     return;
   }
 
-  // SIEMPRE refrescar la sesión al volver — es lo más importante
+  // SIEMPRE refrescar la sesión al volver
   try {
-    const { data: { session }, error } = await sb.auth.getSession();
-    if(error || !session) {
-      console.log('Sesión perdida — recargando');
+    const { data: refreshData, error: refreshError } = await sb.auth.refreshSession();
+    if(refreshError || !refreshData?.session) {
+      console.log('No se pudo refrescar sesión — recargando');
       window.location.reload();
       return;
     }
-    // Forzar refresh del token para asegurar que no esté expirado
-    await sb.auth.refreshSession();
+    console.log('Sesión refrescada OK, expires:', new Date(refreshData.session.expires_at * 1000).toLocaleTimeString());
+    // Actualizar usuarioActual con el nuevo token
+    usuarioActual = refreshData.session.user;
   } catch(e) {
+    console.log('Error refrescando sesión:', e.message);
     window.location.reload();
     return;
   }
