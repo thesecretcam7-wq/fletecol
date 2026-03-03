@@ -3479,7 +3479,22 @@ function addMsg(txt,tipo) {
 }
 
 async function aceptarOfertaReal(monto) {
-  if(perfilActual?.rol !== 'cliente') { toast('Solo el cliente puede aceptar', 'error'); return; }
+  // Si es conductor aceptando contraoferta del cliente, solo confirma
+  // Si es cliente aceptando oferta del conductor, lanza el pago
+  if(perfilActual?.rol === 'conductor') {
+    if(convActual && convActual.id !== 'demo') {
+      await sb.from('conversaciones').update({ precio_acordado: monto }).eq('id', convActual.id);
+      await sb.from('mensajes').insert({
+        conversacion_id: convActual.id,
+        emisor_id: perfilActual.id,
+        contenido: '✅ Precio aceptado: $' + parseInt(monto).toLocaleString('es-CO') + '. El cliente procederá con el pago.',
+        tipo: 'texto'
+      });
+    }
+    actualizarMonto(monto);
+    toast('✅ Precio aceptado. Esperando pago del cliente.', 'success');
+    return;
+  }
   actualizarMonto(monto);
   if(convActual && convActual.id !== 'demo') {
     await sb.from('conversaciones').update({ precio_acordado: monto }).eq('id', convActual.id);
@@ -3523,8 +3538,13 @@ async function prepararWompiConMonto(monto) {
 }
 
 async function hacerOferta() {
-  if(perfilActual?.rol !== 'conductor') { toast('Solo los conductores pueden hacer ofertas', 'error'); return; }
-  const precio=prompt('¿Cuanto cobras por este servicio? (pesos COP)\nEjemplo: 320000');
+  // Conductor hace oferta en carga del cliente
+  // Cliente puede negociar precio en viaje del conductor
+  const esConductor = perfilActual?.rol === 'conductor';
+  const prompt_txt = esConductor
+    ? '¿Cuanto cobras por este servicio? (pesos COP)\nEjemplo: 320000'
+    : '¿Cuanto ofreces por este viaje? (pesos COP)\nEjemplo: 320000';
+  const precio=prompt(prompt_txt);
   if(!precio||isNaN(precio)) return;
   const monto=parseInt(precio);
   if(!convActual || convActual.id === 'demo') {
