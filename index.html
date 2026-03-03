@@ -943,20 +943,18 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
           <div style="font-size:11px;color:var(--texto);line-height:1.7;">1. Pagas → dinero retenido en FleteCOL<br>2. Conductor hace la entrega<br>3. Tú confirmas recibido<br>4. Conductor recibe su 90%</div>
         </div>
 
-        <!-- Wompi Widget -->
+        <!-- Wompi Widget Embebido -->
         <div id="wompi-container" style="margin-top:4px;">
           <div style="font-size:10px;color:var(--texto);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Método de pago</div>
-          <div style="background:rgba(245,196,0,0.05);border:1px solid rgba(245,196,0,0.15);border-radius:11px;padding:12px;margin-bottom:14px;font-size:11px;color:var(--texto);line-height:1.7;">
-            💳 <strong style="color:var(--blanco);">Tarjeta</strong> · 🏦 <strong style="color:var(--blanco);">PSE</strong> · 💵 <strong style="color:var(--blanco);">Efecty</strong> · 📱 <strong style="color:var(--blanco);">Nequi</strong><br>
-            <span style="color:rgba(255,255,255,0.5);">Powered by Wompi · Pago 100% seguro</span>
+          <div id="wompi-btn-wrap" style="display:flex;justify-content:center;">
+            <button class="btn-full" id="pp-btn2" onclick="prepararWompi()" style="margin-top:4px;background:linear-gradient(135deg,#F5C400,#e6a800);color:#080A0F;">
+              🔒 Pagar ahora con Wompi
+            </button>
           </div>
-          <button class="btn-full" id="pp-btn2" onclick="abrirWompi()" style="margin-top:4px;background:linear-gradient(135deg,#F5C400,#e6a800);color:#080A0F;">
-            🔒 Pagar ahora con Wompi
-          </button>
-          <div style="text-align:center;margin-top:10px;">
-            <img src="https://wompi.com/assets/img/badges/badge-secured-wompi.svg" 
-                 onerror="this.style.display='none'" 
-                 style="height:28px;opacity:0.6;" alt="Wompi Seguro">
+          <!-- El formulario de Wompi se inyecta aquí -->
+          <div id="wompi-form-wrap" style="display:none;margin-top:12px;"></div>
+          <div style="text-align:center;margin-top:10px;font-size:10px;color:rgba(255,255,255,0.3);">
+            💳 Tarjeta · 🏦 PSE · 💵 Efecty · 📱 Nequi — Powered by Wompi
           </div>
         </div>
       </div>
@@ -1246,14 +1244,11 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
 // ══ WOMPI CONFIG ══
 const WOMPI_PUBLIC_KEY = 'pub_test_PKG7uFnDqNkrSa6LaITeGmGqQRe8MlCk';
 
-// Obtiene el hash de integridad desde la Edge Function de Supabase (secret nunca expuesto)
+// Obtiene el hash de integridad desde la Edge Function de Supabase
 async function generarIntegridad(referencia, montoCentavos) {
-  // Obtener el token de sesión actual para autenticar la llamada
   const { data: { session } } = await sb.auth.getSession();
   const token = session?.access_token;
 
-  const SUPABASE_URL = sb.supabaseUrl || document.querySelector('script[src*="supabase"]')?.src?.split('/')[2];
-  
   const res = await fetch(`https://sorldaixuzpqlyqdcedi.supabase.co/functions/v1/wompi-integrity`, {
     method: 'POST',
     headers: {
@@ -1269,56 +1264,65 @@ async function generarIntegridad(referencia, montoCentavos) {
     console.error('Error Edge Function:', res.status, txt);
     throw new Error('No se pudo generar la firma de integridad');
   }
-
   const data = await res.json();
   if (!data?.integrity) throw new Error('Integridad vacía');
   return data.integrity;
 }
 
-async function abrirWompi() {
+async function prepararWompi() {
   if(!perfilActual) { toast('Debes iniciar sesión', 'error'); return; }
 
-  // Obtener datos del pago
-  const monto = calcularMontoPago(); // en pesos COP
+  const monto = calcularMontoPago();
   if(!monto || monto < 1000) { toast('Monto inválido', 'error'); return; }
 
-  const montoCentavos = monto * 100; // Wompi usa centavos
-  const referencia = `FLETE-${Date.now()}-${perfilActual.id.slice(0,8)}`;
-  const redirectUrl = window.location.href.split('?')[0] + '?pago=ok&ref=' + referencia;
+  const btn = document.getElementById('pp-btn2');
+  btn.textContent = '⏳ Preparando pago...';
+  btn.disabled = true;
 
-  // Guardar referencia pendiente en Supabase
-  await registrarPagoPendiente(referencia, monto);
+  try {
+    const montoCentavos = monto * 100;
+    const referencia = `FLETE-${Date.now()}-${perfilActual.id.slice(0,8)}`;
+    const redirectUrl = `${window.location.href.split('?')[0]}?pago=ok&ref=${referencia}`;
 
-  // Generar firma de integridad (requerida por Wompi)
-  const integrity = await generarIntegridad(referencia, montoCentavos);
+    await registrarPagoPendiente(referencia, monto);
+    const integrity = await generarIntegridad(referencia, montoCentavos);
 
-  // Construir URL de Wompi Checkout
-  const params = new URLSearchParams({
-    'public-key': WOMPI_PUBLIC_KEY,
-    'currency': 'COP',
-    'amount-in-cents': montoCentavos,
-    'reference': referencia,
-    'integrity': integrity,
-    'redirect-url': redirectUrl,
-    'customer-data:email': perfilActual.email || '',
-    'customer-data:full-name': `${perfilActual.nombre||''} ${perfilActual.apellido||''}`.trim(),
-    'customer-data:phone-number': perfilActual.telefono || '',
-  });
+    console.log('integrity:', integrity, 'monto:', montoCentavos, 'ref:', referencia);
 
-  const wompiUrl = `https://checkout.wompi.co/p/?${params.toString()}`;
-  
-  console.log('🔗 URL Wompi:', wompiUrl);
-  console.log('🔑 Integrity:', integrity);
-  console.log('💰 Monto centavos:', montoCentavos);
-  
-  // Abrir en ventana nueva
-  window.open(wompiUrl, '_blank', 'width=480,height=700,scrollbars=yes');
-  
-  toast('🔗 Se abrió la ventana de pago Wompi', 'info');
-  
-  // Escuchar cuando vuelvan desde Wompi
-  escucharRetornoWompi(referencia);
+    // Inyectar el botón oficial de Wompi (widget embebido)
+    const wrap = document.getElementById('wompi-form-wrap');
+    wrap.style.display = 'block';
+    document.getElementById('wompi-btn-wrap').style.display = 'none';
+
+    wrap.innerHTML = `
+      <form id="wompi-form">
+        <script
+          src="https://checkout.wompi.co/widget.js"
+          data-render="button"
+          data-public-key="${WOMPI_PUBLIC_KEY}"
+          data-currency="COP"
+          data-amount-in-cents="${montoCentavos}"
+          data-reference="${referencia}"
+          data-integrity="${integrity}"
+          data-redirect-url="${redirectUrl}"
+          data-customer-data:email="${perfilActual.email || ''}"
+          data-customer-data:full-name="${(perfilActual.nombre||'')+' '+(perfilActual.apellido||'')}"
+          data-customer-data:phone-number="${perfilActual.telefono || ''}"
+        ><\/script>
+      </form>`;
+
+    escucharRetornoWompi(referencia);
+
+  } catch(e) {
+    console.error(e);
+    toast('Error preparando el pago', 'error');
+    btn.textContent = '🔒 Pagar ahora con Wompi';
+    btn.disabled = false;
+  }
 }
+
+// Mantener abrirWompi como alias por compatibilidad
+const abrirWompi = prepararWompi;
 
 function calcularMontoPago() {
   // Leer el monto del resumen de pago visible
