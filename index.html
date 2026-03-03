@@ -726,7 +726,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
         </div>
         <div class="form-row">
           <div class="form-group"><label class="form-label">⚖️ Capacidad</label><input class="form-input" id="r-capacidad" placeholder="500 kg"></div>
-          <div class="form-group"><label class="form-label">💰 Precio base COP</label><input class="form-input" type="number" id="r-precio" placeholder="350000"></div>
+          <!-- Precio lo pone el conductor via oferta en el chat -->
         </div>
         <div class="form-group"><label class="form-label">📝 Descripción</label><input class="form-input" id="r-desc" placeholder="Tipo de carga que aceptas, condiciones..."></div>
         <div class="aviso"><span>💡</span><span>Tu ruta será visible para clientes de tu zona inmediatamente.</span></div>
@@ -3479,22 +3479,52 @@ function addMsg(txt,tipo) {
 }
 
 async function aceptarOfertaReal(monto) {
+  if(perfilActual?.rol !== 'cliente') { toast('Solo el cliente puede aceptar', 'error'); return; }
   actualizarMonto(monto);
   if(convActual && convActual.id !== 'demo') {
     await sb.from('conversaciones').update({ precio_acordado: monto }).eq('id', convActual.id);
     await sb.from('mensajes').insert({
       conversacion_id: convActual.id,
       emisor_id: perfilActual.id,
-      contenido: `✅ Oferta de $${parseInt(monto).toLocaleString('es-CO')} aceptada. Procede con el pago.`,
+      contenido: '✅ Oferta aceptada. Iniciando pago...',
       tipo: 'texto'
     });
   }
-  addMsg('✅ Oferta aceptada. Cuando pagues te confirmo el servicio.','other');
-  toast('✅ Oferta aceptada','success');
+  toast('✅ Oferta aceptada', 'success');
+  setTimeout(() => prepararWompiConMonto(monto), 800);
+}
+
+async function prepararWompiConMonto(monto) {
+  if(!perfilActual) { toast('Debes iniciar sesion', 'error'); return; }
+  if(!monto || monto < 1000) { toast('Monto invalido', 'error'); return; }
+  toast('⏳ Preparando pago...', 'info');
+  try {
+    const montoCentavos = monto * 100;
+    const referencia = 'FLETE-' + Date.now() + '-' + perfilActual.id.slice(0,8);
+    const redirectUrl = window.location.origin + '/?pago=ok&ref=' + referencia;
+    await registrarPagoPendiente(referencia, monto);
+    const integrity = await generarIntegridad(referencia, montoCentavos);
+    const params = new URLSearchParams();
+    params.set('public-key', WOMPI_PUBLIC_KEY);
+    params.set('currency', 'COP');
+    params.set('amount-in-cents', String(montoCentavos));
+    params.set('reference', referencia);
+    params.set('integrity', integrity);
+    params.set('redirect-url', redirectUrl);
+    params.set('customer-data:email', perfilActual.email || '');
+    params.set('customer-data:full-name', ((perfilActual.nombre||'')+' '+(perfilActual.apellido||'')).trim());
+    params.set('customer-data:phone-number', perfilActual.telefono || '');
+    console.log('✅ integrity:', integrity, 'monto:', montoCentavos);
+    window.location.href = 'https://checkout.wompi.co/p/?' + params.toString();
+  } catch(e) {
+    console.error(e);
+    toast('Error: ' + e.message, 'error');
+  }
 }
 
 async function hacerOferta() {
-  const precio=prompt('¿Cuánto ofreces? (pesos COP)\nEjemplo: 320000');
+  if(perfilActual?.rol !== 'conductor') { toast('Solo los conductores pueden hacer ofertas', 'error'); return; }
+  const precio=prompt('¿Cuanto cobras por este servicio? (pesos COP)\nEjemplo: 320000');
   if(!precio||isNaN(precio)) return;
   const monto=parseInt(precio);
   if(!convActual || convActual.id === 'demo') {
