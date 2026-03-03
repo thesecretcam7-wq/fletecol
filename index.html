@@ -1500,7 +1500,7 @@ document.addEventListener('visibilitychange', async () => {
     // Guardar estado importante antes de irse
     if(convActual) localStorage.setItem('fl_conv', JSON.stringify(convActual));
     if(montoAcordado) localStorage.setItem('fl_monto', String(montoAcordado));
-    const pantallaActiva = document.querySelector('.screen.active')?.id || '';
+    const pantallaActiva = document.querySelector('.screen.activa')?.id || '';
     if(pantallaActiva) localStorage.setItem('fl_pantalla', pantallaActiva);
     return;
   }
@@ -1524,30 +1524,29 @@ document.addEventListener('visibilitychange', async () => {
   try {
     const { data: refreshData, error: refreshError } = await sb.auth.refreshSession();
     if(refreshError || !refreshData?.session) {
-      console.log('No se pudo refrescar — recargando');
-      window.location.reload();
+      console.log('No se pudo refrescar sesión, esperando reconexión automática...');
+      // No recargar — dejar que Supabase reconecte solo
       return;
     }
-    // Forzar que el cliente use el nuevo token
-    await sb.auth.setSession({
-      access_token: refreshData.session.access_token,
-      refresh_token: refreshData.session.refresh_token
-    });
     usuarioActual = refreshData.session.user;
-    console.log('Sesión refrescada y aplicada OK');
+    console.log('Sesión refrescada OK');
   } catch(e) {
     console.log('Error refrescando sesión:', e.message);
-    window.location.reload();
+    // No recargar — evitar loop de recargas
     return;
   }
 
   // Reset flags
   cargandoRutas = false;
 
-  // Reconectar Realtime
+  // Reconectar Realtime con limpieza adecuada
   if(convActual?.id && perfilActual) {
-    if(chatSub) { try { sb.removeChannel(chatSub); } catch(e) {} chatSub = null; }
-    suscribirMensajes(convActual.id);
+    if(chatSub) {
+      try { await sb.removeChannel(chatSub); } catch(e) {}
+      chatSub = null;
+    }
+    // Pequeño delay para que el canal anterior se limpie
+    setTimeout(() => suscribirMensajes(convActual.id), 300);
   }
 
   // Reenviar pendientes
@@ -1577,8 +1576,8 @@ document.addEventListener('visibilitychange', async () => {
     localStorage.removeItem('fl_pantalla');
     const el = document.getElementById(pantalla);
     if(el) {
-      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-      el.classList.add('active');
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('activa'));
+      el.classList.add('activa');
       // Recargar datos de la pantalla
       if(pantalla === 'p-buscar') { cargandoRutas = false; buscarRutas(); }
       if(pantalla === 'p-chat') { await cargarConversaciones(convActual?.id); }
