@@ -1243,6 +1243,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
 // Registrar Service Worker
 // ══ WOMPI CONFIG ══
 const WOMPI_PUBLIC_KEY = 'pub_test_PKG7uFnDqNkrSa6LaITeGmGqQRe8MlCk';
+let montoAcordado = 0;
 
 // Obtiene el hash de integridad desde la Edge Function de Supabase
 async function generarIntegridad(referencia, montoCentavos) {
@@ -1272,7 +1273,7 @@ async function generarIntegridad(referencia, montoCentavos) {
 async function prepararWompi() {
   if(!perfilActual) { toast('Debes iniciar sesión', 'error'); return; }
 
-  const monto = calcularMontoPago();
+  const monto = montoAcordado || calcularMontoPago();
   if(!monto || monto < 1000) { toast('Monto inválido', 'error'); return; }
 
   const btn = document.getElementById('pp-btn2');
@@ -3577,6 +3578,7 @@ function aceptarOf(monto){
 }
 
 function actualizarMonto(m){
+  montoAcordado = m;
   const conductor = Math.round(m * 0.9);        // 90% al conductor
   const wompi     = Math.round(m * 0.029);       // 2.9% Wompi
   const fletecol  = Math.round(m * 0.1) - wompi; // 10% menos Wompi
