@@ -1246,6 +1246,18 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
 // ══ WOMPI CONFIG ══
 const WOMPI_PUBLIC_KEY = 'pub_test_PKG7uFnDqNkrSa6LaITeGmGqQRe8MlCk';
 
+// Obtiene el hash de integridad desde la Edge Function de Supabase (secret nunca expuesto)
+async function generarIntegridad(referencia, montoCentavos) {
+  const { data, error } = await sb.functions.invoke('wompi-integrity', {
+    body: { referencia, montoCentavos }
+  });
+  if (error || !data?.integrity) {
+    console.error('Error generando integridad:', error);
+    throw new Error('No se pudo generar la firma de integridad');
+  }
+  return data.integrity;
+}
+
 async function abrirWompi() {
   if(!perfilActual) { toast('Debes iniciar sesión', 'error'); return; }
 
@@ -1260,12 +1272,16 @@ async function abrirWompi() {
   // Guardar referencia pendiente en Supabase
   await registrarPagoPendiente(referencia, monto);
 
+  // Generar firma de integridad (requerida por Wompi)
+  const integrity = await generarIntegridad(referencia, montoCentavos);
+
   // Construir URL de Wompi Checkout
   const params = new URLSearchParams({
     'public-key': WOMPI_PUBLIC_KEY,
     'currency': 'COP',
     'amount-in-cents': montoCentavos,
     'reference': referencia,
+    'integrity': integrity,
     'redirect-url': redirectUrl,
     'customer-data:email': perfilActual.email || '',
     'customer-data:full-name': `${perfilActual.nombre||''} ${perfilActual.apellido||''}`.trim(),
