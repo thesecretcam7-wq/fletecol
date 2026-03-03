@@ -1494,6 +1494,33 @@ async function init() {
 // Guardar timestamp cuando la pestaña se oculta
 let tabHiddenAt = null;
 
+// ══ RECONEXIÓN COMPLETA DE REALTIME ══
+// Cuando el navegador mata el WebSocket (cambio de pestaña, pérdida de red),
+// hay que desconectar el transporte entero y reconectar desde cero.
+let reconectando = false;
+async function reconectarRealtime(motivo) {
+  if(reconectando) { console.log('Ya reconectando, ignorando:', motivo); return; }
+  if(!perfilActual) return;
+  reconectando = true;
+  console.log('Reconectando Realtime:', motivo);
+  try {
+    chatSub = null;
+    estadoSub = null;
+    sb.removeAllChannels();
+    sb.realtime.disconnect();
+    await new Promise(r => setTimeout(r, 300));
+    sb.realtime.connect();
+    await new Promise(r => setTimeout(r, 600));
+    if(usuarioActual) suscribirEstado();
+    if(convActual?.id) suscribirMensajes(convActual.id);
+    console.log('Reconexión completada:', motivo);
+  } catch(e) {
+    console.error('Error en reconexión:', e);
+  } finally {
+    reconectando = false;
+  }
+}
+
 document.addEventListener('visibilitychange', async () => {
   if(document.visibilityState === 'hidden') {
     tabHiddenAt = Date.now();
@@ -1510,6 +1537,7 @@ document.addEventListener('visibilitychange', async () => {
 
   const segundosOculto = tabHiddenAt ? (Date.now() - tabHiddenAt) / 1000 : 0;
   tabHiddenAt = null;
+  console.log(`Pestaña activa de nuevo (oculta ${Math.round(segundosOculto)}s)`);
 
   // Verificar si volvemos de Wompi
   const wompiRef = sessionStorage.getItem('wompi_ref');
@@ -1520,37 +1548,28 @@ document.addEventListener('visibilitychange', async () => {
     return;
   }
 
-  // SIEMPRE refrescar la sesión al volver
+  // 1. Refrescar sesión auth
   try {
     const { data: refreshData, error: refreshError } = await sb.auth.refreshSession();
     if(refreshError || !refreshData?.session) {
-      console.log('No se pudo refrescar sesión, esperando reconexión automática...');
-      // No recargar — dejar que Supabase reconecte solo
+      console.log('No se pudo refrescar sesión:', refreshError?.message);
       return;
     }
     usuarioActual = refreshData.session.user;
-    console.log('Sesión refrescada OK');
+    console.log('Sesión auth refrescada OK');
   } catch(e) {
     console.log('Error refrescando sesión:', e.message);
-    // No recargar — evitar loop de recargas
     return;
   }
 
   // Reset flags
   cargandoRutas = false;
 
-  // Reconectar Realtime con limpieza adecuada
-  if(convActual?.id && perfilActual) {
-    if(chatSub) {
-      try { await sb.removeChannel(chatSub); } catch(e) {}
-      chatSub = null;
-    }
-    // Pequeño delay para que el canal anterior se limpie
-    setTimeout(() => suscribirMensajes(convActual.id), 300);
-  }
+  // 2. Forzar reconexión completa del WebSocket Realtime
+  await reconectarRealtime('tab-visible después de ' + Math.round(segundosOculto) + 's');
 
-  // Reenviar pendientes
-  setTimeout(async () => { await enviarPendientes(); }, 500);
+  // 3. Reenviar mensajes pendientes
+  setTimeout(async () => { await enviarPendientes(); }, 800);
 });
 
 // Al cargar la página, restaurar pantalla y estado si venimos de recarga
@@ -1585,15 +1604,38 @@ document.addEventListener('visibilitychange', async () => {
   }
 })();
 
-// Keepalive: solo reconectar si el canal está realmente caído
+// Keepalive: verificar salud del WebSocket y reconectar si hace falta
 setInterval(async () => {
   if(document.visibilityState !== 'visible') return;
-  if(!convActual?.id || !perfilActual) return;
-  // Solo reconectar si no hay canal activo
-  if(!chatSub) {
+  if(!perfilActual) return;
+
+  const socketState = sb.realtime?.conn?.readyState;
+  if(socketState !== 1 && socketState !== 0) {
+    await reconectarRealtime('keepalive — socket muerto (state:' + socketState + ')');
+    return;
+  }
+
+  // Si el socket está vivo pero no hay canal de chat activo, re-suscribir
+  if(convActual?.id && !chatSub) {
     suscribirMensajes(convActual.id);
   }
-}, 30000);
+}, 15000);
+
+// Reconectar cuando el navegador recupera conexión a internet
+window.addEventListener('online', async () => {
+  console.log('Navegador reporta conexión restaurada');
+  if(!perfilActual) return;
+  await new Promise(r => setTimeout(r, 1000));
+  try {
+    const { data: refreshData } = await sb.auth.refreshSession();
+    if(refreshData?.session) {
+      usuarioActual = refreshData.session.user;
+      await reconectarRealtime('red restaurada');
+    }
+  } catch(e) {
+    console.error('Error reconectando post-online:', e);
+  }
+});
 
 // Reintentar mensajes pendientes cada 5 segundos
 setInterval(async () => {
@@ -1635,9 +1677,10 @@ async function verificarEstadoManual() {
 // Escucha en tiempo real si el admin cambia el estado del usuario
 function suscribirEstado() {
   if(!usuarioActual) return;
-  if(estadoSub) { sb.removeChannel(estadoSub); }
+  if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e) {} estadoSub = null; }
 
-  estadoSub = sb.channel('estado-usuario-' + usuarioActual.id)
+  const channelName = 'estado-usuario-' + usuarioActual.id + '-' + Date.now();
+  estadoSub = sb.channel(channelName)
     .on('postgres_changes', {
       event: 'UPDATE',
       schema: 'public',
@@ -1664,7 +1707,13 @@ function suscribirEstado() {
         ir('s-pendiente');
       }
     })
-    .subscribe();
+    .subscribe((status) => {
+      console.log('Estado realtime:', status, '(canal:', channelName, ')');
+      if(status === 'CHANNEL_ERROR') {
+        console.warn('Canal estado en error, reintentando en 3s...');
+        setTimeout(() => suscribirEstado(), 3000);
+      }
+    });
 }
 
 async function redirigirSegunEstado() {
@@ -3349,8 +3398,9 @@ function renderMensaje(m) {
 }
 
 function suscribirMensajes(convId) {
-  if(chatSub) { sb.removeChannel(chatSub); chatSub = null; }
-  chatSub = sb.channel('chat-conv-' + convId, { config: { broadcast: { self: false } } })
+  if(chatSub) { try { sb.removeChannel(chatSub); } catch(e) {} chatSub = null; }
+  const channelName = 'chat-conv-' + convId + '-' + Date.now();
+  chatSub = sb.channel(channelName, { config: { broadcast: { self: false } } })
     .on('postgres_changes', {
       event: 'INSERT',
       schema: 'public',
@@ -3365,7 +3415,11 @@ function suscribirMensajes(convId) {
       await cargarConversaciones(convActual?.id);
     })
     .subscribe((status) => {
-      console.log('Realtime status:', status);
+      console.log('Chat realtime:', status, '(canal:', channelName, ')');
+      if(status === 'CHANNEL_ERROR') {
+        console.warn('Canal chat en error, reintentando en 3s...');
+        setTimeout(() => { if(convActual?.id) suscribirMensajes(convActual.id); }, 3000);
+      }
     });
 }
 
