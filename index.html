@@ -1511,6 +1511,9 @@ document.addEventListener('visibilitychange', async () => {
       setTimeout(() => verificarRetornoWompi(), 1000);
     }
 
+    // Reset flag de carga para que no quede bloqueado
+    cargandoRutas = false;
+
     // Solo reconectar el canal si ya hay una conversación activa
     if(convActual?.id && perfilActual) {
       if(chatSub) {
@@ -2544,6 +2547,7 @@ async function cargarRutas() {
     cargas = resCargas.data || [];
   } catch(e) {
     console.error('Error cargando rutas/cargas:', e);
+    cargandoRutas = false;
     list.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Error cargando</div><div class="empty-sub">Revisa tu conexión e intenta de nuevo.</div></div>';
     return;
   }
