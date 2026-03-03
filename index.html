@@ -1533,6 +1533,11 @@ document.addEventListener('visibilitychange', async () => {
     }
 
     if(convActual?.id) {
+      // Forzar reconexión completa del canal Realtime
+      if(chatSub) {
+        try { await sb.removeChannel(chatSub); } catch(e) {}
+        chatSub = null;
+      }
       suscribirMensajes(convActual.id);
       await cargarConversaciones(convActual?.id);
     }
