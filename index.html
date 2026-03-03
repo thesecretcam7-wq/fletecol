@@ -1491,45 +1491,86 @@ async function init() {
 }
 
 // Reconectar chat cuando la página vuelve a estar activa
+// Guardar timestamp cuando la pestaña se oculta
+let tabHiddenAt = null;
+
 document.addEventListener('visibilitychange', async () => {
+  if(document.visibilityState === 'hidden') {
+    tabHiddenAt = Date.now();
+    // Guardar estado importante antes de irse
+    if(convActual) localStorage.setItem('fl_conv', JSON.stringify(convActual));
+    if(montoAcordado) localStorage.setItem('fl_monto', String(montoAcordado));
+    const pantallaActiva = document.querySelector('.screen.active')?.id || '';
+    if(pantallaActiva) localStorage.setItem('fl_pantalla', pantallaActiva);
+    return;
+  }
+
+  // Al volver a la pestaña
   if(document.visibilityState !== 'visible') return;
+
+  const segundosOculto = tabHiddenAt ? (Date.now() - tabHiddenAt) / 1000 : 0;
+  tabHiddenAt = null;
+
+  // Verificar si volvemos de Wompi (siempre, independiente del tiempo)
+  const wompiRef = sessionStorage.getItem('wompi_ref');
+  if(wompiRef) {
+    sessionStorage.removeItem('wompi_ref');
+    sessionStorage.removeItem('wompi_monto');
+    setTimeout(() => verificarRetornoWompi(), 500);
+    return;
+  }
+
+  // Si estuvo oculta más de 25 segundos — recargar para evitar conexiones colgadas
+  if(segundosOculto > 25) {
+    console.log('Tab oculta ' + segundosOculto + 's — recargando...');
+    window.location.reload();
+    return;
+  }
+
+  // Si estuvo poco tiempo — solo reconectar Realtime
   try {
-    // Solo reconectar Realtime — NO recargar perfil ni conversaciones
-    // para evitar duplicados y romper la navegación
-
-    // Restaurar montoAcordado si se perdió
-    if(!montoAcordado) {
-      const savedMonto = sessionStorage.getItem('wompi_monto');
-      if(savedMonto) montoAcordado = parseInt(savedMonto);
-    }
-
-    // Verificar si volvemos de un pago Wompi
-    const wompiRef = sessionStorage.getItem('wompi_ref');
-    if(wompiRef) {
-      sessionStorage.removeItem('wompi_ref');
-      sessionStorage.removeItem('wompi_monto');
-      setTimeout(() => verificarRetornoWompi(), 1000);
-    }
-
-    // Reset flag de carga para que no quede bloqueado
     cargandoRutas = false;
-
-    // Solo reconectar el canal si ya hay una conversación activa
     if(convActual?.id && perfilActual) {
-      if(chatSub) {
-        try { sb.removeChannel(chatSub); } catch(e) {}
-        chatSub = null;
-      }
+      if(chatSub) { try { sb.removeChannel(chatSub); } catch(e) {} chatSub = null; }
       suscribirMensajes(convActual.id);
     }
-
-    // Reenviar mensajes pendientes
-    setTimeout(async () => { await enviarPendientes(); }, 1500);
-
+    setTimeout(async () => { await enviarPendientes(); }, 1000);
   } catch(e) {
     console.log('Reconexion:', e);
   }
 });
+
+// Al cargar la página, restaurar pantalla y estado si venimos de recarga
+(async function restaurarEstado() {
+  await new Promise(r => setTimeout(r, 800)); // esperar que el perfil cargue
+  if(!perfilActual) return;
+
+  const pantalla = localStorage.getItem('fl_pantalla');
+  const savedMonto = localStorage.getItem('fl_monto');
+  const savedConv = localStorage.getItem('fl_conv');
+
+  if(savedMonto) { montoAcordado = parseInt(savedMonto); localStorage.removeItem('fl_monto'); }
+
+  if(savedConv) {
+    try {
+      convActual = JSON.parse(savedConv);
+      localStorage.removeItem('fl_conv');
+      if(convActual?.id) suscribirMensajes(convActual.id);
+    } catch(e) {}
+  }
+
+  if(pantalla) {
+    localStorage.removeItem('fl_pantalla');
+    const el = document.getElementById(pantalla);
+    if(el) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      el.classList.add('active');
+      // Recargar datos de la pantalla
+      if(pantalla === 'p-buscar') { cargandoRutas = false; buscarRutas(); }
+      if(pantalla === 'p-chat') { await cargarConversaciones(convActual?.id); }
+    }
+  }
+})();
 
 // Keepalive: reconectar realtime cada 30s si hay conv activa
 setInterval(async () => {
