@@ -1511,7 +1511,7 @@ document.addEventListener('visibilitychange', async () => {
   const segundosOculto = tabHiddenAt ? (Date.now() - tabHiddenAt) / 1000 : 0;
   tabHiddenAt = null;
 
-  // Verificar si volvemos de Wompi (siempre, independiente del tiempo)
+  // Verificar si volvemos de Wompi
   const wompiRef = sessionStorage.getItem('wompi_ref');
   if(wompiRef) {
     sessionStorage.removeItem('wompi_ref');
@@ -1520,24 +1520,32 @@ document.addEventListener('visibilitychange', async () => {
     return;
   }
 
-  // Si estuvo oculta más de 25 segundos — recargar para evitar conexiones colgadas
-  if(segundosOculto > 25) {
-    console.log('Tab oculta ' + segundosOculto + 's — recargando...');
+  // SIEMPRE refrescar la sesión al volver — es lo más importante
+  try {
+    const { data: { session }, error } = await sb.auth.getSession();
+    if(error || !session) {
+      console.log('Sesión perdida — recargando');
+      window.location.reload();
+      return;
+    }
+    // Forzar refresh del token para asegurar que no esté expirado
+    await sb.auth.refreshSession();
+  } catch(e) {
     window.location.reload();
     return;
   }
 
-  // Si estuvo poco tiempo — solo reconectar Realtime
-  try {
-    cargandoRutas = false;
-    if(convActual?.id && perfilActual) {
-      if(chatSub) { try { sb.removeChannel(chatSub); } catch(e) {} chatSub = null; }
-      suscribirMensajes(convActual.id);
-    }
-    setTimeout(async () => { await enviarPendientes(); }, 1000);
-  } catch(e) {
-    console.log('Reconexion:', e);
+  // Reset flags
+  cargandoRutas = false;
+
+  // Reconectar Realtime
+  if(convActual?.id && perfilActual) {
+    if(chatSub) { try { sb.removeChannel(chatSub); } catch(e) {} chatSub = null; }
+    suscribirMensajes(convActual.id);
   }
+
+  // Reenviar pendientes
+  setTimeout(async () => { await enviarPendientes(); }, 500);
 });
 
 // Al cargar la página, restaurar pantalla y estado si venimos de recarga
