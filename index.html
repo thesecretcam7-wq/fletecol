@@ -1493,8 +1493,32 @@ async function init() {
 // Reconectar chat cuando la página vuelve a estar activa
 document.addEventListener('visibilitychange', async () => {
   if(document.visibilityState !== 'visible') return;
-  if(!perfilActual) return;
   try {
+    // Restaurar sesión de Supabase si se perdió
+    if(!perfilActual) {
+      const { data: { session } } = await sb.auth.getSession();
+      if(session) {
+        usuarioActual = session.user;
+        await cargarPerfil();
+      } else {
+        return;
+      }
+    }
+
+    // Restaurar montoAcordado si se perdió
+    if(!montoAcordado) {
+      const savedMonto = sessionStorage.getItem('wompi_monto');
+      if(savedMonto) montoAcordado = parseInt(savedMonto);
+    }
+
+    // Verificar si volvemos de un pago Wompi
+    const wompiRef = sessionStorage.getItem('wompi_ref');
+    if(wompiRef) {
+      sessionStorage.removeItem('wompi_ref');
+      sessionStorage.removeItem('wompi_monto');
+      setTimeout(() => verificarRetornoWompi(), 1000);
+    }
+
     // Restaurar convActual si se perdió
     if(!convActual) {
       const saved = sessionStorage.getItem('convActual');
@@ -1507,16 +1531,16 @@ document.addEventListener('visibilitychange', async () => {
         mostrarHeaderChat(nombre, convActual.origen, convActual.destino, convActual.precio_acordado||0, false);
       }
     }
-      if(convActual?.id) {
+
+    if(convActual?.id) {
       suscribirMensajes(convActual.id);
       await cargarConversaciones(convActual?.id);
     }
-    // Esperar 1.5s a que Supabase reconecte, luego reenviar pendientes
-    setTimeout(async () => {
-      await enviarPendientes();
-    }, 1500);
+
+    setTimeout(async () => { await enviarPendientes(); }, 1500);
+
   } catch(e) {
-    console.log('Reconexión:', e);
+    console.log('Reconexion:', e);
   }
 });
 
@@ -3523,6 +3547,7 @@ async function prepararWompiConMonto(monto) {
     console.log('✅ integrity:', integrity, 'monto:', montoCentavos, 'ref:', referencia);
     sessionStorage.setItem('wompi_ref', referencia);
     sessionStorage.setItem('wompi_monto', String(monto));
+    if(convActual) sessionStorage.setItem('convActual', JSON.stringify(convActual));
 
     // Mostrar modal con widget embebido
     const modal = document.createElement('div');
