@@ -1307,6 +1307,10 @@ async function abrirWompi() {
 
   const wompiUrl = `https://checkout.wompi.co/p/?${params.toString()}`;
   
+  console.log('🔗 URL Wompi:', wompiUrl);
+  console.log('🔑 Integrity:', integrity);
+  console.log('💰 Monto centavos:', montoCentavos);
+  
   // Abrir en ventana nueva
   window.open(wompiUrl, '_blank', 'width=480,height=700,scrollbars=yes');
   
