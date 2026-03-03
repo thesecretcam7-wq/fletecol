@@ -3520,21 +3520,48 @@ async function prepararWompiConMonto(monto) {
     const redirectUrl = window.location.origin + '/?pago=ok&ref=' + referencia;
     await registrarPagoPendiente(referencia, monto);
     const integrity = await generarIntegridad(referencia, montoCentavos);
-    const params = new URLSearchParams();
-    params.set('public-key', WOMPI_PUBLIC_KEY);
-    params.set('currency', 'COP');
-    params.set('amount-in-cents', String(montoCentavos));
-    params.set('reference', referencia);
-    params.set('integrity', integrity);
-    params.set('redirect-url', redirectUrl);
-    params.set('customer-data:email', perfilActual.email || '');
-    params.set('customer-data:full-name', ((perfilActual.nombre||'')+' '+(perfilActual.apellido||'')).trim());
-    params.set('customer-data:phone-number', perfilActual.telefono || '');
     console.log('✅ integrity:', integrity, 'monto:', montoCentavos, 'ref:', referencia);
-    // Guardar referencia para verificar al volver
     sessionStorage.setItem('wompi_ref', referencia);
     sessionStorage.setItem('wompi_monto', String(monto));
-    window.location.href = 'https://checkout.wompi.co/p/?' + params.toString();
+
+    // Mostrar modal con widget embebido
+    const modal = document.createElement('div');
+    modal.id = 'wompi-modal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
+
+    const modalInner = document.createElement('div');
+    modalInner.style.cssText = 'background:#fff;border-radius:16px;padding:24px;max-width:480px;width:95%;max-height:90vh;overflow-y:auto;position:relative;';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '✕';
+    closeBtn.style.cssText = 'position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;';
+    closeBtn.onclick = function() { document.getElementById('wompi-modal').remove(); };
+
+    const container = document.createElement('div');
+    container.id = 'wompi-widget-container';
+
+    modalInner.appendChild(closeBtn);
+    modalInner.appendChild(container);
+    modal.appendChild(modalInner);
+    document.body.appendChild(modal);
+
+    // Cargar widget con createElement (funciona a diferencia de innerHTML)
+    const form = document.createElement('form');
+    const script = document.createElement('script');
+    script.src = 'https://checkout.wompi.co/widget.js';
+    script.setAttribute('data-render', 'button');
+    script.setAttribute('data-public-key', WOMPI_PUBLIC_KEY);
+    script.setAttribute('data-currency', 'COP');
+    script.setAttribute('data-amount-in-cents', String(montoCentavos));
+    script.setAttribute('data-reference', referencia);
+    script.setAttribute('data-integrity', integrity);
+    script.setAttribute('data-redirect-url', redirectUrl);
+    script.setAttribute('data-customer-data:email', perfilActual.email || '');
+    script.setAttribute('data-customer-data:full-name', ((perfilActual.nombre||'')+' '+(perfilActual.apellido||'')).trim());
+    script.setAttribute('data-customer-data:phone-number', perfilActual.telefono || '');
+    form.appendChild(script);
+    document.getElementById('wompi-widget-container').appendChild(form);
+
   } catch(e) {
     console.error(e);
     toast('Error: ' + e.message, 'error');
