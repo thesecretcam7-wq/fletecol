@@ -1739,7 +1739,7 @@ async function cargarPerfil() {
     if(data) {
       perfilActual = data;
       actualizarUIperfil();
-      if(!data.notificacion_vista) {
+      if(data.notificacion_vista === false || data.notificacion_vista === null) {
         if(data.estado === 'aprobado') mostrarBannerEstado('aprobado', data.nombre);
         if(data.estado === 'rechazado') mostrarBannerEstado('rechazado', data.nombre, data.motivo_rechazo);
       }
@@ -1786,7 +1786,8 @@ function mostrarBannerEstado(estado, nombre, motivo) {
 
 async function marcarNotificacionVista() {
   if(!perfilActual) return;
-  await sb.from('usuarios').update({ notificacion_vista: true }).eq('id', perfilActual.id);
+  const { error } = await sb.from('usuarios').update({ notificacion_vista: true }).eq('id', perfilActual.id);
+  if(error) console.error('Error marcarNotificacionVista:', error.message, error.details);
 }
 
 function actualizarUIperfil() {
@@ -2189,7 +2190,8 @@ async function registrar() {
   if(fotoPerfilFile) {
     const fotoPerfil = await subirFotoPerfil(data.user.id);
     if(fotoPerfil) {
-      await sb.from('usuarios').update({ foto_perfil: fotoPerfil }).eq('auth_id', data.user.id);
+      const { error: errFoto } = await sb.from('usuarios').update({ foto_perfil: fotoPerfil }).eq('auth_id', data.user.id);
+      if(errFoto) console.error('Error update foto registro:', errFoto.message, errFoto.details);
     }
   }
 
@@ -2290,7 +2292,7 @@ async function enviarDocumentos() {
 
   try {
     if(authIdTemporal) {
-      await sb.from('usuarios').update({
+      const { error: errDocs } = await sb.from('usuarios').update({
         doc_cedula_frontal:   docsSubidos.cedula_frontal,
         doc_cedula_posterior: docsSubidos.cedula_posterior,
         doc_selfie:           docsSubidos.selfie_cedula,
@@ -2299,6 +2301,7 @@ async function enviarDocumentos() {
         doc_soat:             docsSubidos.soat,
         estado:               'pendiente'
       }).eq('auth_id', authIdTemporal);
+      if(errDocs) console.error('Error update docs:', errDocs.message, errDocs.details);
     }
 
     btn.disabled = false;
@@ -2379,7 +2382,8 @@ async function actualizarFotoPerfil(input) {
   toast('📸 Subiendo foto...', 'info');
   const { error } = await sb.storage.from('documentos').upload(path, file, { upsert: true });
   if(error) { toast('Error: ' + error.message, 'error'); return; }
-  await sb.from('usuarios').update({ foto_perfil: path }).eq('auth_id', session.user.id);
+  const { error: errFoto } = await sb.from('usuarios').update({ foto_perfil: path }).eq('auth_id', session.user.id);
+  if(errFoto) console.error('Error update foto perfil:', errFoto.message, errFoto.details);
   if(perfilActual) perfilActual.foto_perfil = path;
   const url = await cargarFotoPerfilURL(path);
   // Update all avatar spots
@@ -3012,13 +3016,14 @@ async function enviarCambioVehiculo() {
   if(!cvDocs.cv_foto1 || !cvDocs.cv_foto2 || !cvDocs.cv_soat) { errEl.textContent='Sube las 3 fotos requeridas'; errEl.style.display='block'; return; }
   // Guardar solicitud en Supabase
   if(perfilActual) {
-    await sb.from('usuarios').update({
+    const { error: errVeh } = await sb.from('usuarios').update({
       vehiculo_pendiente:      cvVehSel,
       placa_pendiente:         placa,
       doc_foto_vehiculo_nuevo: cvDocs.cv_foto1,
       doc_foto_vehiculo2_nuevo:cvDocs.cv_foto2,
       doc_soat_nuevo:          cvDocs.cv_soat,
     }).eq('id', perfilActual.id);
+    if(errVeh) { console.error('Error update vehículo:', errVeh.message, errVeh.details); toast('Error: ' + errVeh.message, 'error'); return; }
   }
   document.querySelector('div[style*="position:fixed"]')?.remove();
   toast('✅ Solicitud enviada. El equipo revisará tu vehículo en 24 horas.', 'success');
