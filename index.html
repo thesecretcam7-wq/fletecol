@@ -1572,11 +1572,14 @@ document.addEventListener('visibilitychange', async () => {
   }
 })();
 
-// Keepalive: reconectar realtime cada 30s si hay conv activa
+// Keepalive: solo reconectar si el canal está realmente caído
 setInterval(async () => {
   if(document.visibilityState !== 'visible') return;
   if(!convActual?.id || !perfilActual) return;
-  suscribirMensajes(convActual.id);
+  // Solo reconectar si no hay canal activo
+  if(!chatSub) {
+    suscribirMensajes(convActual.id);
+  }
 }, 30000);
 
 // Reintentar mensajes pendientes cada 5 segundos
@@ -3494,6 +3497,18 @@ async function enviarMsg() {
 // Enviar mensajes pendientes cuando vuelve la conexión
 async function enviarPendientes() {
   if(!mensajesPendientes.length || !perfilActual) return;
+  // Limpiar mensajes atascados hace más de 5 minutos
+  const ahora = Date.now();
+  mensajesPendientes = mensajesPendientes.filter(p => {
+    const ts = parseInt(p.id.replace('temp-','')) || ahora;
+    return (ahora - ts) < 300000; // 5 minutos
+  });
+  if(!mensajesPendientes.length) return;
+  // Refrescar sesión antes de intentar
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if(!session) { console.log('Sin sesión, no se pueden enviar pendientes'); return; }
+  } catch(e) { return; }
   console.log('Enviando', mensajesPendientes.length, 'mensajes pendientes...');
   const porEnviar = [...mensajesPendientes];
   for(const p of porEnviar) {
