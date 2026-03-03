@@ -1248,13 +1248,30 @@ const WOMPI_PUBLIC_KEY = 'pub_test_PKG7uFnDqNkrSa6LaITeGmGqQRe8MlCk';
 
 // Obtiene el hash de integridad desde la Edge Function de Supabase (secret nunca expuesto)
 async function generarIntegridad(referencia, montoCentavos) {
-  const { data, error } = await sb.functions.invoke('wompi-integrity', {
-    body: { referencia, montoCentavos }
+  // Obtener el token de sesión actual para autenticar la llamada
+  const { data: { session } } = await sb.auth.getSession();
+  const token = session?.access_token;
+
+  const SUPABASE_URL = sb.supabaseUrl || document.querySelector('script[src*="supabase"]')?.src?.split('/')[2];
+  
+  const res = await fetch(`https://sorldaixuzpqlyqdcedi.supabase.co/functions/v1/wompi-integrity`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvcmxkYWl4dXpwcWx5cWRjZWRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc2OTM0MTAsImV4cCI6MjA2MzI2OTQxMH0.nFXCKZZNvPmDkQrawZiEzDWJlXMimCvXoaGpRSsqBgM'
+    },
+    body: JSON.stringify({ referencia, montoCentavos })
   });
-  if (error || !data?.integrity) {
-    console.error('Error generando integridad:', error);
+
+  if (!res.ok) {
+    const txt = await res.text();
+    console.error('Error Edge Function:', res.status, txt);
     throw new Error('No se pudo generar la firma de integridad');
   }
+
+  const data = await res.json();
+  if (!data?.integrity) throw new Error('Integridad vacía');
   return data.integrity;
 }
 
