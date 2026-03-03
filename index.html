@@ -3530,7 +3530,10 @@ async function prepararWompiConMonto(monto) {
     params.set('customer-data:email', perfilActual.email || '');
     params.set('customer-data:full-name', ((perfilActual.nombre||'')+' '+(perfilActual.apellido||'')).trim());
     params.set('customer-data:phone-number', perfilActual.telefono || '');
-    console.log('✅ integrity:', integrity, 'monto:', montoCentavos);
+    console.log('✅ integrity:', integrity, 'monto:', montoCentavos, 'ref:', referencia);
+    // Guardar referencia para verificar al volver
+    sessionStorage.setItem('wompi_ref', referencia);
+    sessionStorage.setItem('wompi_monto', String(monto));
     window.location.href = 'https://checkout.wompi.co/p/?' + params.toString();
   } catch(e) {
     console.error(e);
