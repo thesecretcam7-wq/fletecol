@@ -1410,10 +1410,14 @@ const sb = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvcmxkYWl4dXpwcWx5cWRjZWRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMjkxODIsImV4cCI6MjA4NzcwNTE4Mn0.L1RjnhY62XiBltYHaT0vciFY9SHSrKbiM3GA8Buy89Q',
   {
     realtime: {
-      params: { eventsPerSecond: 10 }
-    },
-    global: {
-      fetch: (...args) => fetch(...args)
+      worker: true,
+      heartbeatIntervalMs: 15000,
+      heartbeatCallback: (status) => {
+        if (status === 'disconnected' || status === 'timeout') {
+          console.log('[Heartbeat] desconectado, reconectando...');
+          sb.realtime.connect();
+        }
+      }
     },
     auth: {
       persistSession: true,
@@ -1422,6 +1426,11 @@ const sb = createClient(
     }
   }
 );
+
+// Web Lock: evita que Chrome/móvil congele la pestaña
+if ('locks' in navigator) {
+  navigator.locks.request('fletecol-keepalive', () => new Promise(() => {}));
+}
 
 let usuarioActual = null;
 let enRegistro = false; // true mientras el usuario está completando el registro
@@ -1457,49 +1466,53 @@ async function init() {
       ir('s-landing');
     }
 
-    sb.auth.onAuthStateChange(async (event, session) => {
+    // CRÍTICO: NO usar async/await dentro de onAuthStateChange — causa deadlock
+    sb.auth.onAuthStateChange((event, session) => {
       if(event === 'TOKEN_REFRESHED' && session) {
-        // Supabase auto-refrescó el token — solo actualizar referencia
         usuarioActual = session.user;
         console.log('[auth] Token refrescado automáticamente');
       }
       if(event === 'SIGNED_IN' && session) {
         usuarioActual = session.user;
         if(enRegistro) return;
-        await cargarPerfil();
-        // Si viene de Google y no tiene perfil, crear uno con el rol guardado
-        if(!perfilActual) {
-          const rolPendiente = localStorage.getItem('google_rol_pendiente');
-          if(rolPendiente && session.user.email) {
-            const nombreCompleto = session.user.user_metadata?.full_name || '';
-            const partes = nombreCompleto.split(' ');
-            const nombre = partes[0] || 'Usuario';
-            const apellido = partes.slice(1).join(' ') || '';
-            const { error } = await sb.from('usuarios').insert({
-              auth_id: session.user.id,
-              nombre, apellido,
-              email: session.user.email,
-              rol: rolPendiente,
-              estado: 'pendiente',
-              foto_perfil: session.user.user_metadata?.avatar_url || null
-            });
-            if(!error) {
-              localStorage.removeItem('google_rol_pendiente');
-              await cargarPerfil();
+        // Usar setTimeout para romper el contexto síncrono y evitar deadlock
+        setTimeout(async () => {
+          await cargarPerfil();
+          if(!perfilActual) {
+            const rolPendiente = localStorage.getItem('google_rol_pendiente');
+            if(rolPendiente && session.user.email) {
+              const nombreCompleto = session.user.user_metadata?.full_name || '';
+              const partes = nombreCompleto.split(' ');
+              const nombre = partes[0] || 'Usuario';
+              const apellido = partes.slice(1).join(' ') || '';
+              const { error } = await sb.from('usuarios').insert({
+                auth_id: session.user.id,
+                nombre, apellido,
+                email: session.user.email,
+                rol: rolPendiente,
+                estado: 'pendiente',
+                foto_perfil: session.user.user_metadata?.avatar_url || null
+              });
+              if(!error) {
+                localStorage.removeItem('google_rol_pendiente');
+                await cargarPerfil();
+              }
             }
           }
-        }
-        await redirigirSegunEstado();
-        suscribirEstado();
+          await redirigirSegunEstado();
+          suscribirEstado();
+        }, 0);
       }
       if(event === 'SIGNED_OUT') {
         usuarioActual = null;
         perfilActual = null;
         enRegistro = false;
-        detenerPolling();
-        if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e){} estadoSub = null; }
-        if(chatSub) { try { sb.removeChannel(chatSub); } catch(e){} chatSub = null; }
-        ir('s-landing');
+        setTimeout(() => {
+          detenerPolling();
+          if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e){} estadoSub = null; }
+          if(chatSub) { try { sb.removeChannel(chatSub); } catch(e){} chatSub = null; }
+          ir('s-landing');
+        }, 0);
       }
     });
   } catch(e) {
