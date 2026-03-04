@@ -1242,7 +1242,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
 // ══ SUPABASE INIT ══
 // Registrar Service Worker
 // ══ WOMPI CONFIG ══
-const WOMPI_PUBLIC_KEY = 'pub_test_PKG7uFnDqNkrSa6LaITeGmGqQRe8MlCk';
+const WOMPI_PUBLIC_KEY = 'pub_prod_KqiBYlv2dRrcAOUj3tBuezZqfZ3CqMle';
 let montoAcordado = 0;
 
 // Obtiene el hash de integridad desde la Edge Function de Supabase
@@ -3685,43 +3685,53 @@ async function prepararWompiConMonto(monto) {
     sessionStorage.setItem('wompi_monto', String(monto));
     if(convActual) sessionStorage.setItem('convActual', JSON.stringify(convActual));
 
-    // Mostrar modal con widget embebido
+    // Widget embebido — los data-attributes no son interceptados por Meta Pixel
+    console.log('✅ Abriendo widget Wompi, key:', WOMPI_PUBLIC_KEY, 'monto:', montoCentavos);
+
+    // Remover modal anterior si existe
+    const modalViejo = document.getElementById('wompi-modal');
+    if(modalViejo) modalViejo.remove();
+
     const modal = document.createElement('div');
     modal.id = 'wompi-modal';
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
 
-    const modalInner = document.createElement('div');
-    modalInner.style.cssText = 'background:#fff;border-radius:16px;padding:24px;max-width:480px;width:95%;max-height:90vh;overflow-y:auto;position:relative;';
+    const inner = document.createElement('div');
+    inner.style.cssText = 'background:#fff;border-radius:16px;padding:24px;max-width:480px;width:95%;max-height:90vh;overflow-y:auto;position:relative;text-align:center;';
 
     const closeBtn = document.createElement('button');
-    closeBtn.textContent = '✕';
-    closeBtn.style.cssText = 'position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;';
-    closeBtn.onclick = function() { document.getElementById('wompi-modal').remove(); };
+    closeBtn.innerHTML = '✕';
+    closeBtn.style.cssText = 'position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;z-index:1;';
+    closeBtn.onclick = () => modal.remove();
 
-    const container = document.createElement('div');
-    container.id = 'wompi-widget-container';
+    const widgetDiv = document.createElement('div');
+    widgetDiv.id = 'wompi-container-' + Date.now();
 
-    modalInner.appendChild(closeBtn);
-    modalInner.appendChild(container);
-    modal.appendChild(modalInner);
+    inner.appendChild(closeBtn);
+    inner.appendChild(widgetDiv);
+    modal.appendChild(inner);
     document.body.appendChild(modal);
 
-    // Cargar widget con createElement (funciona a diferencia de innerHTML)
+    // Crear el formulario con el script del widget
+    // Los data-attributes se leen directamente por widget.js sin pasar por URL
+    const pubKey = WOMPI_PUBLIC_KEY; // capturar en closure
     const form = document.createElement('form');
-    const script = document.createElement('script');
-    script.src = 'https://checkout.wompi.co/widget.js';
-    script.setAttribute('data-render', 'button');
-    script.setAttribute('data-public-key', WOMPI_PUBLIC_KEY);
-    script.setAttribute('data-currency', 'COP');
-    script.setAttribute('data-amount-in-cents', String(montoCentavos));
-    script.setAttribute('data-reference', referencia);
-    script.setAttribute('data-integrity', integrity);
-    script.setAttribute('data-redirect-url', redirectUrl);
-    script.setAttribute('data-customer-data:email', perfilActual.email || '');
-    script.setAttribute('data-customer-data:full-name', ((perfilActual.nombre||'')+' '+(perfilActual.apellido||'')).trim());
-    script.setAttribute('data-customer-data:phone-number', perfilActual.telefono || '');
-    form.appendChild(script);
-    document.getElementById('wompi-widget-container').appendChild(form);
+    form.style.display = 'inline-block';
+    const s = document.createElement('script');
+    s.src = 'https://checkout.wompi.co/widget.js';
+    s.dataset.render = 'button';
+    s.dataset.publicKey = pubKey;
+    s.dataset.currency = 'COP';
+    s.dataset.amountInCents = String(montoCentavos);
+    s.dataset.reference = referencia;
+    s.dataset.integrity = integrity;
+    s.dataset.redirectUrl = redirectUrl;
+    if(perfilActual.email) s.dataset['customerDataEmail'] = perfilActual.email;
+    const nombre = ((perfilActual.nombre||'')+' '+(perfilActual.apellido||'')).trim();
+    if(nombre) s.dataset['customerDataFullName'] = nombre;
+    if(perfilActual.telefono) s.dataset['customerDataPhoneNumber'] = perfilActual.telefono;
+    form.appendChild(s);
+    widgetDiv.appendChild(form);
 
   } catch(e) {
     console.error(e);
