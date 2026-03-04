@@ -964,7 +964,6 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
         <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:16px;margin-bottom:8px;">¡Pago retenido!</div>
         <div style="font-size:12px;color:var(--texto);margin-bottom:16px;">El conductor fue notificado y está listo.</div>
         <button class="btn-full" style="background:var(--verde);" onclick="confirmarEntrega2()">✅ Confirmar que recibí</button>
-        <button class="btn-full" style="background:var(--gris3);border:1.5px solid var(--gris4);margin-top:8px;" onclick="compartirRecibo()">📤 Compartir recibo</button>
         <div style="font-size:11px;color:var(--texto);margin-top:8px;">Solo confirma cuando verificaste que todo llegó bien</div>
       </div>
       <div id="pp-completado2" style="display:none;text-align:center;padding:20px 0;">
@@ -1369,8 +1368,49 @@ function pagoWompiExitoso(txData) {
   document.getElementById('pp-exitoso2').style.display = 'block';
   toast('✅ ¡Pago confirmado! El conductor fue notificado.', 'success');
 
-  // Guardar datos del recibo para compartir
-  window._reciboData = txData || {};
+  // Mostrar recibo en el chat
+  const tx = txData || {};
+  const monto = tx.amount_in_cents 
+    ? (tx.amount_in_cents/100).toLocaleString('es-CO') 
+    : (montoAcordado||0).toLocaleString('es-CO');
+  const ref = tx.reference || sessionStorage.getItem('wompi_ref') || 'N/A';
+  const metodo = tx.payment_method_type === 'NEQUI' ? '🟣 Nequi' 
+    : tx.payment_method_type === 'BANCOLOMBIA_TRANSFER' ? '🔵 Bancolombia'
+    : tx.payment_method_type ? '💳 Tarjeta' : '💳 Wompi';
+  const fecha = new Date().toLocaleString('es-CO', {dateStyle:'short', timeStyle:'short'});
+
+  const wrap = document.getElementById('msgs-wrap');
+  if(wrap) {
+    const d = document.createElement('div');
+    d.className = 'sys-msg';
+    d.innerHTML = `
+      <div style="background:linear-gradient(135deg,#0a2e1a,#0d3d22);border:1.5px solid #1a6b3a;border-radius:12px;padding:14px 16px;text-align:left;max-width:320px;margin:0 auto;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <span style="font-size:20px;">🧾</span>
+          <span style="font-family:'Syne',sans-serif;font-weight:800;color:#4ade80;font-size:14px;">Pago aprobado</span>
+          <span style="margin-left:auto;background:#166534;color:#4ade80;font-size:10px;padding:2px 8px;border-radius:20px;">✅ APROBADO</span>
+        </div>
+        <div style="font-size:11px;color:#86efac;margin-bottom:6px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span>Monto</span><strong style="color:#fff;">$${monto} COP</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span>Método</span><strong style="color:#fff;">${metodo}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span>Fecha</span><strong style="color:#fff;">${fecha}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>Referencia</span><strong style="color:#fff;font-size:9px;">${ref}</strong>
+          </div>
+        </div>
+        <div style="border-top:1px solid #166534;padding-top:8px;margin-top:4px;font-size:10px;color:#86efac;text-align:center;">
+          🔒 Pago retenido en FleteCOL · El conductor fue notificado
+        </div>
+      </div>`;
+    wrap.appendChild(d);
+    wrap.scrollTop = wrap.scrollHeight;
+  }
 }
 
 function compartirRecibo() {
