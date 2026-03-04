@@ -1511,14 +1511,18 @@ async function verificarRetornoWompi() {
 
       const convOtroId = sessionStorage.getItem('wompi_otro_id');
       const convOtroNombre = sessionStorage.getItem('wompi_otro_nombre');
+      console.log('🔄 Retorno Wompi - otro_id:', convOtroId, 'convActual.id:', convActual?.id);
 
       if(convOtroId) {
         await abrirChatConConductor(convOtroId, convOtroNombre || 'Usuario', 0, '', '');
+        // abrirChatConConductor sobrescribe convActual sin otro_id, restauramos id
+        if(!convActual?.id && snap) try { convActual = JSON.parse(snap); } catch(e) {}
       } else {
         irApp('s-chat');
       }
 
-      // convActual ya restaurado — insertar recibo
+      console.log('✅ convActual después de abrir chat:', convActual?.id);
+      // Insertar recibo en la conversación
       await pagoWompiExitoso(tx || { reference: ref });
       toast('✅ ¡Pago aprobado!', 'success');
     } else if(tx) {
