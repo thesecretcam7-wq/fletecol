@@ -1554,41 +1554,12 @@ document.addEventListener('visibilitychange', async () => {
     return;
   }
 
-  if(!usuarioActual) return;
+  if(!usuarioActual || !perfilActual) return;
 
-  // 1. Refrescar sesión (solo REST, siempre funciona)
-  try {
-    const { data, error } = await sb.auth.refreshSession();
-    if(error || !data?.session) {
-      console.warn('[tab] Refresh falló:', error?.message || 'sin sesión');
-      // NO recargar — esperar, tal vez no hay red momentáneamente
-      return;
-    }
-    usuarioActual = data.session.user;
-    console.log('[tab] Sesión refrescada OK');
-  } catch(e) {
-    console.warn('[tab] Error refrescando:', e.message);
-    return;
-  }
-
-  // 2. Limpiar y re-suscribir AMBOS canales realtime
+  // worker:true maneja el heartbeat y reconexión del WebSocket automáticamente
+  // Solo necesitamos: reset flags + reenviar pendientes
   cargandoRutas = false;
-  try {
-    if(chatSub) { try { sb.removeChannel(chatSub); } catch(e){} chatSub = null; }
-    if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e){} estadoSub = null; }
-  } catch(e) {}
 
-  // Esperar un momento y reconectar
-  await new Promise(r => setTimeout(r, 400));
-
-  if(usuarioActual) suscribirEstado();
-  if(convActual?.id && perfilActual) {
-    suscribirMensajes(convActual.id);
-    // Re-cargar mensajes que llegaron mientras la pestaña estaba oculta
-    try { await cargarMensajes(convActual.id); } catch(e) {}
-  }
-
-  // 3. Reenviar pendientes
   if(mensajesPendientes.length > 0) {
     setTimeout(() => enviarPendientes(), 500);
   }
