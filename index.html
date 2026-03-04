@@ -1363,10 +1363,29 @@ function escucharRetornoWompi(referencia) {
   setTimeout(() => clearInterval(intervalo), 600000);
 }
 
-function pagoWompiExitoso(txData) {
+async function pagoWompiExitoso(txData) {
   document.getElementById('pp-form2').style.display = 'none';
   document.getElementById('pp-exitoso2').style.display = 'block';
   toast('✅ ¡Pago confirmado! El conductor fue notificado.', 'success');
+
+  // Guardar recibo como mensaje en Supabase para que persista
+  if(convActual?.id) {
+    const tx = txData || {};
+    const monto = tx.amount_in_cents
+      ? (tx.amount_in_cents/100).toLocaleString('es-CO')
+      : (montoAcordado||0).toLocaleString('es-CO');
+    const ref = tx.reference || sessionStorage.getItem('wompi_ref') || 'N/A';
+    const metodo = tx.payment_method_type === 'NEQUI' ? '🟣 Nequi'
+      : tx.payment_method_type === 'BANCOLOMBIA_TRANSFER' ? '🔵 Bancolombia'
+      : tx.payment_method_type ? '💳 Tarjeta' : '💳 Wompi';
+    await sb.from('mensajes').insert({
+      conversacion_id: convActual.id,
+      emisor_id: perfilActual.id,
+      tipo: 'recibo',
+      contenido: JSON.stringify({ monto, ref, metodo })
+    });
+    return; // renderMensaje via realtime o cargarMensajes lo mostrará
+  }
 
   // Mostrar recibo en el chat
   const tx = txData || {};
@@ -3485,7 +3504,40 @@ function renderMensaje(m) {
   const div = document.createElement('div');
   div.className = `msg-g ${tipo}`;
   div.dataset.msgId = m.id;
-  if(m.tipo === 'oferta') {
+  if(m.tipo === 'recibo') {
+    let info = {};
+    try { info = JSON.parse(m.contenido); } catch(e) {}
+    const fecha = new Date(m.created_at).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'});
+    div.className = 'sys-msg';
+    div.innerHTML = `
+      <div style="background:linear-gradient(135deg,#0a2e1a,#0d3d22);border:1.5px solid #1a6b3a;border-radius:12px;padding:14px 16px;text-align:left;max-width:320px;margin:0 auto;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <span style="font-size:20px;">🧾</span>
+          <span style="font-family:'Syne',sans-serif;font-weight:800;color:#4ade80;font-size:14px;">Pago aprobado</span>
+          <span style="margin-left:auto;background:#166534;color:#4ade80;font-size:10px;padding:2px 8px;border-radius:20px;">✅ APROBADO</span>
+        </div>
+        <div style="font-size:11px;color:#86efac;margin-bottom:6px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span>Monto</span><strong style="color:#fff;">$${info.monto||''} COP</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span>Método</span><strong style="color:#fff;">${info.metodo||'Wompi'}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span>Fecha</span><strong style="color:#fff;">${fecha}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>Referencia</span><strong style="color:#fff;font-size:9px;">${info.ref||''}</strong>
+          </div>
+        </div>
+        <div style="border-top:1px solid #166534;padding-top:8px;margin-top:4px;font-size:10px;color:#86efac;text-align:center;">
+          🔒 Pago retenido en FleteCOL · El conductor fue notificado
+        </div>
+      </div>`;
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+    return;
+  } else if(m.tipo === 'oferta') {
     div.innerHTML = `<div class="msg-row2" style="${esMio?'flex-direction:row-reverse':''}"><div class="msg-av2">${esMio?'🧑':'👨'}</div><div><div style="background:rgba(245,196,0,0.07);border:1px solid rgba(245,196,0,0.18);border-radius:13px;padding:13px 15px;"><div style="font-weight:700;font-size:12px;color:var(--amarillo);margin-bottom:3px;">💰 ${esMio?'Mi oferta':'Oferta recibida'}</div><div style="font-family:'Syne',sans-serif;font-weight:800;font-size:22px;margin-bottom:5px;">$${parseInt(m.oferta_monto).toLocaleString('es-CO')} COP</div>${!esMio?`<div style="display:flex;gap:8px;margin-top:8px;"><button onclick="aceptarOfertaReal(${m.oferta_monto})" style="background:var(--verde);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">✅ Aceptar</button></div>`:''}</div><div class="msg-time2">${hora}</div></div></div>`;
   } else {
     div.innerHTML = `<div class="msg-row2" style="${esMio?'flex-direction:row-reverse':''}"><div class="msg-av2">${esMio?'🧑':'👨'}</div><div><div class="bubble">${m.contenido}</div><div class="msg-time2">${hora}${esMio?' · ✓✓':''}</div></div></div>`;
