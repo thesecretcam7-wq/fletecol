@@ -947,7 +947,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
         <div id="wompi-container" style="margin-top:4px;">
           <div style="font-size:10px;color:var(--texto);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Método de pago</div>
           <div id="wompi-btn-wrap" style="display:flex;justify-content:center;">
-            <button class="btn-full" id="pp-btn2" onclick="prepararWompi()" style="margin-top:4px;background:linear-gradient(135deg,#F5C400,#e6a800);color:#080A0F;">
+            <button class="btn-full" id="pp-btn2" onclick="prepararWompiConMonto(montoAcordado || calcularMontoPago())" style="margin-top:4px;background:linear-gradient(135deg,#F5C400,#e6a800);color:#080A0F;">
               🔒 Pagar ahora con Wompi
             </button>
           </div>
@@ -3704,11 +3704,18 @@ async function prepararWompiConMonto(monto) {
     closeBtn.onclick = () => modal.remove();
     inner.appendChild(closeBtn);
 
-    // Crear widget con setAttribute — único método correcto para atributos con ":"
+    // Limpiar cualquier instancia previa de widget.js para evitar conflictos
+    document.querySelectorAll('script[src*="checkout.wompi.co/widget.js"]').forEach(el => el.remove());
+    if(window.$wompi) delete window.$wompi;
+
     const nombre = ((perfilActual.nombre||'')+' '+(perfilActual.apellido||'')).trim();
+    console.log('✅ Cargando widget Wompi:', { key: WOMPI_PUBLIC_KEY, monto: montoCentavos, ref: referencia, integrity: integrity.substring(0,8)+'...' });
+
+    // Crear form+script con setAttribute (preserva atributos con ":")
     const formEl = document.createElement('form');
     const s = document.createElement('script');
-    s.setAttribute('src', 'https://checkout.wompi.co/widget.js');
+    // Forzar recarga limpia con timestamp para evitar caché
+    s.setAttribute('src', 'https://checkout.wompi.co/widget.js?t=' + Date.now());
     s.setAttribute('data-render', 'button');
     s.setAttribute('data-public-key', WOMPI_PUBLIC_KEY);
     s.setAttribute('data-currency', 'COP');
@@ -3719,12 +3726,6 @@ async function prepararWompiConMonto(monto) {
     s.setAttribute('data-customer-data:email', perfilActual.email || '');
     s.setAttribute('data-customer-data:full-name', nombre);
     s.setAttribute('data-customer-data:phone-number', perfilActual.telefono || '');
-    console.log('✅ Widget attrs:', {
-      'public-key': s.getAttribute('data-public-key'),
-      'amount': s.getAttribute('data-amount-in-cents'),
-      'reference': s.getAttribute('data-reference'),
-      'integrity': s.getAttribute('data-signature:integrity')
-    });
     formEl.appendChild(s);
     inner.appendChild(formEl);
     modal.appendChild(inner);
