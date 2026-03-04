@@ -3538,12 +3538,14 @@ async function enviarMsg() {
   mensajesPendientes.push(pendiente);
 
   try {
+    console.log('[enviar] Intentando insert...');
     const { data: msg, error: errMsg } = await sb.from('mensajes').insert({
       conversacion_id: pendiente.conversacion_id,
       emisor_id: pendiente.emisor_id,
       contenido: pendiente.contenido,
       tipo: pendiente.tipo
     }).select().single();
+    console.log('[enviar] Resultado:', msg?.id || 'sin id', 'error:', errMsg?.message || 'ninguno');
 
     if(errMsg) throw new Error(errMsg.message);
 
