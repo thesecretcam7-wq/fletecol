@@ -3539,12 +3539,17 @@ async function enviarMsg() {
 
   try {
     console.log('[enviar] Intentando insert...');
-    const { data: msg, error: errMsg } = await sb.from('mensajes').insert({
+    // Timeout de 8 segundos para evitar que se quede colgado
+    const insertPromise = sb.from('mensajes').insert({
       conversacion_id: pendiente.conversacion_id,
       emisor_id: pendiente.emisor_id,
       contenido: pendiente.contenido,
       tipo: pendiente.tipo
     }).select().single();
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), 8000)
+    );
+    const { data: msg, error: errMsg } = await Promise.race([insertPromise, timeoutPromise]);
     console.log('[enviar] Resultado:', msg?.id || 'sin id', 'error:', errMsg?.message || 'ninguno');
 
     if(errMsg) throw new Error(errMsg.message);
