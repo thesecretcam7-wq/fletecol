@@ -1477,26 +1477,20 @@ async function verificarRetornoWompi() {
         estado: 'APPROVED'
       }).eq('wompi_referencia', ref);
       
-      // Navegar al chat y mostrar pantalla de éxito
+      // Navegar al chat correcto y mostrar recibo
       const convId = sessionStorage.getItem('wompi_conv_id');
-      irApp('s-chat');
-      if(convId) {
-        // Restaurar convActual y cargar mensajes de esa conversación
+      const convOtroId = sessionStorage.getItem('wompi_otro_id');
+      const convOtroNombre = sessionStorage.getItem('wompi_otro_nombre');
+
+      if(convId && convOtroId) {
         try {
-          const { data: conv } = await sb.from('conversaciones')
-            .select('*').eq('id', convId).single();
-          if(conv) {
-            // Determinar otro usuario
-            const otroId = conv.usuario1_id === perfilActual.id ? conv.usuario2_id : conv.usuario1_id;
-            const { data: otro } = await sb.from('perfiles').select('nombre,apellido').eq('id', otroId).single();
-            convActual = { ...conv, otro_id: otroId, otro_nombre: otro ? (otro.nombre+' '+otro.apellido).trim() : 'Usuario' };
-            localStorage.setItem('fl_conv', JSON.stringify(convActual));
-            await cargarConversaciones(convId);
-            await cargarMensajes(convId);
-          }
-        } catch(e) { console.log('restaurar conv:', e); }
+          await abrirChatConConductor(convOtroId, convOtroNombre || 'Usuario', 0, '', '');
+        } catch(e) { irApp('s-chat'); }
+      } else {
+        irApp('s-chat');
       }
-      setTimeout(() => pagoWompiExitoso(tx), 600);
+      // Esperar a que el chat cargue y luego mostrar recibo
+      setTimeout(() => pagoWompiExitoso(tx), 1200);
       toast('✅ ¡Pago aprobado!', 'success');
     } else if(tx) {
       toast(`Estado del pago: ${tx.status}`, 'info');
@@ -3785,9 +3779,11 @@ async function prepararWompiConMonto(monto) {
     const montoCentavos = monto * 100;
     const referencia = 'FLETE-' + Date.now() + '-' + perfilActual.id.slice(0,8);
     const redirectUrl = window.location.origin + '/?pago=ok&ref=' + referencia;
-    // Guardar referencia y conv para recuperarla al regresar
+    // Guardar datos para recuperarlos al regresar de Wompi
     sessionStorage.setItem('wompi_ref', referencia);
     if(convActual?.id) sessionStorage.setItem('wompi_conv_id', convActual.id);
+    if(convActual?.otro_id) sessionStorage.setItem('wompi_otro_id', convActual.otro_id);
+    if(convActual?.otro_nombre) sessionStorage.setItem('wompi_otro_nombre', convActual.otro_nombre);
     await registrarPagoPendiente(referencia, monto);
     const integrity = await generarIntegridad(referencia, montoCentavos);
     console.log('✅ integrity:', integrity, 'monto:', montoCentavos, 'ref:', referencia);
