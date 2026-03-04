@@ -1334,8 +1334,7 @@ async function registrarPagoPendiente(referencia, monto) {
       referencia,
       usuario_id: perfilActual.id,
       monto,
-      estado: 'pendiente',
-      created_at: new Date().toISOString()
+      estado: 'pendiente'
     });
   } catch(e) { console.log('registrar pago:', e); }
 }
@@ -3725,7 +3724,8 @@ async function prepararWompiConMonto(monto) {
     s.setAttribute('data-redirect-url', redirectUrl);
     s.setAttribute('data-customer-data:email', perfilActual.email || '');
     s.setAttribute('data-customer-data:full-name', nombre);
-    s.setAttribute('data-customer-data:phone-number', perfilActual.telefono || '');
+    s.setAttribute('data-customer-data:phone-number', (perfilActual.telefono || '3000000000').replace(/^\+57/, ''));
+    s.setAttribute('data-customer-data:phone-number-prefix', '+57');
     formEl.appendChild(s);
     inner.appendChild(formEl);
     modal.appendChild(inner);
