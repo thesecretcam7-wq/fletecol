@@ -964,6 +964,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
         <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:16px;margin-bottom:8px;">¡Pago retenido!</div>
         <div style="font-size:12px;color:var(--texto);margin-bottom:16px;">El conductor fue notificado y está listo.</div>
         <button class="btn-full" style="background:var(--verde);" onclick="confirmarEntrega2()">✅ Confirmar que recibí</button>
+        <button class="btn-full" style="background:var(--gris3);border:1.5px solid var(--gris4);margin-top:8px;" onclick="compartirRecibo()">📤 Compartir recibo</button>
         <div style="font-size:11px;color:var(--texto);margin-top:8px;">Solo confirma cuando verificaste que todo llegó bien</div>
       </div>
       <div id="pp-completado2" style="display:none;text-align:center;padding:20px 0;">
@@ -1363,10 +1364,50 @@ function escucharRetornoWompi(referencia) {
   setTimeout(() => clearInterval(intervalo), 600000);
 }
 
-function pagoWompiExitoso() {
+function pagoWompiExitoso(txData) {
   document.getElementById('pp-form2').style.display = 'none';
   document.getElementById('pp-exitoso2').style.display = 'block';
   toast('✅ ¡Pago confirmado! El conductor fue notificado.', 'success');
+
+  // Guardar datos del recibo para compartir
+  window._reciboData = txData || {};
+}
+
+function compartirRecibo() {
+  const tx = window._reciboData || {};
+  const monto = tx.amount_in_cents ? (tx.amount_in_cents/100).toLocaleString('es-CO') : (montoAcordado||0).toLocaleString('es-CO');
+  const ref = tx.reference || sessionStorage.getItem('wompi_ref') || 'N/A';
+  const fecha = new Date().toLocaleString('es-CO', {dateStyle:'short', timeStyle:'short'});
+  const nombre = perfilActual ? ((perfilActual.nombre||'') + ' ' + (perfilActual.apellido||'')).trim() : '';
+
+  const texto = `🧾 *Recibo de pago FleteCOL*
+
+` +
+    `✅ Pago aprobado
+` +
+    `📅 Fecha: ${fecha}
+` +
+    `💰 Monto: $${monto} COP
+` +
+    `📋 Referencia: ${ref}
+` +
+    (nombre ? `👤 Pagador: ${nombre}
+` : '') +
+    `
+_FleteCOL — Transporte seguro_
+fletecol.vercel.app`;
+
+  if(navigator.share) {
+    navigator.share({ title: 'Recibo FleteCOL', text: texto })
+      .catch(() => {});
+  } else {
+    navigator.clipboard.writeText(texto)
+      .then(() => toast('📋 Recibo copiado al portapapeles', 'success'))
+      .catch(() => {
+        // Fallback: abrir WhatsApp
+        window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
+      });
+  }
 }
 
 // Verificar si volvemos de Wompi al cargar la página
@@ -1381,7 +1422,10 @@ async function verificarRetornoWompi() {
 
   // Consultar estado en Wompi API (desde frontend con public key)
   try {
-    const res = await fetch(`https://production.wompi.co/v1/transactions?reference=${ref}`, {
+    const wompiApiUrl = WOMPI_PUBLIC_KEY.startsWith('pub_test') 
+      ? 'https://sandbox.wompi.co/v1' 
+      : 'https://production.wompi.co/v1';
+    const res = await fetch(`${wompiApiUrl}/transactions?reference=${ref}`, {
       headers: { 'Authorization': `Bearer ${WOMPI_PUBLIC_KEY}` }
     });
     const data = await res.json();
@@ -1395,6 +1439,7 @@ async function verificarRetornoWompi() {
         updated_at: new Date().toISOString()
       }).eq('referencia', ref);
       
+      pagoWompiExitoso(tx);
       toast('✅ ¡Pago aprobado!', 'success');
     } else if(tx) {
       toast(`Estado del pago: ${tx.status}`, 'info');
