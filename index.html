@@ -1479,12 +1479,24 @@ async function verificarRetornoWompi() {
       
       // Navegar al chat y mostrar pantalla de éxito
       const convId = sessionStorage.getItem('wompi_conv_id');
+      irApp('s-chat');
       if(convId) {
-        await abrirChat(convId);
-      } else {
-        irApp('s-chat');
+        // Restaurar convActual y cargar mensajes de esa conversación
+        try {
+          const { data: conv } = await sb.from('conversaciones')
+            .select('*').eq('id', convId).single();
+          if(conv) {
+            // Determinar otro usuario
+            const otroId = conv.usuario1_id === perfilActual.id ? conv.usuario2_id : conv.usuario1_id;
+            const { data: otro } = await sb.from('perfiles').select('nombre,apellido').eq('id', otroId).single();
+            convActual = { ...conv, otro_id: otroId, otro_nombre: otro ? (otro.nombre+' '+otro.apellido).trim() : 'Usuario' };
+            localStorage.setItem('fl_conv', JSON.stringify(convActual));
+            await cargarConversaciones(convId);
+            await cargarMensajes(convId);
+          }
+        } catch(e) { console.log('restaurar conv:', e); }
       }
-      setTimeout(() => pagoWompiExitoso(tx), 300);
+      setTimeout(() => pagoWompiExitoso(tx), 600);
       toast('✅ ¡Pago aprobado!', 'success');
     } else if(tx) {
       toast(`Estado del pago: ${tx.status}`, 'info');
