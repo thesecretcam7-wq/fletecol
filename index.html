@@ -1382,7 +1382,8 @@ async function pagoWompiExitoso(txData) {
       conversacion_id: convActual.id,
       emisor_id: perfilActual.id,
       tipo: 'recibo',
-      contenido: JSON.stringify({ monto, ref, metodo })
+      contenido: JSON.stringify({ monto, ref, metodo }),
+      leido: false
     });
     return; // renderMensaje via realtime o cargarMensajes lo mostrará
   }
@@ -1501,7 +1502,13 @@ async function verificarRetornoWompi() {
     if(aprobado) {
       await sb.from('pagos').update({ estado: 'APPROVED' }).eq('wompi_referencia', ref);
 
-      // Recuperar datos de sesión guardados antes del pago
+      // Restaurar convActual del snapshot guardado antes del pago
+      const snap = sessionStorage.getItem('wompi_conv_snapshot');
+      if(snap) {
+        try { convActual = JSON.parse(snap); } catch(e) {}
+        sessionStorage.removeItem('wompi_conv_snapshot');
+      }
+
       const convOtroId = sessionStorage.getItem('wompi_otro_id');
       const convOtroNombre = sessionStorage.getItem('wompi_otro_nombre');
 
@@ -1511,15 +1518,8 @@ async function verificarRetornoWompi() {
         irApp('s-chat');
       }
 
-      // Esperar a que convActual esté disponible antes de insertar el recibo
-      let intentos = 0;
-      const esperarConv = setInterval(async () => {
-        intentos++;
-        if(convActual?.id || intentos > 20) {
-          clearInterval(esperarConv);
-          await pagoWompiExitoso(tx || { reference: ref });
-        }
-      }, 200);
+      // convActual ya restaurado — insertar recibo
+      await pagoWompiExitoso(tx || { reference: ref });
       toast('✅ ¡Pago aprobado!', 'success');
     } else if(tx) {
       irApp('s-chat');
@@ -3844,7 +3844,7 @@ async function prepararWompiConMonto(monto) {
     const redirectUrl = window.location.origin + '/?pago=ok&ref=' + referencia;
     // Guardar datos para recuperarlos al regresar de Wompi
     sessionStorage.setItem('wompi_ref', referencia);
-    if(convActual?.id) sessionStorage.setItem('wompi_conv_id', convActual.id);
+    if(convActual) sessionStorage.setItem('wompi_conv_snapshot', JSON.stringify(convActual));
     if(convActual?.otro_id) sessionStorage.setItem('wompi_otro_id', convActual.otro_id);
     if(convActual?.otro_nombre) sessionStorage.setItem('wompi_otro_nombre', convActual.otro_nombre);
     await registrarPagoPendiente(referencia, monto);
