@@ -1475,6 +1475,8 @@ async function init() {
       if(event === 'SIGNED_IN' && session) {
         usuarioActual = session.user;
         if(enRegistro) return;
+        // Si ya hay perfil cargado, es un re-login por token refresh — no redirigir
+        if(perfilActual) return;
         // Usar setTimeout para romper el contexto síncrono y evitar deadlock
         setTimeout(async () => {
           await cargarPerfil();
