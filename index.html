@@ -3704,31 +3704,28 @@ async function prepararWompiConMonto(monto) {
     closeBtn.onclick = () => modal.remove();
     inner.appendChild(closeBtn);
 
-    // Insertar el widget via div temporal — preserva atributos con ":" como data-signature:integrity
-    const tmp = document.createElement('div');
+    // Crear widget con setAttribute — único método correcto para atributos con ":"
     const nombre = ((perfilActual.nombre||'')+' '+(perfilActual.apellido||'')).trim();
-    tmp.innerHTML = `<form>
-      <script
-        src="https://checkout.wompi.co/widget.js"
-        data-render="button"
-        data-public-key="${WOMPI_PUBLIC_KEY}"
-        data-currency="COP"
-        data-amount-in-cents="${montoCentavos}"
-        data-reference="${referencia}"
-        data-signature:integrity="${integrity}"
-        data-redirect-url="${redirectUrl}"
-        data-customer-data:email="${perfilActual.email || ''}"
-        data-customer-data:full-name="${nombre}"
-        data-customer-data:phone-number="${perfilActual.telefono || ''}"
-      ><\/script>
-    </form>`;
-    // Extraer y re-ejecutar el script correctamente
-    const formEl = tmp.querySelector('form');
-    const oldScript = tmp.querySelector('script');
-    const newScript = document.createElement('script');
-    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-    formEl.removeChild(oldScript);
-    formEl.appendChild(newScript);
+    const formEl = document.createElement('form');
+    const s = document.createElement('script');
+    s.setAttribute('src', 'https://checkout.wompi.co/widget.js');
+    s.setAttribute('data-render', 'button');
+    s.setAttribute('data-public-key', WOMPI_PUBLIC_KEY);
+    s.setAttribute('data-currency', 'COP');
+    s.setAttribute('data-amount-in-cents', String(montoCentavos));
+    s.setAttribute('data-reference', referencia);
+    s.setAttribute('data-signature:integrity', integrity);
+    s.setAttribute('data-redirect-url', redirectUrl);
+    s.setAttribute('data-customer-data:email', perfilActual.email || '');
+    s.setAttribute('data-customer-data:full-name', nombre);
+    s.setAttribute('data-customer-data:phone-number', perfilActual.telefono || '');
+    console.log('✅ Widget attrs:', {
+      'public-key': s.getAttribute('data-public-key'),
+      'amount': s.getAttribute('data-amount-in-cents'),
+      'reference': s.getAttribute('data-reference'),
+      'integrity': s.getAttribute('data-signature:integrity')
+    });
+    formEl.appendChild(s);
     inner.appendChild(formEl);
     modal.appendChild(inner);
     document.body.appendChild(modal);
