@@ -1330,11 +1330,17 @@ function calcularMontoPago() {
 
 async function registrarPagoPendiente(referencia, monto) {
   try {
+    const comision = Math.round(monto * 0.05); // 5% plataforma
     await sb.from('pagos').insert({
-      referencia,
-      usuario_id: perfilActual.id,
-      monto,
-      estado: 'pendiente'
+      wompi_referencia: referencia,
+      cliente_id: perfilActual.id,
+      conductor_id: convActual?.otro_id || null,
+      conversacion_id: convActual?.id || null,
+      monto_total: monto,
+      monto_conductor: monto - comision,
+      comision_plataforma: comision,
+      estado: 'pendiente',
+      metodo: 'wompi'
     });
   } catch(e) { console.log('registrar pago:', e); }
 }
@@ -1344,7 +1350,7 @@ function escucharRetornoWompi(referencia) {
   const intervalo = setInterval(async () => {
     const { data } = await sb.from('pagos')
       .select('estado')
-      .eq('referencia', referencia)
+      .eq('wompi_referencia', referencia)
       .single();
     
     if(data?.estado === 'APPROVED') {
