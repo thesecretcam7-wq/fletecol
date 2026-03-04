@@ -1434,12 +1434,17 @@ async function verificarRetornoWompi() {
     if(tx?.status === 'APPROVED') {
       // Actualizar en Supabase
       await sb.from('pagos').update({ 
-        estado: 'APPROVED', 
-        wompi_id: tx.id,
-        updated_at: new Date().toISOString()
-      }).eq('referencia', ref);
+        estado: 'APPROVED'
+      }).eq('wompi_referencia', ref);
       
-      pagoWompiExitoso(tx);
+      // Navegar al chat y mostrar pantalla de éxito
+      const convId = sessionStorage.getItem('wompi_conv_id');
+      if(convId) {
+        await abrirChat(convId);
+      } else {
+        irApp('s-chat');
+      }
+      setTimeout(() => pagoWompiExitoso(tx), 300);
       toast('✅ ¡Pago aprobado!', 'success');
     } else if(tx) {
       toast(`Estado del pago: ${tx.status}`, 'info');
@@ -3728,6 +3733,9 @@ async function prepararWompiConMonto(monto) {
     const montoCentavos = monto * 100;
     const referencia = 'FLETE-' + Date.now() + '-' + perfilActual.id.slice(0,8);
     const redirectUrl = window.location.origin + '/?pago=ok&ref=' + referencia;
+    // Guardar referencia y conv para recuperarla al regresar
+    sessionStorage.setItem('wompi_ref', referencia);
+    if(convActual?.id) sessionStorage.setItem('wompi_conv_id', convActual.id);
     await registrarPagoPendiente(referencia, monto);
     const integrity = await generarIntegridad(referencia, montoCentavos);
     console.log('✅ integrity:', integrity, 'monto:', montoCentavos, 'ref:', referencia);
