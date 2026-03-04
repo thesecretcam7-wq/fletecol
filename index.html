@@ -1511,7 +1511,15 @@ async function verificarRetornoWompi() {
         irApp('s-chat');
       }
 
-      setTimeout(() => pagoWompiExitoso(tx || { reference: ref }), 1200);
+      // Esperar a que convActual esté disponible antes de insertar el recibo
+      let intentos = 0;
+      const esperarConv = setInterval(async () => {
+        intentos++;
+        if(convActual?.id || intentos > 20) {
+          clearInterval(esperarConv);
+          await pagoWompiExitoso(tx || { reference: ref });
+        }
+      }, 200);
       toast('✅ ¡Pago aprobado!', 'success');
     } else if(tx) {
       irApp('s-chat');
