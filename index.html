@@ -3685,10 +3685,9 @@ async function prepararWompiConMonto(monto) {
     sessionStorage.setItem('wompi_monto', String(monto));
     if(convActual) sessionStorage.setItem('convActual', JSON.stringify(convActual));
 
-    // Widget embebido — los data-attributes no son interceptados por Meta Pixel
-    console.log('✅ Abriendo widget Wompi, key:', WOMPI_PUBLIC_KEY, 'monto:', montoCentavos);
+    // Widget embebido con innerHTML — único método que respeta data-signature:integrity con ":"
+    console.log('✅ Abriendo widget Wompi, monto:', montoCentavos, 'ref:', referencia);
 
-    // Remover modal anterior si existe
     const modalViejo = document.getElementById('wompi-modal');
     if(modalViejo) modalViejo.remove();
 
@@ -3697,41 +3696,42 @@ async function prepararWompiConMonto(monto) {
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
 
     const inner = document.createElement('div');
-    inner.style.cssText = 'background:#fff;border-radius:16px;padding:24px;max-width:480px;width:95%;max-height:90vh;overflow-y:auto;position:relative;text-align:center;';
+    inner.style.cssText = 'background:#fff;border-radius:16px;padding:32px 24px;max-width:480px;width:95%;max-height:90vh;overflow-y:auto;position:relative;text-align:center;';
 
     const closeBtn = document.createElement('button');
     closeBtn.innerHTML = '✕';
-    closeBtn.style.cssText = 'position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;z-index:1;';
+    closeBtn.style.cssText = 'position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;';
     closeBtn.onclick = () => modal.remove();
-
-    const widgetDiv = document.createElement('div');
-    widgetDiv.id = 'wompi-container-' + Date.now();
-
     inner.appendChild(closeBtn);
-    inner.appendChild(widgetDiv);
+
+    // Insertar el widget via div temporal — preserva atributos con ":" como data-signature:integrity
+    const tmp = document.createElement('div');
+    const nombre = ((perfilActual.nombre||'')+' '+(perfilActual.apellido||'')).trim();
+    tmp.innerHTML = `<form>
+      <script
+        src="https://checkout.wompi.co/widget.js"
+        data-render="button"
+        data-public-key="${WOMPI_PUBLIC_KEY}"
+        data-currency="COP"
+        data-amount-in-cents="${montoCentavos}"
+        data-reference="${referencia}"
+        data-signature:integrity="${integrity}"
+        data-redirect-url="${redirectUrl}"
+        data-customer-data:email="${perfilActual.email || ''}"
+        data-customer-data:full-name="${nombre}"
+        data-customer-data:phone-number="${perfilActual.telefono || ''}"
+      ><\/script>
+    </form>`;
+    // Extraer y re-ejecutar el script correctamente
+    const formEl = tmp.querySelector('form');
+    const oldScript = tmp.querySelector('script');
+    const newScript = document.createElement('script');
+    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+    formEl.removeChild(oldScript);
+    formEl.appendChild(newScript);
+    inner.appendChild(formEl);
     modal.appendChild(inner);
     document.body.appendChild(modal);
-
-    // Crear el formulario con el script del widget
-    // Los data-attributes se leen directamente por widget.js sin pasar por URL
-    const pubKey = WOMPI_PUBLIC_KEY; // capturar en closure
-    const form = document.createElement('form');
-    form.style.display = 'inline-block';
-    const s = document.createElement('script');
-    s.src = 'https://checkout.wompi.co/widget.js';
-    s.dataset.render = 'button';
-    s.dataset.publicKey = pubKey;
-    s.dataset.currency = 'COP';
-    s.dataset.amountInCents = String(montoCentavos);
-    s.dataset.reference = referencia;
-    s.dataset.integrity = integrity;
-    s.dataset.redirectUrl = redirectUrl;
-    if(perfilActual.email) s.dataset['customerDataEmail'] = perfilActual.email;
-    const nombre = ((perfilActual.nombre||'')+' '+(perfilActual.apellido||'')).trim();
-    if(nombre) s.dataset['customerDataFullName'] = nombre;
-    if(perfilActual.telefono) s.dataset['customerDataPhoneNumber'] = perfilActual.telefono;
-    form.appendChild(s);
-    widgetDiv.appendChild(form);
 
   } catch(e) {
     console.error(e);
