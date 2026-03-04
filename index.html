@@ -1445,6 +1445,11 @@ async function init() {
     }
 
     sb.auth.onAuthStateChange(async (event, session) => {
+      if(event === 'TOKEN_REFRESHED' && session) {
+        // Supabase auto-refrescó el token — solo actualizar referencia
+        usuarioActual = session.user;
+        console.log('[auth] Token refrescado automáticamente');
+      }
       if(event === 'SIGNED_IN' && session) {
         usuarioActual = session.user;
         if(enRegistro) return;
@@ -1479,7 +1484,8 @@ async function init() {
         perfilActual = null;
         enRegistro = false;
         detenerPolling();
-        if(estadoSub) { sb.removeChannel(estadoSub); estadoSub = null; }
+        if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e){} estadoSub = null; }
+        if(chatSub) { try { sb.removeChannel(chatSub); } catch(e){} chatSub = null; }
         ir('s-landing');
       }
     });
@@ -1494,52 +1500,26 @@ async function init() {
 // Guardar timestamp cuando la pestaña se oculta
 let tabHiddenAt = null;
 
-// ══ RECONEXIÓN COMPLETA DE REALTIME ══
-// Cuando el navegador mata el WebSocket (cambio de pestaña, pérdida de red),
-// hay que desconectar el transporte entero y reconectar desde cero.
-let reconectando = false;
-async function reconectarRealtime(motivo) {
-  if(reconectando) { console.log('Ya reconectando, ignorando:', motivo); return; }
-  if(!perfilActual) return;
-  reconectando = true;
-  console.log('Reconectando Realtime:', motivo);
-  try {
-    chatSub = null;
-    estadoSub = null;
-    sb.removeAllChannels();
-    sb.realtime.disconnect();
-    await new Promise(r => setTimeout(r, 300));
-    sb.realtime.connect();
-    await new Promise(r => setTimeout(r, 600));
-    if(usuarioActual) suscribirEstado();
-    if(convActual?.id) suscribirMensajes(convActual.id);
-    console.log('Reconexión completada:', motivo);
-  } catch(e) {
-    console.error('Error en reconexión:', e);
-  } finally {
-    reconectando = false;
-  }
-}
-
 document.addEventListener('visibilitychange', async () => {
   if(document.visibilityState === 'hidden') {
     tabHiddenAt = Date.now();
-    // Guardar estado importante antes de irse
-    if(convActual) localStorage.setItem('fl_conv', JSON.stringify(convActual));
-    if(montoAcordado) localStorage.setItem('fl_monto', String(montoAcordado));
-    const pantallaActiva = document.querySelector('.screen.activa')?.id || '';
-    if(pantallaActiva) localStorage.setItem('fl_pantalla', pantallaActiva);
+    // Guardar estado antes de salir
+    try {
+      if(convActual) localStorage.setItem('fl_conv', JSON.stringify(convActual));
+      if(montoAcordado) localStorage.setItem('fl_monto', String(montoAcordado));
+      const pantallaActiva = document.querySelector('.screen.activa')?.id || '';
+      if(pantallaActiva) localStorage.setItem('fl_pantalla', pantallaActiva);
+    } catch(e) {}
     return;
   }
 
-  // Al volver a la pestaña
   if(document.visibilityState !== 'visible') return;
 
   const segundosOculto = tabHiddenAt ? (Date.now() - tabHiddenAt) / 1000 : 0;
   tabHiddenAt = null;
-  console.log(`Pestaña activa de nuevo (oculta ${Math.round(segundosOculto)}s)`);
+  console.log('[tab] Visible de nuevo (' + Math.round(segundosOculto) + 's oculta)');
 
-  // Verificar si volvemos de Wompi
+  // Si volvemos de Wompi
   const wompiRef = sessionStorage.getItem('wompi_ref');
   if(wompiRef) {
     sessionStorage.removeItem('wompi_ref');
@@ -1548,33 +1528,49 @@ document.addEventListener('visibilitychange', async () => {
     return;
   }
 
-  // 1. Refrescar sesión auth
+  if(!usuarioActual) return;
+
+  // 1. Refrescar sesión (solo REST, siempre funciona)
   try {
-    const { data: refreshData, error: refreshError } = await sb.auth.refreshSession();
-    if(refreshError || !refreshData?.session) {
-      console.log('No se pudo refrescar sesión:', refreshError?.message);
+    const { data, error } = await sb.auth.refreshSession();
+    if(error || !data?.session) {
+      console.warn('[tab] Refresh falló:', error?.message || 'sin sesión');
+      // NO recargar — esperar, tal vez no hay red momentáneamente
       return;
     }
-    usuarioActual = refreshData.session.user;
-    console.log('Sesión auth refrescada OK');
+    usuarioActual = data.session.user;
+    console.log('[tab] Sesión refrescada OK');
   } catch(e) {
-    console.log('Error refrescando sesión:', e.message);
+    console.warn('[tab] Error refrescando:', e.message);
     return;
   }
 
-  // Reset flags
+  // 2. Limpiar y re-suscribir AMBOS canales realtime
   cargandoRutas = false;
+  try {
+    if(chatSub) { try { sb.removeChannel(chatSub); } catch(e){} chatSub = null; }
+    if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e){} estadoSub = null; }
+  } catch(e) {}
 
-  // 2. Forzar reconexión completa del WebSocket Realtime
-  await reconectarRealtime('tab-visible después de ' + Math.round(segundosOculto) + 's');
+  // Esperar un momento y reconectar
+  await new Promise(r => setTimeout(r, 400));
 
-  // 3. Reenviar mensajes pendientes
-  setTimeout(async () => { await enviarPendientes(); }, 800);
+  if(usuarioActual) suscribirEstado();
+  if(convActual?.id && perfilActual) {
+    suscribirMensajes(convActual.id);
+    // Re-cargar mensajes que llegaron mientras la pestaña estaba oculta
+    try { await cargarMensajes(convActual.id); } catch(e) {}
+  }
+
+  // 3. Reenviar pendientes
+  if(mensajesPendientes.length > 0) {
+    setTimeout(() => enviarPendientes(), 500);
+  }
 });
 
 // Al cargar la página, restaurar pantalla y estado si venimos de recarga
 (async function restaurarEstado() {
-  await new Promise(r => setTimeout(r, 800)); // esperar que el perfil cargue
+  await new Promise(r => setTimeout(r, 1000));
   if(!perfilActual) return;
 
   const pantalla = localStorage.getItem('fl_pantalla');
@@ -1597,44 +1593,47 @@ document.addEventListener('visibilitychange', async () => {
     if(el) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('activa'));
       el.classList.add('activa');
-      // Recargar datos de la pantalla
-      if(pantalla === 'p-buscar') { cargandoRutas = false; buscarRutas(); }
-      if(pantalla === 'p-chat') { await cargarConversaciones(convActual?.id); }
+      try {
+        if(pantalla === 's-rutas') { cargandoRutas = false; cargarRutas(); }
+        if(pantalla === 's-chat') { await cargarConversaciones(convActual?.id); }
+        if(pantalla === 's-pagos') { await cargarCuentaBancaria(); }
+      } catch(e) { console.warn('[restaurar] Error:', e.message); }
     }
   }
 })();
 
-// Keepalive: verificar salud del WebSocket y reconectar si hace falta
+// Keepalive: re-suscribir canales perdidos cada 20 segundos
 setInterval(async () => {
   if(document.visibilityState !== 'visible') return;
-  if(!perfilActual) return;
-
-  const socketState = sb.realtime?.conn?.readyState;
-  if(socketState !== 1 && socketState !== 0) {
-    await reconectarRealtime('keepalive — socket muerto (state:' + socketState + ')');
-    return;
-  }
-
-  // Si el socket está vivo pero no hay canal de chat activo, re-suscribir
+  if(!perfilActual || !usuarioActual) return;
   if(convActual?.id && !chatSub) {
+    console.log('[keepalive] Chat canal perdido, re-suscribiendo');
     suscribirMensajes(convActual.id);
   }
-}, 15000);
-
-// Reconectar cuando el navegador recupera conexión a internet
-window.addEventListener('online', async () => {
-  console.log('Navegador reporta conexión restaurada');
-  if(!perfilActual) return;
-  await new Promise(r => setTimeout(r, 1000));
-  try {
-    const { data: refreshData } = await sb.auth.refreshSession();
-    if(refreshData?.session) {
-      usuarioActual = refreshData.session.user;
-      await reconectarRealtime('red restaurada');
-    }
-  } catch(e) {
-    console.error('Error reconectando post-online:', e);
+  if(!estadoSub) {
+    console.log('[keepalive] Estado canal perdido, re-suscribiendo');
+    suscribirEstado();
   }
+}, 20000);
+
+// Reconectar cuando el navegador pasa de offline a online
+window.addEventListener('online', () => {
+  console.log('[red] Conexión restaurada');
+  if(!usuarioActual || !perfilActual) return;
+  setTimeout(async () => {
+    try {
+      const { data } = await sb.auth.refreshSession();
+      if(data?.session) {
+        usuarioActual = data.session.user;
+        if(chatSub) { try { sb.removeChannel(chatSub); } catch(e){} chatSub = null; }
+        if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e){} estadoSub = null; }
+        await new Promise(r => setTimeout(r, 300));
+        suscribirEstado();
+        if(convActual?.id) suscribirMensajes(convActual.id);
+        console.log('[red] Reconectado OK');
+      }
+    } catch(e) { console.warn('[red] Error reconectando:', e.message); }
+  }, 1500);
 });
 
 // Reintentar mensajes pendientes cada 5 segundos
@@ -1677,41 +1676,39 @@ async function verificarEstadoManual() {
 // Escucha en tiempo real si el admin cambia el estado del usuario
 function suscribirEstado() {
   if(!usuarioActual) return;
-  if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e) {} estadoSub = null; }
+  if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e){} estadoSub = null; }
 
-  const channelName = 'estado-usuario-' + usuarioActual.id + '-' + Date.now();
-  estadoSub = sb.channel(channelName)
+  estadoSub = sb.channel('estado-' + usuarioActual.id + '-' + Date.now())
     .on('postgres_changes', {
       event: 'UPDATE',
       schema: 'public',
       table: 'usuarios',
       filter: 'auth_id=eq.' + usuarioActual.id
     }, async (payload) => {
-      const nuevoEstado = payload.new?.estado;
-      const estadoViejo = perfilActual?.estado;
+      try {
+        const nuevoEstado = payload.new?.estado;
+        const estadoViejo = perfilActual?.estado;
 
-      // Actualizar perfil local
-      perfilActual = { ...perfilActual, ...payload.new };
+        perfilActual = { ...perfilActual, ...payload.new };
 
-      if(nuevoEstado === estadoViejo) return; // sin cambio real
+        if(nuevoEstado === estadoViejo) return;
 
-      if(nuevoEstado === 'aprobado') {
-        // Mostrar banner de bienvenida y entrar a la app
-        mostrarBannerEstado('aprobado', perfilActual.nombre);
-        setTimeout(() => irApp('s-rutas'), 2000);
-      } else if(nuevoEstado === 'rechazado') {
-        actualizarPantallaPendiente('rechazado', payload.new?.motivo_rechazo, perfilActual.rol);
-        ir('s-pendiente');
-      } else if(nuevoEstado === 'baneado') {
-        actualizarPantallaPendiente('baneado', payload.new?.motivo_rechazo, perfilActual.rol);
-        ir('s-pendiente');
-      }
+        if(nuevoEstado === 'aprobado') {
+          mostrarBannerEstado('aprobado', perfilActual.nombre);
+          setTimeout(() => irApp('s-rutas'), 2000);
+        } else if(nuevoEstado === 'rechazado') {
+          actualizarPantallaPendiente('rechazado', payload.new?.motivo_rechazo, perfilActual.rol);
+          ir('s-pendiente');
+        } else if(nuevoEstado === 'baneado') {
+          actualizarPantallaPendiente('baneado', payload.new?.motivo_rechazo, perfilActual.rol);
+          ir('s-pendiente');
+        }
+      } catch(e) { console.error('[estado] Error:', e); }
     })
     .subscribe((status) => {
-      console.log('Estado realtime:', status, '(canal:', channelName, ')');
-      if(status === 'CHANNEL_ERROR') {
-        console.warn('Canal estado en error, reintentando en 3s...');
-        setTimeout(() => suscribirEstado(), 3000);
+      console.log('[realtime] estado:', status);
+      if(status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        estadoSub = null;
       }
     });
 }
@@ -1788,7 +1785,7 @@ async function cargarPerfil() {
     if(data) {
       perfilActual = data;
       actualizarUIperfil();
-      if(data.notificacion_vista === false || data.notificacion_vista === null) {
+      if(!data.notificacion_vista) {
         if(data.estado === 'aprobado') mostrarBannerEstado('aprobado', data.nombre);
         if(data.estado === 'rechazado') mostrarBannerEstado('rechazado', data.nombre, data.motivo_rechazo);
       }
@@ -1835,8 +1832,7 @@ function mostrarBannerEstado(estado, nombre, motivo) {
 
 async function marcarNotificacionVista() {
   if(!perfilActual) return;
-  const { error } = await sb.from('usuarios').update({ notificacion_vista: true }).eq('id', perfilActual.id);
-  if(error) console.error('Error marcarNotificacionVista:', error.message, error.details);
+  await sb.from('usuarios').update({ notificacion_vista: true }).eq('id', perfilActual.id);
 }
 
 function actualizarUIperfil() {
@@ -2239,8 +2235,7 @@ async function registrar() {
   if(fotoPerfilFile) {
     const fotoPerfil = await subirFotoPerfil(data.user.id);
     if(fotoPerfil) {
-      const { error: errFoto } = await sb.from('usuarios').update({ foto_perfil: fotoPerfil }).eq('auth_id', data.user.id);
-      if(errFoto) console.error('Error update foto registro:', errFoto.message, errFoto.details);
+      await sb.from('usuarios').update({ foto_perfil: fotoPerfil }).eq('auth_id', data.user.id);
     }
   }
 
@@ -2341,7 +2336,7 @@ async function enviarDocumentos() {
 
   try {
     if(authIdTemporal) {
-      const { error: errDocs } = await sb.from('usuarios').update({
+      await sb.from('usuarios').update({
         doc_cedula_frontal:   docsSubidos.cedula_frontal,
         doc_cedula_posterior: docsSubidos.cedula_posterior,
         doc_selfie:           docsSubidos.selfie_cedula,
@@ -2350,7 +2345,6 @@ async function enviarDocumentos() {
         doc_soat:             docsSubidos.soat,
         estado:               'pendiente'
       }).eq('auth_id', authIdTemporal);
-      if(errDocs) console.error('Error update docs:', errDocs.message, errDocs.details);
     }
 
     btn.disabled = false;
@@ -2431,8 +2425,7 @@ async function actualizarFotoPerfil(input) {
   toast('📸 Subiendo foto...', 'info');
   const { error } = await sb.storage.from('documentos').upload(path, file, { upsert: true });
   if(error) { toast('Error: ' + error.message, 'error'); return; }
-  const { error: errFoto } = await sb.from('usuarios').update({ foto_perfil: path }).eq('auth_id', session.user.id);
-  if(errFoto) console.error('Error update foto perfil:', errFoto.message, errFoto.details);
+  await sb.from('usuarios').update({ foto_perfil: path }).eq('auth_id', session.user.id);
   if(perfilActual) perfilActual.foto_perfil = path;
   const url = await cargarFotoPerfilURL(path);
   // Update all avatar spots
@@ -3065,14 +3058,13 @@ async function enviarCambioVehiculo() {
   if(!cvDocs.cv_foto1 || !cvDocs.cv_foto2 || !cvDocs.cv_soat) { errEl.textContent='Sube las 3 fotos requeridas'; errEl.style.display='block'; return; }
   // Guardar solicitud en Supabase
   if(perfilActual) {
-    const { error: errVeh } = await sb.from('usuarios').update({
+    await sb.from('usuarios').update({
       vehiculo_pendiente:      cvVehSel,
       placa_pendiente:         placa,
       doc_foto_vehiculo_nuevo: cvDocs.cv_foto1,
       doc_foto_vehiculo2_nuevo:cvDocs.cv_foto2,
       doc_soat_nuevo:          cvDocs.cv_soat,
     }).eq('id', perfilActual.id);
-    if(errVeh) { console.error('Error update vehículo:', errVeh.message, errVeh.details); toast('Error: ' + errVeh.message, 'error'); return; }
   }
   document.querySelector('div[style*="position:fixed"]')?.remove();
   toast('✅ Solicitud enviada. El equipo revisará tu vehículo en 24 horas.', 'success');
@@ -3354,37 +3346,38 @@ function mostrarHeaderChat(nombre, origen, destino, precio, limpiar=true) {
 }
 
 async function cargarMensajes(convId) {
-  const { data: msgs } = await sb.from('mensajes')
-    .select('*')
-    .eq('conversacion_id', convId)
-    .order('created_at', { ascending: true });
-  const wrap = document.getElementById('msgs-wrap');
-  // Obtener IDs de mensajes ya renderizados para no duplicar
-  const idsExistentes = new Set(Array.from(wrap.querySelectorAll('[data-msg-id]')).map(el => el.dataset.msgId));
-  if(idsExistentes.size === 0) {
-    // Primera carga — limpiar y renderizar todo
-    Array.from(wrap.children).forEach(c => { if(c.id !== 'chat-empty-state') c.remove(); });
-    (msgs||[]).forEach(m => renderMensaje(m));
-  } else {
-    // Reconexión — solo agregar mensajes nuevos
-    (msgs||[]).forEach(m => { if(!idsExistentes.has(m.id)) renderMensaje(m); });
+  try {
+    const { data: msgs, error } = await sb.from('mensajes')
+      .select('*')
+      .eq('conversacion_id', convId)
+      .order('created_at', { ascending: true });
+    if(error) { console.error('[cargarMensajes]', error.message); return; }
+    const wrap = document.getElementById('msgs-wrap');
+    if(!wrap) return;
+    const idsExistentes = new Set(Array.from(wrap.querySelectorAll('[data-msg-id]')).map(el => el.dataset.msgId));
+    if(idsExistentes.size === 0) {
+      Array.from(wrap.children).forEach(c => { if(c.id !== 'chat-empty-state') c.remove(); });
+      (msgs||[]).forEach(m => renderMensaje(m));
+    } else {
+      (msgs||[]).forEach(m => { if(!idsExistentes.has(m.id)) renderMensaje(m); });
+    }
+    wrap.scrollTop = wrap.scrollHeight;
+    await sb.from('mensajes')
+      .update({ leido: true })
+      .eq('conversacion_id', convId)
+      .neq('emisor_id', perfilActual.id)
+      .eq('leido', false);
+    await cargarConversaciones(convId);
+  } catch(e) {
+    console.error('[cargarMensajes] Error:', e.message);
   }
-  wrap.scrollTop = wrap.scrollHeight;
-  // Marcar como leídos los mensajes del otro
-  await sb.from('mensajes')
-    .update({ leido: true })
-    .eq('conversacion_id', convId)
-    .neq('emisor_id', perfilActual.id)
-    .eq('leido', false);
-  // Actualizar badge
-  await cargarConversaciones(convId);
 }
 
 function renderMensaje(m) {
   const esMio = m.emisor_id === perfilActual?.id;
   const tipo = esMio ? 'mine' : 'other';
   const wrap = document.getElementById('msgs-wrap');
-  console.log('renderMensaje:', m.id, 'esMio:', esMio, 'wrap existe:', !!wrap, 'wrap hijos:', wrap?.children.length);
+  if(!wrap) return;
   const hora = new Date(m.created_at).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
   const div = document.createElement('div');
   div.className = `msg-g ${tipo}`;
@@ -3398,39 +3391,40 @@ function renderMensaje(m) {
 }
 
 function suscribirMensajes(convId) {
-  if(chatSub) { try { sb.removeChannel(chatSub); } catch(e) {} chatSub = null; }
-  const channelName = 'chat-conv-' + convId + '-' + Date.now();
-  chatSub = sb.channel(channelName, { config: { broadcast: { self: false } } })
+  if(chatSub) { try { sb.removeChannel(chatSub); } catch(e){} chatSub = null; }
+  chatSub = sb.channel('chat-' + convId + '-' + Date.now(), { config: { broadcast: { self: false } } })
     .on('postgres_changes', {
       event: 'INSERT',
       schema: 'public',
       table: 'mensajes',
       filter: `conversacion_id=eq.${convId}`
     }, async (payload) => {
-      if(payload.new.emisor_id !== perfilActual?.id) {
-        renderMensaje(payload.new);
-        document.getElementById('msgs-wrap').scrollTop = 99999;
-        await sb.from('mensajes').update({ leido: true }).eq('id', payload.new.id);
-      }
-      await cargarConversaciones(convActual?.id);
+      try {
+        if(payload.new.emisor_id !== perfilActual?.id) {
+          renderMensaje(payload.new);
+          document.getElementById('msgs-wrap').scrollTop = 99999;
+          await sb.from('mensajes').update({ leido: true }).eq('id', payload.new.id);
+        }
+        await cargarConversaciones(convActual?.id);
+      } catch(e) { console.error('[chat] Error callback:', e); }
     })
     .subscribe((status) => {
-      console.log('Chat realtime:', status, '(canal:', channelName, ')');
-      if(status === 'CHANNEL_ERROR') {
-        console.warn('Canal chat en error, reintentando en 3s...');
-        setTimeout(() => { if(convActual?.id) suscribirMensajes(convActual.id); }, 3000);
+      console.log('[realtime] chat:', status);
+      if(status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        chatSub = null;
       }
     });
 }
 
 async function cargarConversaciones(convActivaId) {
   if(!perfilActual) return;
-  const { data: convs, error } = await sb.from('conversaciones')
-    .select(`*, mensajes(contenido, created_at, emisor_id, tipo, leido)`)
-    .or(`usuario1_id.eq.${perfilActual.id},usuario2_id.eq.${perfilActual.id}`)
-    .order('created_at', { ascending: false });
+  try {
+    const { data: convs, error } = await sb.from('conversaciones')
+      .select(`*, mensajes(contenido, created_at, emisor_id, tipo, leido)`)
+      .or(`usuario1_id.eq.${perfilActual.id},usuario2_id.eq.${perfilActual.id}`)
+      .order('created_at', { ascending: false });
 
-  if(error) { console.error('Error convs:', error); return; }
+    if(error) { console.error('[cargarConversaciones]', error.message); return; }
 
   // Obtener IDs de los otros usuarios para buscar sus nombres
   const otrosIds = convs.map(c => c.usuario1_id === perfilActual.id ? c.usuario2_id : c.usuario1_id).filter(Boolean);
@@ -3487,6 +3481,9 @@ async function cargarConversaciones(convActivaId) {
       </div>
     </div>`;
   }).join('');
+  } catch(e) {
+    console.error('[cargarConversaciones] Error:', e.message);
+  }
 }
 
 async function abrirConvExistente(convId) {
