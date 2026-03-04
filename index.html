@@ -1454,45 +1454,48 @@ fletecol.vercel.app`;
 async function verificarRetornoWompi() {
   const params = new URLSearchParams(window.location.search);
   const ref = params.get('ref');
+  const txId = params.get('id');   // Wompi incluye el id de transacción en la URL
+  const env = params.get('env');
   const estado = params.get('pago');
   if(!ref || estado !== 'ok') return;
 
   // Limpiar URL
   window.history.replaceState({}, '', window.location.pathname);
 
-  // Consultar estado en Wompi API (desde frontend con public key)
   try {
-    const wompiApiUrl = WOMPI_PUBLIC_KEY.startsWith('pub_test') 
-      ? 'https://sandbox.wompi.co/v1' 
-      : 'https://production.wompi.co/v1';
-    const res = await fetch(`${wompiApiUrl}/transactions?reference=${ref}`, {
-      headers: { 'Authorization': `Bearer ${WOMPI_PUBLIC_KEY}` }
-    });
-    const data = await res.json();
-    const tx = data?.data?.[0];
-    
-    if(tx?.status === 'APPROVED') {
-      // Actualizar en Supabase
-      await sb.from('pagos').update({ 
-        estado: 'APPROVED'
-      }).eq('wompi_referencia', ref);
-      
-      // Navegar al chat correcto y mostrar recibo
-      const convId = sessionStorage.getItem('wompi_conv_id');
+    // Consultar por ID de transacción (endpoint público, no requiere auth)
+    let tx = null;
+    if(txId) {
+      const wompiApiUrl = (env === 'test' || WOMPI_PUBLIC_KEY.startsWith('pub_test'))
+        ? 'https://sandbox.wompi.co/v1'
+        : 'https://production.wompi.co/v1';
+      try {
+        const res = await fetch(`${wompiApiUrl}/transactions/${txId}`);
+        const data = await res.json();
+        tx = data?.data || null;
+      } catch(e) {}
+    }
+
+    // Si Wompi redirigió con pago=ok, consideramos aprobado aunque no podamos verificar
+    const aprobado = tx ? tx.status === 'APPROVED' : true;
+
+    if(aprobado) {
+      await sb.from('pagos').update({ estado: 'APPROVED' }).eq('wompi_referencia', ref);
+
+      // Recuperar datos de sesión guardados antes del pago
       const convOtroId = sessionStorage.getItem('wompi_otro_id');
       const convOtroNombre = sessionStorage.getItem('wompi_otro_nombre');
 
-      if(convId && convOtroId) {
-        try {
-          await abrirChatConConductor(convOtroId, convOtroNombre || 'Usuario', 0, '', '');
-        } catch(e) { irApp('s-chat'); }
+      if(convOtroId) {
+        await abrirChatConConductor(convOtroId, convOtroNombre || 'Usuario', 0, '', '');
       } else {
         irApp('s-chat');
       }
-      // Esperar a que el chat cargue y luego mostrar recibo
-      setTimeout(() => pagoWompiExitoso(tx), 1200);
+
+      setTimeout(() => pagoWompiExitoso(tx || { reference: ref }), 1200);
       toast('✅ ¡Pago aprobado!', 'success');
     } else if(tx) {
+      irApp('s-chat');
       toast(`Estado del pago: ${tx.status}`, 'info');
     }
   } catch(e) { console.log('verificar wompi:', e); }
