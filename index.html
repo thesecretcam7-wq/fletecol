@@ -3551,10 +3551,24 @@ function mostrarHeaderChat(nombre, origen, destino, precio, limpiar=true) {
   document.getElementById('escrow-bar').style.display = 'flex';
   document.getElementById('chat-empty-state').style.display = 'none';
 
-  // Solo clientes ven botones de pago y oferta
+  // Solo clientes ven botones de pago, oferta y panel de pago
   const esConductor = perfilActual?.rol === 'conductor';
   document.getElementById('chat-acciones').style.display = esConductor ? 'none' : 'flex';
   document.querySelectorAll('.btn-accion-cliente').forEach(b => b.style.display = esConductor ? 'none' : '');
+
+  // Ocultar panel de pago y escrow-bar para conductores
+  const pagoPanelEl = document.getElementById('pago-panel');
+  const escrowBarEl = document.getElementById('escrow-bar');
+  const chatLayout = document.querySelector('.chat-layout');
+  if(esConductor) {
+    if(pagoPanelEl) pagoPanelEl.style.display = 'none';
+    if(escrowBarEl) escrowBarEl.style.display = 'none';
+    if(chatLayout) chatLayout.style.gridTemplateColumns = '260px 1fr';
+  } else {
+    if(pagoPanelEl) pagoPanelEl.style.display = '';
+    if(escrowBarEl) escrowBarEl.style.display = 'flex';
+    if(chatLayout) chatLayout.style.gridTemplateColumns = '';
+  }
 
   if(precio>0) actualizarMonto(precio);
   if(limpiar) {
