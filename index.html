@@ -984,7 +984,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}*,*::before
         </div>
       </div>
       <div class="escrow-bar" id="escrow-bar" style="display:none;">
-        <div>🔒 <span style="color:var(--verde);">Dinero retenido hasta confirmar entrega</span></div>
+        <div id="escrow-txt">💳 <span style="color:var(--texto);">Precio acordado</span></div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:14px;color:var(--amarillo);" id="escrow-amt2">$0</span>
           <span style="background:rgba(245,196,0,0.1);color:var(--amarillo);padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;" id="escrow-est2">Sin pagar</span>
@@ -1555,46 +1555,28 @@ async function pagoWompiExitoso(txData, convIdParam) {
 }
 
 async function verificarEstadoPagoConv(convId) {
-  // Solo aplica para clientes
-  if(perfilActual?.rol !== 'cliente') return;
-  try {
-    const { data: pagos } = await sb.from('pagos')
-      .select('estado')
-      .eq('conversacion_id', convId)
-      .in('estado', ['APPROVED', 'pendiente'])
-      .order('created_at', { ascending: false })
-      .limit(1);
+  // Toda la lógica está en cargarMensajes — esta función ya no hace nada
+}
 
-    const pago = pagos?.[0];
-    if(!pago) return; // sin pago, mostrar formulario normal
-
-    const ppForm = document.getElementById('pp-form2');
-    const ppExitoso = document.getElementById('pp-exitoso2');
-    const ppCompletado = document.getElementById('pp-completado2');
-    const escrowEst = document.getElementById('escrow-est2');
-    const chatPayBtn = document.getElementById('chat-pay-btn');
-
-    if(pago.estado === 'APPROVED') {
-      // Pago aprobado — mostrar estado en el botón y pantalla de retención
-      if(ppForm) ppForm.style.display = 'none';
-      if(ppExitoso) ppExitoso.style.display = 'block';
-      if(ppCompletado) ppCompletado.style.display = 'none';
-      if(escrowEst) escrowEst.textContent = '🔒 Retenido';
-      if(chatPayBtn) {
-        chatPayBtn.textContent = '✅ Confirmar entrega';
-        chatPayBtn.style.background = 'var(--verde)';
-        chatPayBtn.onclick = confirmarEntregaMobile;
-      }
-    } else if(pago.estado === 'pendiente') {
-      // Pago pendiente — mostrar estado
-      if(chatPayBtn) {
-        chatPayBtn.textContent = '⏳ Pago pendiente';
-        chatPayBtn.disabled = true;
-        chatPayBtn.style.opacity = '0.6';
-      }
-    }
-  } catch(e) {
-    console.warn('verificarEstadoPagoConv:', e.message);
+function actualizarEscrowBar(estado) {
+  const txt = document.getElementById('escrow-txt');
+  const est = document.getElementById('escrow-est2');
+  if(!txt || !est) return;
+  if(estado === 'APPROVED') {
+    txt.innerHTML = '🔒 <span style="color:var(--verde);">Dinero retenido hasta confirmar entrega</span>';
+    est.textContent = '🔒 Retenido';
+    est.style.color = 'var(--verde)';
+    est.style.background = 'rgba(0,212,106,0.1)';
+  } else if(estado === 'LIBERADO') {
+    txt.innerHTML = '✅ <span style="color:var(--verde);">Pago liberado al conductor</span>';
+    est.textContent = '✅ Liberado';
+    est.style.color = 'var(--verde)';
+    est.style.background = 'rgba(0,212,106,0.1)';
+  } else {
+    txt.innerHTML = '💳 <span style="color:var(--texto);">Precio acordado</span>';
+    est.textContent = 'Sin pagar';
+    est.style.color = 'var(--amarillo)';
+    est.style.background = 'rgba(245,196,0,0.1)';
   }
 }
 
@@ -3814,33 +3796,49 @@ async function cargarMensajes(convId) {
       .eq('leido', false);
     await cargarConversaciones(convId);
 
-    // Para clientes: gestionar estado del botón Pagar
+    // Para clientes: gestionar estado del panel y botón Pagar (fuente única de verdad)
     if(perfilActual?.rol === 'cliente') {
       const tieneOfertaAceptada = (msgs||[]).some(m => m.tipo === 'oferta_aceptada');
       const tieneEntregaConfirmada = (msgs||[]).some(m => m.tipo === 'entrega_confirmada');
       const payBtn = document.getElementById('chat-pay-btn');
+      const ppForm = document.getElementById('pp-form2');
+      const ppExitoso = document.getElementById('pp-exitoso2');
+      const ppCompletado = document.getElementById('pp-completado2');
+      const escrowEst = document.getElementById('escrow-est2');
 
       if(tieneEntregaConfirmada) {
-        // Entrega ya confirmada — mostrar botón para nuevo pago
-        if(payBtn) { payBtn.style.display = ''; payBtn.textContent = '🔒 Pagar'; }
-        // Mostrar panel completado
-        const ppExitoso = document.getElementById('pp-exitoso2');
-        const ppCompletado = document.getElementById('pp-completado2');
-        const escrowEst = document.getElementById('escrow-est2');
+        // Estado final: entrega confirmada
+        if(payBtn) { payBtn.style.display = ''; payBtn.textContent = '🔒 Pagar'; payBtn.style.background = 'var(--amarillo)'; payBtn.disabled = false; payBtn.style.opacity = '1'; payBtn.onclick = abrirPagoMobile; }
+        if(ppForm) ppForm.style.display = 'none';
         if(ppExitoso) ppExitoso.style.display = 'none';
         if(ppCompletado) ppCompletado.style.display = 'block';
-        if(escrowEst) escrowEst.textContent = '✅ Liberado';
+        actualizarEscrowBar('LIBERADO');
+
       } else if(tieneOfertaAceptada) {
-        const { data: pagos } = await sb.from('pagos')
+        // Verificar si ya pagó
+        const { data: pagosData } = await sb.from('pagos')
           .select('estado').eq('conversacion_id', convId)
-          .in('estado', ['APPROVED','pendiente']).limit(1);
-        if(payBtn) {
-          if(pagos?.length) {
-            payBtn.style.display = 'none'; // pagó pero aún no confirma entrega
-          } else {
-            payBtn.style.display = ''; // mostrar botón pagar
-          }
+          .order('created_at', { ascending: false }).limit(1);
+        const estadoPago = pagosData?.[0]?.estado;
+
+        if(estadoPago === 'APPROVED') {
+          // Pagó, esperando confirmación de entrega
+          if(payBtn) { payBtn.style.display = ''; payBtn.textContent = '✅ Confirmar entrega'; payBtn.style.background = 'var(--verde)'; payBtn.disabled = false; payBtn.style.opacity = '1'; payBtn.onclick = confirmarEntregaMobile; }
+          if(ppForm) ppForm.style.display = 'none';
+          if(ppExitoso) ppExitoso.style.display = 'block';
+          if(ppCompletado) ppCompletado.style.display = 'none';
+          actualizarEscrowBar('APPROVED');
+        } else {
+          // Oferta aceptada pero sin pago aún
+          if(payBtn) { payBtn.style.display = ''; payBtn.textContent = '🔒 Pagar'; payBtn.style.background = 'var(--amarillo)'; payBtn.disabled = false; payBtn.style.opacity = '1'; payBtn.onclick = abrirPagoMobile; }
+          if(ppForm) ppForm.style.display = 'block';
+          if(ppExitoso) ppExitoso.style.display = 'none';
+          if(ppCompletado) ppCompletado.style.display = 'none';
+          actualizarEscrowBar('sin_pagar');
         }
+      } else {
+        // Sin oferta aceptada — ocultar botón pagar
+        if(payBtn) payBtn.style.display = 'none';
       }
     }
   } catch(e) {
