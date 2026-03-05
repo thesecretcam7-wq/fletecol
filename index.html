@@ -1598,9 +1598,18 @@ function confirmarEntregaMobile() {
   }
 }
 
-function abrirPagoMobile() {
+async function abrirPagoMobile() {
+  // Verificar que no haya pago activo sin entrega confirmada
+  if(convActual?.id) {
+    const { data: pagosActivos } = await sb.from('pagos')
+      .select('estado').eq('conversacion_id', convActual.id)
+      .eq('estado', 'APPROVED').limit(1);
+    if(pagosActivos?.length) {
+      toast('⚠️ Debes confirmar la entrega antes de realizar un nuevo pago', 'error');
+      return;
+    }
+  }
   if(!esMobile()) {
-    // Desktop: el panel ya es visible como columna
     mostrarPago();
     return;
   }
@@ -3855,8 +3864,16 @@ async function cargarMensajes(convId) {
         const estadoPago = pagosData?.[0]?.estado;
 
         if(estadoPago === 'APPROVED') {
-          // Pagó, esperando confirmación de entrega
+          // Pagó — solo puede confirmar entrega, no hacer nuevas ofertas ni pagos
           if(payBtn) { payBtn.style.display = ''; payBtn.textContent = '✅ Confirmar entrega'; payBtn.style.background = 'var(--verde)'; payBtn.disabled = false; payBtn.style.opacity = '1'; payBtn.onclick = confirmarEntregaMobile; }
+          // Ocultar botón oferta del header
+          const ofertaBtn = document.querySelector('#chat-acciones button[onclick="hacerOferta()"]');
+          if(ofertaBtn) ofertaBtn.style.display = 'none';
+          // Ocultar botones de acción inferiores excepto confirmar entrega
+          document.querySelectorAll('.btn-accion-cliente').forEach(b => {
+            if(b.getAttribute('onclick') === 'hacerOferta()') b.style.display = 'none';
+            if(b.getAttribute('onclick') === 'pedirConfEntrega()') b.style.display = '';
+          });
           if(ppForm) ppForm.style.display = 'none';
           if(ppExitoso) ppExitoso.style.display = 'block';
           if(ppCompletado) ppCompletado.style.display = 'none';
@@ -4359,6 +4376,16 @@ async function prepararWompiConMonto(monto) {
 }
 
 async function hacerOferta() {
+  // Verificar que no haya pago activo sin entrega confirmada
+  if(convActual?.id) {
+    const { data: pagosActivos } = await sb.from('pagos')
+      .select('estado').eq('conversacion_id', convActual.id)
+      .eq('estado', 'APPROVED').limit(1);
+    if(pagosActivos?.length) {
+      toast('⚠️ Debes confirmar la entrega antes de hacer una nueva oferta', 'error');
+      return;
+    }
+  }
   // Conductor hace oferta en carga del cliente
   // Cliente puede negociar precio en viaje del conductor
   const esConductor = perfilActual?.rol === 'conductor';
