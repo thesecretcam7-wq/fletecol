@@ -3870,7 +3870,9 @@ function renderMensaje(m) {
         if(escrowEst) escrowEst.textContent = '✅ Liberado';
       }
       div.innerHTML = `<div class="sys-msg">🎉 <strong style="color:var(--verde)">Entrega confirmada</strong> · Pago liberado</div>`;
-      return div;
+      wrap.appendChild(div);
+      wrap.scrollTop = wrap.scrollHeight;
+      return;
     }
     if(m.tipo === 'oferta_aceptada') {
       // El conductor aceptó — mostrar botón pagar al cliente
@@ -3879,7 +3881,9 @@ function renderMensaje(m) {
         if(payBtn) payBtn.style.display = '';
       }
       div.innerHTML = `<div class="msg-row2"><div class="msg-av2">👨</div><div><div style="background:rgba(0,212,106,0.08);border:1px solid rgba(0,212,106,0.2);border-radius:13px;padding:11px 14px;font-size:13px;">${escHtml(m.contenido)}</div><div class="msg-time2">${hora}</div></div></div>`;
-      return div;
+      wrap.appendChild(div);
+      wrap.scrollTop = wrap.scrollHeight;
+      return;
     }
     if(m.tipo === 'recibo') {
     let info = {};
@@ -3930,14 +3934,24 @@ function suscribirMensajes(convId) {
     .on('postgres_changes', {
       event: 'INSERT',
       schema: 'public',
-      table: 'mensajes',
-      filter: `conversacion_id=eq.${convId}`
+      table: 'mensajes'
+      // Sin filtro — filtramos en el cliente para garantizar recepción
     }, async (payload) => {
       try {
-        if(payload.new.emisor_id !== perfilActual?.id) {
-          renderMensaje(payload.new);
-          document.getElementById('msgs-wrap').scrollTop = 99999;
-          await sb.from('mensajes').update({ leido: true }).eq('id', payload.new.id);
+        const msg = payload.new;
+        // Ignorar mensajes de otras conversaciones
+        if(msg.conversacion_id !== convActual?.id) return;
+        // Ignorar mensajes propios (ya se muestran al enviar)
+        if(msg.emisor_id === perfilActual?.id) {
+          await cargarConversaciones(convActual?.id);
+          return;
+        }
+        // Verificar que no esté ya renderizado
+        const wrap = document.getElementById('msgs-wrap');
+        if(wrap && !wrap.querySelector(`[data-msg-id="${msg.id}"]`)) {
+          renderMensaje(msg);
+          wrap.scrollTop = 99999;
+          await sb.from('mensajes').update({ leido: true }).eq('id', msg.id);
         }
         await cargarConversaciones(convActual?.id);
       } catch(e) { console.error('[chat] Error callback:', e); }
@@ -3945,7 +3959,8 @@ function suscribirMensajes(convId) {
     .subscribe((status) => {
       console.log('[realtime] chat:', status);
       if(status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        chatSub = null;
+        // Reintentar suscripción automáticamente
+        setTimeout(() => { if(convActual?.id) suscribirMensajes(convActual.id); }, 2000);
       }
     });
 }
