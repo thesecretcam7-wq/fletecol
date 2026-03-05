@@ -4334,7 +4334,6 @@ async function hacerOferta() {
     div.innerHTML=`<div class="msg-row2" style="flex-direction:row-reverse"><div class="msg-av2">🧑</div><div><div style="background:rgba(245,196,0,0.07);border:1px solid rgba(245,196,0,0.18);border-radius:13px;padding:13px 15px;"><div style="font-weight:700;font-size:12px;color:var(--amarillo);margin-bottom:3px;">💰 Mi oferta</div><div style="font-family:'Syne',sans-serif;font-weight:800;font-size:22px;margin-bottom:5px;">$${monto.toLocaleString('es-CO')} COP</div><div style="font-size:11px;color:var(--texto)">Esperando respuesta...</div></div></div></div>`;
     wrap.appendChild(div);
     wrap.scrollTop=wrap.scrollHeight;
-    actualizarMonto(monto);
     toast('💰 Oferta enviada','info');
     return;
   }
@@ -4346,7 +4345,6 @@ async function hacerOferta() {
     oferta_monto: monto
   }).select().single();
   if(msg) { renderMensaje(msg); document.getElementById('msgs-wrap').scrollTop = 99999; }
-  actualizarMonto(monto);
   toast('💰 Oferta enviada al conductor','info');
 }
 
