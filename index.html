@@ -1969,8 +1969,13 @@ document.addEventListener('visibilitychange', async () => {
   if(!usuarioActual || !perfilActual) return;
 
   // worker:true maneja el heartbeat y reconexión del WebSocket automáticamente
-  // Solo necesitamos: reset flags + reenviar pendientes
   cargandoRutas = false;
+
+  // Re-suscribir mensajes y recargar chat si hay conversación activa
+  if(convActual?.id) {
+    suscribirMensajes(convActual.id);
+    await cargarMensajes(convActual.id);
+  }
 
   if(mensajesPendientes.length > 0) {
     setTimeout(() => enviarPendientes(), 500);
