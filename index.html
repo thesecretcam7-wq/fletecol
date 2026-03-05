@@ -973,7 +973,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}*,*::before
           <div style="font-size:11px;color:var(--texto);" id="chat-sub">—</div>
         </div>
         <div style="margin-left:auto;gap:7px;display:none;" id="chat-acciones">
-          <button style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:6px 12px;color:var(--blanco);font-size:12px;font-weight:600;cursor:pointer;" onclick="hacerOferta()">💰 Oferta</button>
+          <button id="btn-oferta-header" style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:6px 12px;color:var(--blanco);font-size:12px;font-weight:600;cursor:pointer;" onclick="hacerOferta()">💰 Oferta</button>
           <button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;display:none;" id="chat-pay-btn" onclick="abrirPagoMobile()">🔒 Pagar</button>
         </div>
         <div style="position:relative;margin-left:6px;" id="chat-menu-wrap">
@@ -1001,7 +1001,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}*,*::before
       <div class="input-area2">
         <div class="input-warn2" id="i-warn2">🚫 <span id="i-warn-txt2"></span></div>
         <div style="display:flex;gap:7px;margin-bottom:8px;">
-          <button class="btn-accion-cliente" style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;" onclick="hacerOferta()">💰 Hacer oferta</button>
+          <button id="btn-oferta-bottom" class="btn-accion-cliente" style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;" onclick="hacerOferta()">💰 Hacer oferta</button>
           <button class="btn-accion-cliente" style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;" onclick="pedirConfEntrega()">📦 Confirmar entrega</button>
         </div>
         <div style="display:flex;gap:8px;align-items:flex-end;">
@@ -1556,6 +1556,40 @@ async function pagoWompiExitoso(txData, convIdParam) {
 
 async function verificarEstadoPagoConv(convId) {
   // Toda la lógica está en cargarMensajes — esta función ya no hace nada
+}
+
+function setBotonesSegunEstadoPago(estado) {
+  // estado: 'sin_oferta' | 'oferta_aceptada' | 'pagado' | 'entregado'
+  const btnOfertaHeader = document.getElementById('btn-oferta-header');
+  const btnOfertaBottom = document.getElementById('btn-oferta-bottom');
+  const btnPagar = document.getElementById('chat-pay-btn');
+  const btnConfirmar = document.querySelector('.btn-accion-cliente[onclick="pedirConfEntrega()"]');
+
+  if(estado === 'pagado') {
+    // Pago APPROVED — solo confirmar entrega
+    if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
+    if(btnOfertaBottom) btnOfertaBottom.style.display = 'none';
+    if(btnPagar) { btnPagar.style.display = ''; btnPagar.textContent = '✅ Confirmar entrega'; btnPagar.style.background = 'var(--verde)'; btnPagar.onclick = confirmarEntregaMobile; }
+    if(btnConfirmar) btnConfirmar.style.display = '';
+  } else if(estado === 'oferta_aceptada') {
+    // Oferta aceptada — solo pagar
+    if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
+    if(btnOfertaBottom) btnOfertaBottom.style.display = 'none';
+    if(btnPagar) { btnPagar.style.display = ''; btnPagar.textContent = '🔒 Pagar'; btnPagar.style.background = 'var(--amarillo)'; btnPagar.onclick = abrirPagoMobile; }
+    if(btnConfirmar) btnConfirmar.style.display = 'none';
+  } else if(estado === 'entregado') {
+    // Entrega confirmada — todo disponible para nuevo flete
+    if(btnOfertaHeader) btnOfertaHeader.style.display = '';
+    if(btnOfertaBottom) btnOfertaBottom.style.display = '';
+    if(btnPagar) { btnPagar.style.display = 'none'; btnPagar.textContent = '🔒 Pagar'; btnPagar.style.background = 'var(--amarillo)'; btnPagar.onclick = abrirPagoMobile; }
+    if(btnConfirmar) btnConfirmar.style.display = '';
+  } else {
+    // Sin oferta aceptada — solo oferta disponible
+    if(btnOfertaHeader) btnOfertaHeader.style.display = '';
+    if(btnOfertaBottom) btnOfertaBottom.style.display = '';
+    if(btnPagar) btnPagar.style.display = 'none';
+    if(btnConfirmar) btnConfirmar.style.display = 'none';
+  }
 }
 
 function actualizarEscrowBar(estado) {
@@ -3849,46 +3883,33 @@ async function cargarMensajes(convId) {
       const escrowEst = document.getElementById('escrow-est2');
 
       if(tieneEntregaConfirmada) {
-        // Estado final: entrega confirmada
-        if(payBtn) { payBtn.style.display = ''; payBtn.textContent = '🔒 Pagar'; payBtn.style.background = 'var(--amarillo)'; payBtn.disabled = false; payBtn.style.opacity = '1'; payBtn.onclick = abrirPagoMobile; }
+        setBotonesSegunEstadoPago('entregado');
         if(ppForm) ppForm.style.display = 'none';
         if(ppExitoso) ppExitoso.style.display = 'none';
         if(ppCompletado) ppCompletado.style.display = 'block';
         actualizarEscrowBar('LIBERADO');
 
       } else if(tieneOfertaAceptada) {
-        // Verificar si ya pagó
         const { data: pagosData } = await sb.from('pagos')
           .select('estado').eq('conversacion_id', convId)
           .order('created_at', { ascending: false }).limit(1);
         const estadoPago = pagosData?.[0]?.estado;
 
         if(estadoPago === 'APPROVED') {
-          // Pagó — solo puede confirmar entrega, no hacer nuevas ofertas ni pagos
-          if(payBtn) { payBtn.style.display = ''; payBtn.textContent = '✅ Confirmar entrega'; payBtn.style.background = 'var(--verde)'; payBtn.disabled = false; payBtn.style.opacity = '1'; payBtn.onclick = confirmarEntregaMobile; }
-          // Ocultar botón oferta del header
-          const ofertaBtn = document.querySelector('#chat-acciones button[onclick="hacerOferta()"]');
-          if(ofertaBtn) ofertaBtn.style.display = 'none';
-          // Ocultar botones de acción inferiores excepto confirmar entrega
-          document.querySelectorAll('.btn-accion-cliente').forEach(b => {
-            if(b.getAttribute('onclick') === 'hacerOferta()') b.style.display = 'none';
-            if(b.getAttribute('onclick') === 'pedirConfEntrega()') b.style.display = '';
-          });
+          setBotonesSegunEstadoPago('pagado');
           if(ppForm) ppForm.style.display = 'none';
           if(ppExitoso) ppExitoso.style.display = 'block';
           if(ppCompletado) ppCompletado.style.display = 'none';
           actualizarEscrowBar('APPROVED');
         } else {
-          // Oferta aceptada pero sin pago aún
-          if(payBtn) { payBtn.style.display = ''; payBtn.textContent = '🔒 Pagar'; payBtn.style.background = 'var(--amarillo)'; payBtn.disabled = false; payBtn.style.opacity = '1'; payBtn.onclick = abrirPagoMobile; }
+          setBotonesSegunEstadoPago('oferta_aceptada');
           if(ppForm) ppForm.style.display = 'block';
           if(ppExitoso) ppExitoso.style.display = 'none';
           if(ppCompletado) ppCompletado.style.display = 'none';
           actualizarEscrowBar('sin_pagar');
         }
       } else {
-        // Sin oferta aceptada — ocultar botón pagar
-        if(payBtn) payBtn.style.display = 'none';
+        setBotonesSegunEstadoPago('sin_oferta');
       }
     }
   } catch(e) {
@@ -4458,17 +4479,8 @@ async function confirmarEntrega2(){
     // Actualizar estado del pago a LIBERADO
     sb.from('pagos').update({ estado: 'LIBERADO' }).eq('conversacion_id', convId).eq('estado','APPROVED').then(()=>{});
   }
-  // Restaurar botón Pagar para nuevos fletes
-  const btn = document.getElementById('chat-pay-btn');
-  if(btn) {
-    btn.textContent = '🔒 Pagar';
-    btn.style.background = 'var(--amarillo)';
-    btn.style.color = 'var(--negro)';
-    btn.style.opacity = '1';
-    btn.disabled = false;
-    btn.onclick = abrirPagoMobile;
-    btn.style.display = '';
-  }
+  // Restaurar botones para nuevos fletes
+  setBotonesSegunEstadoPago('entregado');
   // Reactivar publicaciones para nuevos fletes
   if(perfilActual?.id) {
     sb.from('rutas').update({ estado: 'activa' }).eq('conductor_id', convActual?.otro_id).eq('estado','en_curso').then(()=>{});
