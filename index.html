@@ -1784,10 +1784,14 @@ async function verificarRetornoWompi() {
       irApp('s-chat');
 
       if(snapConvId) {
-        // Tenemos el convId directo — abrir sin pasar por abrirChatConConductor
         await abrirConvExistente(snapConvId);
       } else if(convOtroId) {
         await abrirChatConConductor(convOtroId, convOtroNombre || 'Usuario', 0, '', '');
+      }
+
+      // En mobile: forzar apertura del chat (irApp muestra la lista, no el chat)
+      if(esMobile()) {
+        setTimeout(() => abrirChatMobile(), 300);
       }
 
       const convIdFinal = snapConvId || convActual?.id;
