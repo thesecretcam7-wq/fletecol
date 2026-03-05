@@ -1649,14 +1649,23 @@ function toggleChatMenu() {
 
 async function eliminarChat() {
   document.getElementById('chat-menu-dropdown').style.display = 'none';
-  if(!convActual?.id) return;
+  // Guardar el ID exacto antes de cualquier operación
+  const convIdAEliminar = convActual?.id;
+  // Verificación estricta: debe ser un UUID válido
+  if(!convIdAEliminar || typeof convIdAEliminar !== 'string' || convIdAEliminar.length < 10) {
+    toast('Error: no hay conversación seleccionada', 'error');
+    return;
+  }
   const ok = confirm('¿Eliminar esta conversación? Se borrarán todos los mensajes.');
   if(!ok) return;
   try {
-    // Eliminar mensajes primero
-    await sb.from('mensajes').delete().eq('conversacion_id', convActual.id);
-    // Eliminar conversación
-    await sb.from('conversaciones').delete().eq('id', convActual.id);
+    console.log('🗑️ Eliminando conversación:', convIdAEliminar);
+    // Eliminar mensajes solo de esta conversación específica
+    const { error: e1 } = await sb.from('mensajes').delete().eq('conversacion_id', convIdAEliminar);
+    if(e1) throw new Error('mensajes: ' + e1.message);
+    // Eliminar solo esta conversación específica
+    const { error: e2 } = await sb.from('conversaciones').delete().eq('id', convIdAEliminar);
+    if(e2) throw new Error('conversacion: ' + e2.message);
     convActual = null;
     // Volver a lista de chats
     if(esMobile()) volverListaChat();
