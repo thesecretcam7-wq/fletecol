@@ -1902,6 +1902,7 @@ async function init() {
       const vieneDePago = await verificarRetornoWompi(); // DESPUÉS de cargarPerfil — necesita perfilActual
       if(!vieneDePago) await redirigirSegunEstado(); // no redirigir si venimos de Wompi
       suscribirEstado(); // escuchar cambios en tiempo real
+      suscribirBadge();  // actualizar badge de chat en tiempo real
     } else {
       ir('s-landing');
     }
@@ -2118,6 +2119,26 @@ async function verificarEstadoManual() {
 }
 
 // Escucha en tiempo real si el admin cambia el estado del usuario
+let badgeSub = null;
+function suscribirBadge() {
+  if(!usuarioActual || !perfilActual) return;
+  if(badgeSub) { try { sb.removeChannel(badgeSub); } catch(e){} badgeSub = null; }
+
+  badgeSub = sb.channel('badge-' + perfilActual.id + '-' + Date.now())
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'mensajes'
+    }, async (payload) => {
+      const msg = payload.new;
+      // Solo contar mensajes dirigidos a este usuario (no propios)
+      if(msg.emisor_id === perfilActual.id) return;
+      // Verificar que pertenece a una conversación del usuario
+      await cargarConversaciones(convActual?.id);
+    })
+    .subscribe();
+}
+
 function suscribirEstado() {
   if(!usuarioActual) return;
   if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e){} estadoSub = null; }
