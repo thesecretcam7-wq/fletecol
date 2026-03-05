@@ -1660,10 +1660,13 @@ async function eliminarChat() {
   if(!ok) return;
   try {
     console.log('🗑️ Eliminando conversación:', convIdAEliminar);
-    // Eliminar mensajes solo de esta conversación específica
+    // 1. Eliminar pagos asociados
+    const { error: e0 } = await sb.from('pagos').delete().eq('conversacion_id', convIdAEliminar);
+    if(e0) throw new Error('pagos: ' + e0.message);
+    // 2. Eliminar mensajes
     const { error: e1 } = await sb.from('mensajes').delete().eq('conversacion_id', convIdAEliminar);
     if(e1) throw new Error('mensajes: ' + e1.message);
-    // Eliminar solo esta conversación específica
+    // 3. Eliminar conversación
     const { error: e2 } = await sb.from('conversaciones').delete().eq('id', convIdAEliminar);
     if(e2) throw new Error('conversacion: ' + e2.message);
     convActual = null;
