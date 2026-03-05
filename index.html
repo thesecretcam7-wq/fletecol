@@ -191,7 +191,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}*,*::before
 .aviso{background:rgba(245,196,0,0.06);border:1px solid rgba(245,196,0,0.15);border-radius:11px;padding:12px 14px;font-size:12px;color:#bbb;margin-bottom:14px;display:flex;gap:8px;line-height:1.5;}
 
 /* ══ CHAT ══ */
-.chat-layout{display:grid;grid-template-columns:260px 1fr 300px;flex:1;overflow:hidden;height:calc(100% - 0px);}
+.chat-layout{display:grid;grid-template-columns:260px 1fr;flex:1;overflow:hidden;height:calc(100% - 0px);}
 .conv-sidebar{background:var(--gris1);border-right:1px solid rgba(255,255,255,0.05);display:flex;flex-direction:column;overflow:hidden;}
 .conv-list{flex:1;overflow-y:auto;}
 .conv-item{padding:13px 14px;border-bottom:1px solid rgba(255,255,255,0.03);cursor:pointer;display:flex;gap:10px;transition:background 0.15s;}
@@ -223,7 +223,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}*,*::before
 .escrow-bar{background:rgba(0,212,106,0.05);border-bottom:1px solid rgba(0,212,106,0.1);padding:9px 18px;display:flex;align-items:center;justify-content:space-between;font-size:12px;flex-shrink:0;}
 
 /* ══ PAGO PANEL ══ */
-.pago-panel{background:var(--gris1);border-left:1px solid rgba(255,255,255,0.05);padding:18px 14px;overflow-y:auto;}
+.pago-panel{background:var(--gris1);border-left:1px solid rgba(255,255,255,0.05);padding:18px 14px;overflow-y:auto;display:none;}
 .metodo{display:flex;align-items:center;gap:10px;background:var(--gris2);border:2px solid var(--gris4);border-radius:11px;padding:11px 13px;margin-bottom:7px;cursor:pointer;transition:all 0.15s;}
 .metodo.sel{border-color:var(--amarillo);background:rgba(245,196,0,0.04);}
 .metodo-radio2{width:14px;height:14px;border-radius:50%;border:2px solid var(--gris5);flex-shrink:0;transition:all 0.15s;}
@@ -2099,7 +2099,11 @@ async function irApp(screenId) {
   if(screenId === 's-rutas') cargarRutas();
   if(screenId === 's-chat') {
     cargarConversaciones();
-    // En mobile, mostrar lista al entrar al chat
+    // Ocultar panel de pago hasta que se abra una conversación
+    const pp = document.getElementById('pago-panel');
+    if(pp) pp.style.display = 'none';
+    const cl = document.querySelector('.chat-layout');
+    if(cl) cl.style.gridTemplateColumns = '260px 1fr';
     if(esMobile()) volverListaChat();
   }
   if(screenId === 's-rutas') cargarCarrusel();
@@ -3565,9 +3569,9 @@ function mostrarHeaderChat(nombre, origen, destino, precio, limpiar=true) {
     if(escrowBarEl) escrowBarEl.style.display = 'none';
     if(chatLayout) chatLayout.style.gridTemplateColumns = '260px 1fr';
   } else {
-    if(pagoPanelEl) pagoPanelEl.style.display = '';
+    if(pagoPanelEl) pagoPanelEl.style.display = 'block';
     if(escrowBarEl) escrowBarEl.style.display = 'flex';
-    if(chatLayout) chatLayout.style.gridTemplateColumns = '';
+    if(chatLayout) chatLayout.style.gridTemplateColumns = '260px 1fr 300px';
   }
 
   if(precio>0) actualizarMonto(precio);
