@@ -1576,7 +1576,8 @@ async function verificarRetornoWompi() {
     const aprobado = tx ? tx.status === 'APPROVED' : true;
 
     if(aprobado) {
-      await sb.from('pagos').update({ estado: 'APPROVED' }).eq('wompi_referencia', ref);
+      try { await sb.from('pagos').update({ estado: 'APPROVED' }).eq('wompi_referencia', ref); } catch(e) {}
+      let _retorno = true; // marcar que procesamos retorno de Wompi
 
       // Restaurar convActual del snapshot guardado antes del pago
       const snap = sessionStorage.getItem('wompi_conv_snapshot');
@@ -1600,11 +1601,14 @@ async function verificarRetornoWompi() {
       const convIdFinal = snapConvId || convActual?.id;
       await pagoWompiExitoso(tx || { reference: ref }, convIdFinal);
       toast('✅ ¡Pago aprobado!', 'success');
+      return true; // indicar que procesamos retorno de Wompi
     } else if(tx) {
       irApp('s-chat');
       toast(`Estado del pago: ${tx.status}`, 'info');
+      return true;
     }
   } catch(e) { console.log('verificar wompi:', e); }
+  return false;
 }
 
 // Service Worker desactivado — no compatible con dominios externos (Supabase)
@@ -1669,8 +1673,8 @@ async function init() {
     if(session) {
       usuarioActual = session.user;
       await cargarPerfil();
-      await verificarRetornoWompi(); // DESPUÉS de cargarPerfil — necesita perfilActual
-      await redirigirSegunEstado();
+      const vieneDePago = await verificarRetornoWompi(); // DESPUÉS de cargarPerfil — necesita perfilActual
+      if(!vieneDePago) await redirigirSegunEstado(); // no redirigir si venimos de Wompi
       suscribirEstado(); // escuchar cambios en tiempo real
     } else {
       ir('s-landing');
