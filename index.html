@@ -1586,18 +1586,20 @@ async function verificarRetornoWompi() {
         sessionStorage.removeItem('wompi_conv_snapshot');
       }
 
-      // Guardar convId ANTES de que abrirChatConConductor lo sobrescriba
       const snapConvId = convActual?.id;
       const convOtroId = sessionStorage.getItem('wompi_otro_id');
       const convOtroNombre = sessionStorage.getItem('wompi_otro_nombre');
 
-      if(convOtroId) {
+      // Ir al chat e intentar abrir la conversación específica
+      irApp('s-chat');
+
+      if(snapConvId) {
+        // Tenemos el convId directo — abrir sin pasar por abrirChatConConductor
+        await abrirConvExistente(snapConvId);
+      } else if(convOtroId) {
         await abrirChatConConductor(convOtroId, convOtroNombre || 'Usuario', 0, '', '');
-      } else {
-        irApp('s-chat');
       }
 
-      // Pasar convId directamente para no depender de convActual
       const convIdFinal = snapConvId || convActual?.id;
       await pagoWompiExitoso(tx || { reference: ref }, convIdFinal);
       toast('✅ ¡Pago aprobado!', 'success');
