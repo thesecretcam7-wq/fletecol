@@ -3858,11 +3858,16 @@ async function cargarMensajes(convId) {
       (msgs||[]).forEach(m => { if(!idsExistentes.has(m.id)) renderMensaje(m); });
     }
     wrap.scrollTop = wrap.scrollHeight;
-    await sb.from('mensajes')
-      .update({ leido: true })
-      .eq('conversacion_id', convId)
-      .neq('emisor_id', perfilActual.id)
-      .eq('leido', false);
+    // Solo marcar como leídos si el chat está realmente visible
+    const chatVisible = document.getElementById('chat-main')?.classList.contains('visible-mobile')
+      || !esMobile(); // en desktop siempre visible
+    if(chatVisible && !document.hidden) {
+      await sb.from('mensajes')
+        .update({ leido: true })
+        .eq('conversacion_id', convId)
+        .neq('emisor_id', perfilActual.id)
+        .eq('leido', false);
+    }
     await cargarConversaciones(convId);
 
     // Restaurar monto solo desde oferta aceptada (precio acordado oficial)
@@ -4050,7 +4055,11 @@ function suscribirMensajes(convId) {
         if(wrap && !wrap.querySelector(`[data-msg-id="${msg.id}"]`)) {
           renderMensaje(msg);
           wrap.scrollTop = 99999;
-          await sb.from('mensajes').update({ leido: true }).eq('id', msg.id);
+          // Solo marcar leído si el chat está visible en pantalla
+          const chatVisible = document.getElementById('chat-main')?.classList.contains('visible-mobile') || !esMobile();
+          if(chatVisible && !document.hidden) {
+            await sb.from('mensajes').update({ leido: true }).eq('id', msg.id);
+          }
         }
         await cargarConversaciones(convActual?.id);
       } catch(e) { console.error('[chat] Error callback:', e); }
