@@ -972,7 +972,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}*,*::before
           <div style="font-weight:700;font-size:13px;" id="chat-nombre">Selecciona una conversación</div>
           <div style="font-size:11px;color:var(--texto);" id="chat-sub">—</div>
         </div>
-        <div style="margin-left:auto;display:flex;gap:7px;" id="chat-acciones" style="display:none;">
+        <div style="margin-left:auto;gap:7px;display:none;" id="chat-acciones">
           <button style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:6px 12px;color:var(--blanco);font-size:12px;font-weight:600;cursor:pointer;" onclick="hacerOferta()">💰 Oferta</button>
           <button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;" id="chat-pay-btn" onclick="abrirPagoMobile()">🔒 Pagar</button>
         </div>
@@ -1545,18 +1545,39 @@ async function verificarEstadoPagoConv(convId) {
     const chatPayBtn = document.getElementById('chat-pay-btn');
 
     if(pago.estado === 'APPROVED') {
-      // Pago aprobado — mostrar pantalla de retención
+      // Pago aprobado — mostrar estado en el botón y pantalla de retención
       if(ppForm) ppForm.style.display = 'none';
       if(ppExitoso) ppExitoso.style.display = 'block';
       if(ppCompletado) ppCompletado.style.display = 'none';
       if(escrowEst) escrowEst.textContent = '🔒 Retenido';
-      if(chatPayBtn) chatPayBtn.style.display = 'none';
+      if(chatPayBtn) {
+        chatPayBtn.textContent = '✅ Confirmar entrega';
+        chatPayBtn.style.background = 'var(--verde)';
+        chatPayBtn.onclick = confirmarEntregaMobile;
+      }
     } else if(pago.estado === 'pendiente') {
-      // Pago pendiente — ocultar botón pagar para evitar doble pago
-      if(chatPayBtn) chatPayBtn.style.display = 'none';
+      // Pago pendiente — mostrar estado
+      if(chatPayBtn) {
+        chatPayBtn.textContent = '⏳ Pago pendiente';
+        chatPayBtn.disabled = true;
+        chatPayBtn.style.opacity = '0.6';
+      }
     }
   } catch(e) {
     console.warn('verificarEstadoPagoConv:', e.message);
+  }
+}
+
+function confirmarEntregaMobile() {
+  // En mobile abrir modal con pantalla de confirmación de entrega
+  if(esMobile()) {
+    const panel = document.getElementById('pago-panel');
+    const modalContent = document.getElementById('pago-modal-content');
+    if(panel && modalContent) modalContent.innerHTML = panel.innerHTML;
+    const modal = document.getElementById('pago-modal-mobile');
+    if(modal) modal.classList.add('open');
+  } else {
+    confirmarEntrega2();
   }
 }
 
@@ -4177,8 +4198,49 @@ function actualizarMonto(m){
 function mostrarPago(){toast('💳 Selecciona el método de pago en el panel derecho','info');}
 function selMet(el,tipo){document.querySelectorAll('.metodo').forEach(m=>m.classList.remove('sel'));document.querySelectorAll('.metodo-detalle2').forEach(d=>d.classList.remove('visible'));el.classList.add('sel');document.getElementById('md-'+tipo).classList.add('visible');}
 function procesarPago2(){document.getElementById('pp-form2').style.display='none';document.getElementById('pp-procesando2').style.display='block';setTimeout(()=>{document.getElementById('pp-procesando2').style.display='none';document.getElementById('pp-exitoso2').style.display='block';document.getElementById('escrow-est2').textContent='🔒 Retenido';document.getElementById('chat-pay-btn').style.display='none';const d=document.createElement('div');d.className='sys-msg';d.innerHTML='🔒 <strong style="color:var(--naranja)">Pago retenido en FleteCOL</strong> · El conductor fue notificado.';document.getElementById('msgs-wrap').appendChild(d);toast('🔒 Pago procesado','success');},2000);}
-function confirmarEntrega2(){document.getElementById('pp-exitoso2').style.display='none';document.getElementById('pp-completado2').style.display='block';document.getElementById('escrow-est2').textContent='✅ Liberado';const d=document.createElement('div');d.className='sys-msg';d.innerHTML='🎉 <strong style="color:var(--verde)">Entrega confirmada</strong> · Pago liberado';document.getElementById('msgs-wrap').appendChild(d);toast('🎉 Entrega confirmada','success');}
-function pedirConfEntrega(){addMsg('📦 Por favor confirma cuando hayas recibido todo.','mine');}
+function confirmarEntrega2(){
+  document.getElementById('pp-exitoso2').style.display='none';
+  document.getElementById('pp-completado2').style.display='block';
+  document.getElementById('escrow-est2').textContent='✅ Liberado';
+  const d=document.createElement('div');
+  d.className='sys-msg';
+  d.innerHTML='🎉 <strong style="color:var(--verde)">Entrega confirmada</strong> · Pago liberado';
+  document.getElementById('msgs-wrap').appendChild(d);
+  toast('🎉 Entrega confirmada','success');
+  // Restaurar botón Pagar para nuevos fletes
+  const btn = document.getElementById('chat-pay-btn');
+  if(btn) {
+    btn.textContent = '🔒 Pagar';
+    btn.style.background = 'var(--amarillo)';
+    btn.style.color = 'var(--negro)';
+    btn.style.opacity = '1';
+    btn.disabled = false;
+    btn.onclick = abrirPagoMobile;
+    btn.style.display = '';
+  }
+}
+function pedirConfEntrega() {
+  // Verificar si hay pago aprobado para confirmar entrega
+  if(esMobile()) {
+    // En mobile: abrir modal con la pantalla de confirmación
+    const panel = document.getElementById('pago-panel');
+    const modalContent = document.getElementById('pago-modal-content');
+    if(panel && modalContent) modalContent.innerHTML = panel.innerHTML;
+    const modal = document.getElementById('pago-modal-mobile');
+    if(modal) modal.classList.add('open');
+  } else {
+    // Desktop: asegurar que el panel muestra pp-exitoso2
+    const ppForm = document.getElementById('pp-form2');
+    const ppExitoso = document.getElementById('pp-exitoso2');
+    if(ppForm) ppForm.style.display = 'none';
+    if(ppExitoso) ppExitoso.style.display = 'block';
+    // Asegurar que el panel está visible
+    const panel = document.getElementById('pago-panel');
+    if(panel) panel.style.display = 'block';
+    const layout = document.querySelector('.chat-layout');
+    if(layout) layout.style.gridTemplateColumns = '260px 1fr 300px';
+  }
+}
 function calificar2(n){document.querySelectorAll('#stars-r span').forEach((s,i)=>{s.textContent=i<n?'★':'☆';s.style.color=i<n?'var(--amarillo)':'var(--texto)';});}
 
 // ══ TOAST ══
