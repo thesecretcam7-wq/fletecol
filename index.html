@@ -15,7 +15,7 @@
   --texto:#A8B3C8;--verde:#00D46A;--rojo:#FF4545;--azul:#4A9EFF;--naranja:#FF8C00;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{background:#080A0F !important;color:#F2F5FB !important;font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;overscroll-behavior-x:none;max-width:100vw;touch-action:pan-y;-webkit-text-size-adjust:100%;}
+html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}*,*::before,*::after{box-sizing:border-box;}body{background:#080A0F !important;color:#F2F5FB !important;font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;overscroll-behavior-x:none;max-width:100vw;touch-action:pan-y;-webkit-text-size-adjust:100%;}
 
 /* ══ SCREENS ══ */
 .screen{display:none;min-height:100vh;flex-direction:column;}
@@ -100,7 +100,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
 .hero-stats{display:flex;gap:40px;flex-wrap:wrap;justify-content:center;}
 .hstat-val{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--amarillo);}
 .hstat-label{font-size:12px;color:var(--texto);margin-top:2px;}
-.vehicles-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;width:100%;max-width:700px;margin:0 auto;padding:24px 16px;box-sizing:border-box;}
+.vehicles-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;width:100%;max-width:700px;margin:0 auto;padding:16px;box-sizing:border-box;}
 .vcard{background:#161B24;border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:18px 12px;text-align:center;transition:all 0.2s;cursor:pointer;box-sizing:border-box;width:100%;overflow:hidden;}
 .vcard:hover{border-color:var(--amarillo);transform:translateY(-3px);}
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;padding:0 24px;}
@@ -109,7 +109,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
 
 /* ══ AUTH ══ */
 .auth-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;}
-.auth-box{background:var(--gris2);border:1px solid rgba(255,255,255,0.06);border-radius:22px;padding:36px;width:100%;max-width:420px;}
+.auth-box{background:var(--gris2);border:1px solid rgba(255,255,255,0.06);border-radius:22px;padding:36px;width:100%;max-width:420px;box-sizing:border-box;}
 .auth-tabs{display:flex;background:var(--gris3);border-radius:10px;padding:4px;margin-bottom:24px;}
 .auth-tab{flex:1;padding:9px;text-align:center;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;border:none;background:transparent;color:var(--texto);font-family:'DM Sans',sans-serif;transition:all 0.15s;}
 .auth-tab.active{background:var(--amarillo);color:var(--negro);}
@@ -173,7 +173,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
 .review-item{background:var(--gris2);border-radius:10px;padding:10px 12px;margin-bottom:8px;}
 
 /* ══ PUBLICAR ══ */
-.pub-wrap{flex:1;padding:28px 24px;max-width:660px;margin:0 auto;width:100%;}
+.pub-wrap{flex:1;padding:28px 24px;max-width:660px;margin:0 auto;width:100%;box-sizing:border-box;}
 .pub-toggle{display:flex;background:var(--gris2);border-radius:14px;padding:5px;margin-bottom:24px;}
 .pub-tab{flex:1;padding:10px;text-align:center;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;border:none;background:transparent;color:var(--texto);font-family:'DM Sans',sans-serif;transition:all 0.2s;}
 .pub-tab.active{background:var(--amarillo);color:var(--negro);}
@@ -247,7 +247,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
 .btn-del2:hover{background:var(--rojo);color:#fff;}
 
 /* ══ PERFIL ══ */
-.perfil-wrap{flex:1;padding:28px;max-width:600px;margin:0 auto;width:100%;}
+.perfil-wrap{flex:1;padding:28px;max-width:600px;margin:0 auto;width:100%;box-sizing:border-box;}
 .perfil-av{width:80px;height:80px;border-radius:50%;background:var(--amarillo);display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 16px;border:3px solid var(--gris4);}
 .perfil-stat{background:var(--gris2);border-radius:14px;padding:16px;text-align:center;}
 .perfil-stat-val{font-family:'Syne',sans-serif;font-weight:800;font-size:24px;color:var(--amarillo);}
@@ -258,8 +258,77 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
 
 /* ══ RESPONSIVE ══ */
 @media(max-width:1000px){.chat-layout{grid-template-columns:240px 1fr;}.pago-panel{display:none;}.rutas-wrap{grid-template-columns:1fr;}.conductor-panel{display:none;}}
-@media(max-width:700px){.search-bar{grid-template-columns:1fr 1fr;}.steps{grid-template-columns:1fr;}.chat-layout{grid-template-columns:1fr;}.conv-sidebar{display:flex;position:absolute;top:0;left:0;right:0;bottom:0;z-index:10;}.conv-sidebar.hidden-mobile{display:none;}.chat-main{display:none;}.chat-main.visible-mobile{display:flex;}.form-row{grid-template-columns:1fr;}.topnav{padding:10px 12px;}.topnav .logo{font-size:18px;}.topnav .btn-secondary,.topnav .btn-primary{padding:7px 10px!important;font-size:11px!important;white-space:nowrap;}.pub-wrap{padding:20px 16px;}.back-btn-mobile{display:flex!important;}}
-@media(max-width:480px){.hero-title{font-size:32px;}.vehicles-grid{grid-template-columns:1fr 1fr;gap:10px;padding:16px;}}
+
+@media(max-width:700px){
+  /* BASE */
+  *{box-sizing:border-box;}
+  body{overflow-x:hidden;}
+
+  /* AUTH */
+  .auth-wrap{padding:16px 14px;align-items:flex-start;padding-top:24px;}
+
+  /* NAV */
+  .topnav{padding:10px 14px;}
+  .topnav .logo{font-size:16px;}
+  .topnav .btn-secondary,.topnav .btn-primary{padding:7px 10px!important;font-size:11px!important;white-space:nowrap;}
+
+  /* HERO */
+  .hero{padding:40px 16px 32px;}
+  .hero-title{font-size:30px;}
+  .hero-sub{font-size:14px;}
+  .hero-btns{gap:8px;}
+  .hero-btns .btn-primary,.hero-btns .btn-secondary{width:100%;justify-content:center;padding:13px 16px!important;}
+  .hero-stats{gap:20px;}
+
+  /* LAYOUTS */
+  .form-row{grid-template-columns:1fr;}
+  .steps{grid-template-columns:1fr;}
+  .search-bar{grid-template-columns:1fr;}
+
+  /* AUTH */
+  .auth-box{padding:24px 18px;border-radius:16px;margin:0 4px;}
+
+  /* RUTAS / BUSCAR */
+  .search-hero{padding:16px 14px;}
+  .search-bar{grid-template-columns:1fr!important;}
+  .filtros-bar{padding:8px 14px;gap:6px;}
+  .loc-banner{padding:8px 14px;}
+  .rutas-wrap{grid-template-columns:1fr;padding:12px 10px;}
+  .ruta-card{padding:14px 12px;}
+
+  /* PUBLICAR */
+  .pub-wrap{padding:16px 14px;}
+
+  /* PERFIL */
+  .perfil-wrap{padding:16px 14px;width:100%;}
+
+  /* CHAT MOBILE */
+  .chat-layout{grid-template-columns:1fr;position:relative;}
+  .conv-sidebar{display:flex;position:absolute;top:0;left:0;right:0;bottom:0;z-index:10;width:100%;}
+  .conv-sidebar.hidden-mobile{display:none;}
+  .chat-main{display:none;}
+  .chat-main.visible-mobile{display:flex;}
+  .back-btn-mobile{display:flex!important;}
+  .pago-panel{display:none;}
+
+  /* TOAST */
+  .toast-container{left:14px;right:14px;bottom:75px;}
+  .toast{min-width:unset;width:100%;}
+
+  /* PAGO PANEL — slide in from bottom */
+  #pago-panel.visible{display:block!important;position:fixed;bottom:70px;left:0;right:0;max-height:85vh;overflow-y:auto;border-radius:20px 20px 0 0;z-index:50;}
+}
+
+@media(max-width:480px){
+  .hero-title{font-size:26px;}
+  .hero{padding:30px 14px 24px;}
+  .vehicles-grid{grid-template-columns:1fr 1fr;gap:8px;padding:12px;}
+  .vcard{padding:14px 8px;font-size:12px;}
+  .btn-primary,.btn-secondary{font-size:13px;}
+  .auth-box{padding:20px 14px;}
+  .loading-box{padding:24px 20px;margin:0 16px;}
+  .form-input{font-size:16px;}
+}
 </style>
 </head>
 <body>
@@ -301,7 +370,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
     <div class="vcard"><div style="font-size:40px;margin-bottom:12px;">🚚</div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;margin-bottom:4px;">Camión</div><div style="font-size:12px;color:var(--texto);">Hasta 10 ton</div></div>
     <div class="vcard"><div style="font-size:40px;margin-bottom:12px;">🚛</div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;margin-bottom:4px;">Tractomula</div><div style="font-size:12px;color:var(--texto);">Hasta 35 ton</div></div>
   </div>
-  <div style="padding:60px 24px;max-width:900px;margin:0 auto;">
+  <div style="padding:40px 16px;max-width:900px;margin:0 auto;box-sizing:border-box;width:100%;">
     <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:28px;text-align:center;margin-bottom:8px;">¿Cómo funciona?</div>
     <div style="text-align:center;color:var(--texto);font-size:14px;margin-bottom:40px;">Tres pasos para mover tu carga de forma segura</div>
     <div class="steps">
@@ -921,7 +990,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
       </div>
     </div>
 
-    <div class="pago-panel" id="pago-panel">
+    <div class="pago-panel" id="pago-panel" style="overflow-y:auto;">
       <div id="pp-form2">
         <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:15px;margin-bottom:4px;">🔒 Pago seguro</div>
         <div style="font-size:12px;color:var(--texto);margin-bottom:14px;">Retenido hasta confirmar entrega</div>
