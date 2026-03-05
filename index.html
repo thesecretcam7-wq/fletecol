@@ -1576,8 +1576,10 @@ async function verificarRetornoWompi() {
     const aprobado = tx ? tx.status === 'APPROVED' : true;
 
     if(aprobado) {
-      try { await sb.from('pagos').update({ estado: 'APPROVED' }).eq('wompi_referencia', ref); } catch(e) {}
-      let _retorno = true; // marcar que procesamos retorno de Wompi
+      // Actualizar estado del pago (silenciado — RLS puede bloquearlo sin afectar el flujo)
+      sb.from('pagos').update({ estado: 'APPROVED' }).eq('wompi_referencia', ref).then(({error}) => {
+        if(error) console.warn('pagos update:', error.message);
+      });
 
       // Restaurar convActual del snapshot guardado antes del pago
       const snap = sessionStorage.getItem('wompi_conv_snapshot');
