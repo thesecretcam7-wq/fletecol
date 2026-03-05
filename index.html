@@ -1666,10 +1666,10 @@ async function init() {
     const { data: { session } } = await sb.auth.getSession();
     document.getElementById('loading').style.display = 'none';
 
-    verificarRetornoWompi();
     if(session) {
       usuarioActual = session.user;
       await cargarPerfil();
+      await verificarRetornoWompi(); // DESPUÉS de cargarPerfil — necesita perfilActual
       await redirigirSegunEstado();
       suscribirEstado(); // escuchar cambios en tiempo real
     } else {
