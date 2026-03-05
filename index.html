@@ -4166,6 +4166,15 @@ function abrirChatMobile() {
   if(main) main.classList.add('visible-mobile');
   const backBtn = document.getElementById('back-btn-mobile');
   if(backBtn) backBtn.style.display = 'flex';
+  // Marcar mensajes como leídos al abrir el chat en mobile
+  if(convActual?.id && perfilActual?.id) {
+    sb.from('mensajes')
+      .update({ leido: true })
+      .eq('conversacion_id', convActual.id)
+      .neq('emisor_id', perfilActual.id)
+      .eq('leido', false)
+      .then(() => cargarConversaciones(convActual.id));
+  }
 }
 
 async function abrirConvExistente(convId) {
