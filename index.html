@@ -1656,6 +1656,14 @@ async function eliminarChat() {
     toast('Error: no hay conversación seleccionada', 'error');
     return;
   }
+  // Bloquear si hay pago activo sin entrega confirmada
+  const { data: pagosActivos } = await sb.from('pagos')
+    .select('estado').eq('conversacion_id', convIdAEliminar)
+    .in('estado', ['APPROVED', 'pendiente']).limit(1);
+  if(pagosActivos?.length) {
+    toast('⚠️ No puedes eliminar esta conversación hasta confirmar la entrega', 'error');
+    return;
+  }
   const ok = confirm('¿Eliminar esta conversación? Se borrarán todos los mensajes.');
   if(!ok) return;
   try {
