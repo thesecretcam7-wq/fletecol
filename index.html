@@ -974,7 +974,13 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}*,*::before
         </div>
         <div style="margin-left:auto;gap:7px;display:none;" id="chat-acciones">
           <button style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:6px 12px;color:var(--blanco);font-size:12px;font-weight:600;cursor:pointer;" onclick="hacerOferta()">💰 Oferta</button>
-          <button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;" id="chat-pay-btn" onclick="abrirPagoMobile()">🔒 Pagar</button>
+          <button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;display:none;" id="chat-pay-btn" onclick="abrirPagoMobile()">🔒 Pagar</button>
+        </div>
+        <div style="position:relative;margin-left:6px;" id="chat-menu-wrap">
+          <button id="chat-menu-btn" onclick="toggleChatMenu()" style="background:none;border:none;color:var(--texto);font-size:20px;cursor:pointer;padding:4px 6px;border-radius:8px;display:none;">⋯</button>
+          <div id="chat-menu-dropdown" style="display:none;position:absolute;right:0;top:36px;background:var(--gris2);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:6px;min-width:160px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+            <button onclick="eliminarChat()" style="width:100%;background:none;border:none;color:var(--rojo);font-size:13px;font-weight:600;padding:10px 14px;text-align:left;cursor:pointer;border-radius:8px;font-family:'DM Sans',sans-serif;">🗑️ Eliminar conversación</button>
+          </div>
         </div>
       </div>
       <div class="escrow-bar" id="escrow-bar" style="display:none;">
@@ -1452,6 +1458,9 @@ async function pagoWompiExitoso(txData, convIdParam) {
   document.getElementById('pp-form2').style.display = 'none';
   document.getElementById('pp-exitoso2').style.display = 'block';
   toast('✅ ¡Pago confirmado! El conductor fue notificado.', 'success');
+  // Ocultar botón pagar hasta confirmar entrega
+  const payBtn = document.getElementById('chat-pay-btn');
+  if(payBtn) payBtn.style.display = 'none';
 
   // Usar convId pasado como parámetro o el actual
   const convId = convIdParam || convActual?.id;
@@ -1622,6 +1631,46 @@ function cerrarPagoMobile(e) {
   if(e && e.target !== document.getElementById('pago-modal-mobile')) return;
   const modal = document.getElementById('pago-modal-mobile');
   if(modal) modal.classList.remove('open');
+}
+
+function toggleChatMenu() {
+  const dd = document.getElementById('chat-menu-dropdown');
+  if(dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+  // Cerrar al hacer click fuera
+  setTimeout(() => {
+    document.addEventListener('click', function cerrar(e) {
+      if(!document.getElementById('chat-menu-wrap')?.contains(e.target)) {
+        if(dd) dd.style.display = 'none';
+        document.removeEventListener('click', cerrar);
+      }
+    });
+  }, 50);
+}
+
+async function eliminarChat() {
+  document.getElementById('chat-menu-dropdown').style.display = 'none';
+  if(!convActual?.id) return;
+  const ok = confirm('¿Eliminar esta conversación? Se borrarán todos los mensajes.');
+  if(!ok) return;
+  try {
+    // Eliminar mensajes primero
+    await sb.from('mensajes').delete().eq('conversacion_id', convActual.id);
+    // Eliminar conversación
+    await sb.from('conversaciones').delete().eq('id', convActual.id);
+    convActual = null;
+    // Volver a lista de chats
+    if(esMobile()) volverListaChat();
+    document.getElementById('chat-nombre').textContent = 'Selecciona una conversación';
+    document.getElementById('chat-sub').textContent = '—';
+    document.getElementById('msgs-wrap').innerHTML = '';
+    document.getElementById('chat-acciones').style.display = 'none';
+    const menuBtn = document.getElementById('chat-menu-btn');
+    if(menuBtn) menuBtn.style.display = 'none';
+    await cargarConversaciones();
+    toast('🗑️ Conversación eliminada', 'info');
+  } catch(e) {
+    toast('Error al eliminar: ' + e.message, 'error');
+  }
 }
 
 function compartirRecibo() {
@@ -3682,6 +3731,9 @@ function mostrarHeaderChat(nombre, origen, destino, precio, limpiar=true) {
   // Solo clientes ven botones de pago, oferta y panel de pago
   const esConductor = perfilActual?.rol === 'conductor';
   document.getElementById('chat-acciones').style.display = esConductor ? 'none' : 'flex';
+  // Mostrar menú ⋯ para todos
+  const menuBtn = document.getElementById('chat-menu-btn');
+  if(menuBtn) menuBtn.style.display = 'block';
   document.querySelectorAll('.btn-accion-cliente').forEach(b => b.style.display = esConductor ? 'none' : '');
 
   // Ocultar panel de pago y escrow-bar para conductores
@@ -3728,6 +3780,24 @@ async function cargarMensajes(convId) {
       .neq('emisor_id', perfilActual.id)
       .eq('leido', false);
     await cargarConversaciones(convId);
+
+    // Para clientes: mostrar botón Pagar si hay oferta aceptada y aún no hay pago
+    if(perfilActual?.rol === 'cliente') {
+      const tieneOfertaAceptada = (msgs||[]).some(m => m.tipo === 'oferta_aceptada');
+      if(tieneOfertaAceptada) {
+        const { data: pagos } = await sb.from('pagos')
+          .select('estado').eq('conversacion_id', convId)
+          .in('estado', ['APPROVED','pendiente']).limit(1);
+        const payBtn = document.getElementById('chat-pay-btn');
+        if(payBtn) {
+          if(pagos?.length) {
+            payBtn.style.display = 'none'; // ya pagó, ocultar hasta confirmar entrega
+          } else {
+            payBtn.style.display = ''; // mostrar botón pagar
+          }
+        }
+      }
+    }
   } catch(e) {
     console.error('[cargarMensajes] Error:', e.message);
   }
@@ -3742,7 +3812,16 @@ function renderMensaje(m) {
   const div = document.createElement('div');
   div.className = `msg-g ${tipo}`;
   div.dataset.msgId = m.id;
-  if(m.tipo === 'recibo') {
+  if(m.tipo === 'oferta_aceptada') {
+      // El conductor aceptó — mostrar botón pagar al cliente
+      if(perfilActual?.rol === 'cliente') {
+        const payBtn = document.getElementById('chat-pay-btn');
+        if(payBtn) payBtn.style.display = '';
+      }
+      div.innerHTML = `<div class="msg-row2"><div class="msg-av2">👨</div><div><div style="background:rgba(0,212,106,0.08);border:1px solid rgba(0,212,106,0.2);border-radius:13px;padding:11px 14px;font-size:13px;">${escHtml(m.contenido)}</div><div class="msg-time2">${hora}</div></div></div>`;
+      return div;
+    }
+    if(m.tipo === 'recibo') {
     let info = {};
     try { info = JSON.parse(m.contenido); } catch(e) {}
     const fecha = new Date(m.created_at).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'});
@@ -4069,7 +4148,7 @@ async function aceptarOfertaReal(monto) {
         conversacion_id: convActual.id,
         emisor_id: perfilActual.id,
         contenido: '✅ Precio aceptado: $' + parseInt(monto).toLocaleString('es-CO') + '. El cliente procederá con el pago.',
-        tipo: 'texto'
+        tipo: 'oferta_aceptada'
       });
     }
     actualizarMonto(monto);
@@ -4238,6 +4317,11 @@ function confirmarEntrega2(){
     btn.disabled = false;
     btn.onclick = abrirPagoMobile;
     btn.style.display = '';
+  }
+  // Reactivar publicaciones para nuevos fletes
+  if(perfilActual?.id) {
+    sb.from('rutas').update({ estado: 'activa' }).eq('conductor_id', convActual?.otro_id).eq('estado','en_curso').then(()=>{});
+    sb.from('cargas').update({ estado: 'activa' }).eq('cliente_id', perfilActual.id).eq('estado','en_curso').then(()=>{});
   }
 }
 function pedirConfEntrega() {
