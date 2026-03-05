@@ -1475,6 +1475,27 @@ async function pagoWompiExitoso(txData, convIdParam) {
     });
     if(error) console.error('❌ Error guardando recibo:', error.message, error.details);
     else console.log('✅ Recibo guardado en conv:', convId);
+
+    // Quitar publicación del conductor de búsquedas
+    const conductorId = convActual?.otro_id || null;
+    if(conductorId) {
+      const { error: eRuta } = await sb.from('rutas')
+        .update({ estado: 'en_curso' })
+        .eq('conductor_id', conductorId)
+        .eq('estado', 'activa');
+      if(eRuta) console.warn('ruta en_curso:', eRuta.message);
+      else console.log('✅ Ruta del conductor marcada como en_curso');
+    }
+
+    // Quitar carga publicada por el cliente de búsquedas
+    if(perfilActual?.id) {
+      const { error: eCarga } = await sb.from('cargas')
+        .update({ estado: 'en_curso' })
+        .eq('cliente_id', perfilActual.id)
+        .eq('estado', 'activa');
+      if(eCarga) console.warn('carga en_curso:', eCarga.message);
+      else console.log('✅ Carga del cliente marcada como en_curso');
+    }
     return;
   }
   console.warn('⚠️ Sin convId para guardar recibo. convId:', convId, 'perfilActual:', perfilActual?.id);
