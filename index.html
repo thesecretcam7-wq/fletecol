@@ -3793,17 +3793,29 @@ async function cargarMensajes(convId) {
       .eq('leido', false);
     await cargarConversaciones(convId);
 
-    // Para clientes: mostrar botón Pagar si hay oferta aceptada y aún no hay pago
+    // Para clientes: gestionar estado del botón Pagar
     if(perfilActual?.rol === 'cliente') {
       const tieneOfertaAceptada = (msgs||[]).some(m => m.tipo === 'oferta_aceptada');
-      if(tieneOfertaAceptada) {
+      const tieneEntregaConfirmada = (msgs||[]).some(m => m.tipo === 'entrega_confirmada');
+      const payBtn = document.getElementById('chat-pay-btn');
+
+      if(tieneEntregaConfirmada) {
+        // Entrega ya confirmada — mostrar botón para nuevo pago
+        if(payBtn) { payBtn.style.display = ''; payBtn.textContent = '🔒 Pagar'; }
+        // Mostrar panel completado
+        const ppExitoso = document.getElementById('pp-exitoso2');
+        const ppCompletado = document.getElementById('pp-completado2');
+        const escrowEst = document.getElementById('escrow-est2');
+        if(ppExitoso) ppExitoso.style.display = 'none';
+        if(ppCompletado) ppCompletado.style.display = 'block';
+        if(escrowEst) escrowEst.textContent = '✅ Liberado';
+      } else if(tieneOfertaAceptada) {
         const { data: pagos } = await sb.from('pagos')
           .select('estado').eq('conversacion_id', convId)
           .in('estado', ['APPROVED','pendiente']).limit(1);
-        const payBtn = document.getElementById('chat-pay-btn');
         if(payBtn) {
           if(pagos?.length) {
-            payBtn.style.display = 'none'; // ya pagó, ocultar hasta confirmar entrega
+            payBtn.style.display = 'none'; // pagó pero aún no confirma entrega
           } else {
             payBtn.style.display = ''; // mostrar botón pagar
           }
@@ -3824,7 +3836,24 @@ function renderMensaje(m) {
   const div = document.createElement('div');
   div.className = `msg-g ${tipo}`;
   div.dataset.msgId = m.id;
-  if(m.tipo === 'oferta_aceptada') {
+  if(m.tipo === 'entrega_confirmada') {
+      // Mostrar mensaje de entrega y actualizar UI
+      if(perfilActual?.rol === 'cliente') {
+        // Restaurar botón pagar
+        const payBtn = document.getElementById('chat-pay-btn');
+        if(payBtn) { payBtn.style.display = ''; payBtn.textContent = '🔒 Pagar'; }
+        // Mostrar panel completado
+        const ppExitoso = document.getElementById('pp-exitoso2');
+        const ppCompletado = document.getElementById('pp-completado2');
+        const escrowEst = document.getElementById('escrow-est2');
+        if(ppExitoso) ppExitoso.style.display = 'none';
+        if(ppCompletado) ppCompletado.style.display = 'block';
+        if(escrowEst) escrowEst.textContent = '✅ Liberado';
+      }
+      div.innerHTML = `<div class="sys-msg">🎉 <strong style="color:var(--verde)">Entrega confirmada</strong> · Pago liberado</div>`;
+      return div;
+    }
+    if(m.tipo === 'oferta_aceptada') {
       // El conductor aceptó — mostrar botón pagar al cliente
       if(perfilActual?.rol === 'cliente') {
         const payBtn = document.getElementById('chat-pay-btn');
@@ -4310,15 +4339,25 @@ function actualizarMonto(m){
 function mostrarPago(){toast('💳 Selecciona el método de pago en el panel derecho','info');}
 function selMet(el,tipo){document.querySelectorAll('.metodo').forEach(m=>m.classList.remove('sel'));document.querySelectorAll('.metodo-detalle2').forEach(d=>d.classList.remove('visible'));el.classList.add('sel');document.getElementById('md-'+tipo).classList.add('visible');}
 function procesarPago2(){document.getElementById('pp-form2').style.display='none';document.getElementById('pp-procesando2').style.display='block';setTimeout(()=>{document.getElementById('pp-procesando2').style.display='none';document.getElementById('pp-exitoso2').style.display='block';document.getElementById('escrow-est2').textContent='🔒 Retenido';document.getElementById('chat-pay-btn').style.display='none';const d=document.createElement('div');d.className='sys-msg';d.innerHTML='🔒 <strong style="color:var(--naranja)">Pago retenido en FleteCOL</strong> · El conductor fue notificado.';document.getElementById('msgs-wrap').appendChild(d);toast('🔒 Pago procesado','success');},2000);}
-function confirmarEntrega2(){
+async function confirmarEntrega2(){
   document.getElementById('pp-exitoso2').style.display='none';
   document.getElementById('pp-completado2').style.display='block';
   document.getElementById('escrow-est2').textContent='✅ Liberado';
-  const d=document.createElement('div');
-  d.className='sys-msg';
-  d.innerHTML='🎉 <strong style="color:var(--verde)">Entrega confirmada</strong> · Pago liberado';
-  document.getElementById('msgs-wrap').appendChild(d);
   toast('🎉 Entrega confirmada','success');
+
+  const convId = convActual?.id;
+  if(convId && perfilActual?.id) {
+    // Guardar mensaje de entrega confirmada en BD
+    await sb.from('mensajes').insert({
+      conversacion_id: convId,
+      emisor_id: perfilActual.id,
+      tipo: 'entrega_confirmada',
+      contenido: 'entrega_confirmada',
+      leido: false
+    });
+    // Actualizar estado del pago a LIBERADO
+    sb.from('pagos').update({ estado: 'LIBERADO' }).eq('conversacion_id', convId).eq('estado','APPROVED').then(()=>{});
+  }
   // Restaurar botón Pagar para nuevos fletes
   const btn = document.getElementById('chat-pay-btn');
   if(btn) {
