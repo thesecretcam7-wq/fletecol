@@ -1669,6 +1669,10 @@ async function eliminarChat() {
     // 3. Eliminar conversación
     const { error: e2 } = await sb.from('conversaciones').delete().eq('id', convIdAEliminar);
     if(e2) throw new Error('conversacion: ' + e2.message);
+    // Quitar el item de la lista inmediatamente
+    const itemEliminar = document.querySelector(`.conv-item[data-conv-id="${convIdAEliminar}"]`);
+    if(itemEliminar) itemEliminar.remove();
+
     convActual = null;
     // Volver a lista de chats
     if(esMobile()) volverListaChat();
@@ -3982,7 +3986,7 @@ async function cargarConversaciones(convActivaId) {
     const hora = ultimo ? new Date(ultimo.created_at).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) : '';
     const activo = c.id === convActivaId;
 
-    return `<div onclick="abrirConvExistente('${c.id}')" style="padding:13px 14px;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;display:flex;gap:10px;align-items:center;background:${activo?'rgba(245,196,0,0.06)':'transparent'};">
+    return `<div class="conv-item" data-conv-id="${c.id}" onclick="abrirConvExistente('${c.id}')" style="padding:13px 14px;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;display:flex;gap:10px;align-items:center;background:${activo?'rgba(245,196,0,0.06)':'transparent'};">
       <div style="width:40px;height:40px;border-radius:50%;background:var(--gris3);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;">💬</div>
       <div style="flex:1;min-width:0;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;">
