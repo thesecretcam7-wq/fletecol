@@ -911,8 +911,8 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:dark;}body{backgr
       <div class="input-area2">
         <div class="input-warn2" id="i-warn2">🚫 <span id="i-warn-txt2"></span></div>
         <div style="display:flex;gap:7px;margin-bottom:8px;">
-          <button style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;" onclick="hacerOferta()">💰 Hacer oferta</button>
-          <button style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;" onclick="pedirConfEntrega()">📦 Confirmar entrega</button>
+          <button class="btn-accion-cliente" style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;" onclick="hacerOferta()">💰 Hacer oferta</button>
+          <button class="btn-accion-cliente" style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;" onclick="pedirConfEntrega()">📦 Confirmar entrega</button>
         </div>
         <div style="display:flex;gap:8px;align-items:flex-end;">
           <textarea class="msg-input2" id="m-input2" rows="1" placeholder="Escribe tu mensaje..." oninput="checkMsg(this)" onkeydown="enterSend2(event)"></textarea>
@@ -3479,11 +3479,15 @@ async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, des
 function mostrarHeaderChat(nombre, origen, destino, precio, limpiar=true) {
   document.getElementById('chat-nombre').textContent = nombre||'Conversación';
   document.getElementById('chat-sub').textContent = (origen&&destino) ? `${origen} → ${destino}` : 'Conversación';
-  document.getElementById('chat-acciones').style.display = 'flex';
   document.getElementById('escrow-bar').style.display = 'flex';
   document.getElementById('chat-empty-state').style.display = 'none';
+
+  // Solo clientes ven botones de pago y oferta
+  const esConductor = perfilActual?.rol === 'conductor';
+  document.getElementById('chat-acciones').style.display = esConductor ? 'none' : 'flex';
+  document.querySelectorAll('.btn-accion-cliente').forEach(b => b.style.display = esConductor ? 'none' : '');
+
   if(precio>0) actualizarMonto(precio);
-  // limpiar mensajes solo si se pide explícitamente
   if(limpiar) {
     const wrap = document.getElementById('msgs-wrap');
     Array.from(wrap.children).forEach(c => { if(c.id !== 'chat-empty-state') c.remove(); });
