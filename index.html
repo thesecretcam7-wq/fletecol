@@ -3858,10 +3858,11 @@ async function cargarMensajes(convId) {
       (msgs||[]).forEach(m => { if(!idsExistentes.has(m.id)) renderMensaje(m); });
     }
     wrap.scrollTop = wrap.scrollHeight;
-    // Solo marcar como leídos si el chat está realmente visible
-    const chatVisible = document.getElementById('chat-main')?.classList.contains('visible-mobile')
-      || !esMobile(); // en desktop siempre visible
-    if(chatVisible && !document.hidden) {
+    // Solo marcar como leídos si el usuario está viendo el chat activamente
+    const pantallaChat = document.getElementById('s-chat')?.classList.contains('activa');
+    const chatMobileVisible = document.getElementById('chat-main')?.classList.contains('visible-mobile');
+    const usuarioVeElChat = !document.hidden && pantallaChat && (esMobile() ? chatMobileVisible : true);
+    if(usuarioVeElChat) {
       await sb.from('mensajes')
         .update({ leido: true })
         .eq('conversacion_id', convId)
@@ -4056,8 +4057,10 @@ function suscribirMensajes(convId) {
           renderMensaje(msg);
           wrap.scrollTop = 99999;
           // Solo marcar leído si el chat está visible en pantalla
-          const chatVisible = document.getElementById('chat-main')?.classList.contains('visible-mobile') || !esMobile();
-          if(chatVisible && !document.hidden) {
+          const pantallaActiva = document.getElementById('s-chat')?.classList.contains('activa');
+          const chatMobileVis = document.getElementById('chat-main')?.classList.contains('visible-mobile');
+          const viendo = !document.hidden && pantallaActiva && (esMobile() ? chatMobileVis : true);
+          if(viendo) {
             await sb.from('mensajes').update({ leido: true }).eq('id', msg.id);
           }
         }
