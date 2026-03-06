@@ -1485,8 +1485,16 @@ async function pagoWompiExitoso(txData, convIdParam) {
     if(error) console.error('❌ Error guardando recibo:', error.message, error.details);
     else console.log('✅ Recibo guardado en conv:', convId);
 
-    // Quitar publicación del conductor de búsquedas
-    const conductorId = convActual?.otro_id || null;
+    // Obtener datos de la conversación para tener el conductor_id seguro
+    let conductorId = convActual?.otro_id || null;
+    if(!conductorId && convId) {
+      const { data: convData } = await sb.from('conversaciones').select('usuario1_id,usuario2_id').eq('id', convId).single();
+      if(convData) {
+        conductorId = convData.usuario1_id === perfilActual.id ? convData.usuario2_id : convData.usuario1_id;
+      }
+    }
+
+    // Quitar ruta del conductor de búsquedas
     if(conductorId) {
       const { error: eRuta } = await sb.from('rutas')
         .update({ estado: 'en_curso' })
@@ -3892,15 +3900,17 @@ async function cargarMensajes(convId) {
     if(perfilActual?.rol === 'conductor') {
       const botonesAccion = document.querySelectorAll('.btn-accion-cliente');
       if(tieneEntregaConfirmadaG) {
-        // Entrega confirmada — mostrar mensaje final
         botonesAccion.forEach(b => b.style.display = 'none');
         actualizarEscrowBar('LIBERADO');
       } else if(tieneReciboG) {
-        // Pago recibido — mostrar "Pago retenido"
+        // Verificar si el pago ya fue liberado
+        const { data: pagosCond } = await sb.from('pagos')
+          .select('estado').eq('conversacion_id', convId)
+          .order('created_at', { ascending: false }).limit(1);
+        const estadoPagoCond = pagosCond?.[0]?.estado;
         botonesAccion.forEach(b => b.style.display = 'none');
-        actualizarEscrowBar('APPROVED');
+        actualizarEscrowBar(estadoPagoCond === 'LIBERADO' ? 'LIBERADO' : 'APPROVED');
       } else if(tieneOfertaAceptadaG) {
-        // Aceptó oferta — esperando pago
         actualizarEscrowBar('esperando_pago');
       }
     }
@@ -3928,7 +3938,14 @@ async function cargarMensajes(convId) {
           .order('created_at', { ascending: false }).limit(1);
         const estadoPago = pagosData?.[0]?.estado;
 
-        if(estadoPago === 'APPROVED') {
+        if(estadoPago === 'LIBERADO' || tieneEntregaConfirmada) {
+          // Entrega ya confirmada (detectado por pago LIBERADO o mensaje)
+          setBotonesSegunEstadoPago('entregado');
+          if(ppForm) ppForm.style.display = 'none';
+          if(ppExitoso) ppExitoso.style.display = 'none';
+          if(ppCompletado) ppCompletado.style.display = 'block';
+          actualizarEscrowBar('LIBERADO');
+        } else if(estadoPago === 'APPROVED') {
           setBotonesSegunEstadoPago('pagado');
           if(ppForm) ppForm.style.display = 'none';
           if(ppExitoso) ppExitoso.style.display = 'block';
