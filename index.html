@@ -3175,7 +3175,10 @@ async function cargarRutas() {
         <div style="background:var(--gris3);padding:4px 10px;border-radius:20px;font-size:11px;color:var(--texto);">⚖️ ${r.capacidad||'—'}</div>
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:17px;color:var(--amarillo);">${r.precio>0?'$'+r.precio.toLocaleString('es-CO'):'Negociable'}</div>
-          ${perfilActual?.rol === 'cliente' ? `<button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;" onclick="event.stopPropagation();abrirChatConConductor('${r.conductor_id||''}','${(r.conductor?.nombre||'Conductor')+' '+(r.conductor?.apellido||'')}',${r.precio||0},'${r.origen||''}','${r.destino||''}')">Negociar →</button>` : `<span style="font-size:11px;color:var(--texto);padding:8px;">Tu propia ruta</span>`}
+          ${perfilActual?.rol === 'cliente' ? `<button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;" onclick="event.stopPropagation();abrirChatConConductor('${r.conductor_id||''}','${(r.conductor?.nombre||'Conductor')+' '+(r.conductor?.apellido||'')}',${r.precio||0},'${r.origen||''}','${r.destino||''}')">Negociar →</button>` : `<div style="display:flex;gap:8px;align-items:center;">
+              <span style="font-size:11px;color:var(--texto);">Tu ruta</span>
+              <button onclick="eliminarRutaBuscar('${r.id}',this)" style="background:rgba(255,69,69,0.12);border:1px solid rgba(255,69,69,0.25);color:var(--rojo);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Eliminar</button>
+            </div>`}
         </div>
       </div>
     </div>`).join('');
@@ -3201,7 +3204,10 @@ async function cargarRutas() {
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <div style="font-size:12px;color:var(--texto);flex:1;">${c.descripcion?c.descripcion.substring(0,60)+'...':''}</div>
-        ${perfilActual?.rol === 'conductor' ? `<button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;" onclick="abrirChatConConductor('${c.cliente_id||''}','${(c.cliente?.nombre||'Cliente')+' '+(c.cliente?.apellido||'')}',0,'${c.origen||''}','${c.destino||''}')">Ofrecer precio →</button>` : `<span style="font-size:11px;color:var(--texto);padding:8px;">Tu publicación</span>`}
+        ${perfilActual?.rol === 'conductor' ? `<button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;" onclick="abrirChatConConductor('${c.cliente_id||''}','${(c.cliente?.nombre||'Cliente')+' '+(c.cliente?.apellido||'')}',0,'${c.origen||''}','${c.destino||''}',true)">Ofrecer precio →</button>` : `<div style="display:flex;gap:8px;align-items:center;">
+              <span style="font-size:11px;color:var(--texto);">Tu publicación</span>
+              <button onclick="eliminarCargaBuscar('${c.id}',this)" style="background:rgba(255,69,69,0.12);border:1px solid rgba(255,69,69,0.25);color:var(--rojo);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Eliminar</button>
+            </div>`}
       </div>
     </div>`).join('');
 
@@ -3715,6 +3721,21 @@ async function eliminarCarga(id, btn) {
   btn.closest('.pub-item').remove();
   toast('🗑️ Carga eliminada', 'info');
 }
+async function eliminarRutaBuscar(id, btn) {
+  if(!id || id.startsWith('undefined')) return;
+  if(!confirm('¿Eliminar esta ruta?')) return;
+  await sb.from('rutas').update({estado:'eliminada'}).eq('id', id);
+  btn.closest('[style]').closest('[style]')?.remove() || btn.closest('div[style*="border-radius:20px"]')?.remove();
+  await buscarRutas();
+  toast('🗑️ Ruta eliminada', 'info');
+}
+async function eliminarCargaBuscar(id, btn) {
+  if(!id || id.startsWith('undefined')) return;
+  if(!confirm('¿Eliminar esta publicación?')) return;
+  await sb.from('cargas').update({estado:'eliminada'}).eq('id', id);
+  await buscarRutas();
+  toast('🗑️ Publicación eliminada', 'info');
+}
 
 // ══ GPS ══
 function pedirGPS() {
@@ -3771,7 +3792,7 @@ function enterSend2(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();envia
 
 
 // ══ CHAT CON SUPABASE ══
-async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, destino) {
+async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, destino, desdeCarga=false) {
   if(!usuarioActual || !perfilActual) { toast('Debes iniciar sesión','error'); return; }
   if(perfilActual.estado === 'pendiente') {
     toast('⚠️ Debes completar tu perfil para chatear','error');
@@ -3806,8 +3827,8 @@ async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, des
       conv = nueva;
     }
 
-    convActual = conv;
-    sessionStorage.setItem('convActual', JSON.stringify(conv));
+    convActual = { ...conv, desdeCarga };
+    sessionStorage.setItem('convActual', JSON.stringify(convActual));
     mostrarHeaderChat(otroNombre, origen, destino, conv.precio_acordado||precio);
     abrirChatMobile();
     await cargarMensajes(conv.id);
@@ -3826,9 +3847,24 @@ function mostrarHeaderChat(nombre, origen, destino, precio, limpiar=true) {
   document.getElementById('escrow-bar').style.display = 'flex';
   document.getElementById('chat-empty-state').style.display = 'none';
 
-  // Solo clientes ven botones de pago, oferta y panel de pago
+  // Conductores solo ven botón oferta si vienen desde una carga de cliente
   const esConductor = perfilActual?.rol === 'conductor';
-  document.getElementById('chat-acciones').style.display = esConductor ? 'none' : 'flex';
+  const conductorPuedeOfertar = esConductor && convActual?.desdeCarga;
+  // Mostrar chat-acciones solo con botón oferta para conductor en carga
+  const chatAcciones = document.getElementById('chat-acciones');
+  if(esConductor) {
+    if(conductorPuedeOfertar) {
+      chatAcciones.style.display = 'flex';
+      const btnOfertaH = document.getElementById('btn-oferta-header');
+      if(btnOfertaH) btnOfertaH.style.display = '';
+      const btnPagar = document.getElementById('chat-pay-btn');
+      if(btnPagar) btnPagar.style.display = 'none';
+    } else {
+      chatAcciones.style.display = 'none';
+    }
+  } else {
+    chatAcciones.style.display = 'flex';
+  }
   // Mostrar menú ⋯ para todos
   const menuBtn = document.getElementById('chat-menu-btn');
   if(menuBtn) menuBtn.style.display = 'block';
@@ -4216,8 +4252,16 @@ async function abrirConvExistente(convId) {
     .eq('id', convId)
     .single();
   if(!conv || error) return;
-  convActual = conv;
-  sessionStorage.setItem('convActual', JSON.stringify(conv));
+  // Para conductores: detectar si la otra persona es un cliente (viene de carga)
+  const soyUnoTemp = conv.usuario1_id === perfilActual?.id;
+  const otroIdTemp = soyUnoTemp ? conv.usuario2_id : conv.usuario1_id;
+  let desdeCargaConv = false;
+  if(perfilActual?.rol === 'conductor') {
+    const { data: otroPerf } = await sb.from('usuarios').select('rol').eq('id', otroIdTemp).single();
+    desdeCargaConv = otroPerf?.rol === 'cliente';
+  }
+  convActual = { ...conv, otro_id: otroIdTemp, desdeCarga: desdeCargaConv };
+  sessionStorage.setItem('convActual', JSON.stringify(convActual));
   const soyUno = conv.usuario1_id === perfilActual?.id;
   const otroId = soyUno ? conv.usuario2_id : conv.usuario1_id;
   const { data: otroUser } = await sb.from('usuarios').select('nombre, apellido').eq('id', otroId).single();
@@ -4490,6 +4534,11 @@ async function hacerOferta() {
       toast('⚠️ Debes confirmar la entrega antes de hacer una nueva oferta', 'error');
       return;
     }
+  }
+  // Conductor solo puede ofertar en conversaciones de cargas de clientes
+  if(perfilActual?.rol === 'conductor' && !convActual?.desdeCarga) {
+    toast('Solo puedes hacer ofertas en cargas de clientes', 'error');
+    return;
   }
   // Conductor hace oferta en carga del cliente
   // Cliente puede negociar precio en viaje del conductor
