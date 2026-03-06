@@ -1583,6 +1583,12 @@ function setBotonesSegunEstadoPago(estado) {
     if(btnOfertaBottom) btnOfertaBottom.style.display = '';
     if(btnPagar) { btnPagar.style.display = 'none'; btnPagar.textContent = '🔒 Pagar'; btnPagar.style.background = 'var(--amarillo)'; btnPagar.onclick = abrirPagoMobile; }
     if(btnConfirmar) btnConfirmar.style.display = '';
+  } else if(estado === 'esperando_conductor') {
+    // Conductor aceptó — no mostrar nada extra al conductor
+    if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
+    if(btnOfertaBottom) btnOfertaBottom.style.display = 'none';
+    if(btnPagar) btnPagar.style.display = 'none';
+    if(btnConfirmar) btnConfirmar.style.display = 'none';
   } else {
     // Sin oferta aceptada — solo oferta disponible
     if(btnOfertaHeader) btnOfertaHeader.style.display = '';
@@ -4056,6 +4062,16 @@ function suscribirMensajes(convId) {
         if(wrap && !wrap.querySelector(`[data-msg-id="${msg.id}"]`)) {
           renderMensaje(msg);
           wrap.scrollTop = 99999;
+          // Si el cliente recibe oferta_aceptada → actualizar monto automáticamente
+          if(msg.tipo === 'oferta_aceptada' && perfilActual?.rol === 'cliente') {
+            const { data: conv } = await sb.from('conversaciones')
+              .select('precio_acordado').eq('id', msg.conversacion_id).single();
+            if(conv?.precio_acordado > 0) {
+              actualizarMonto(conv.precio_acordado);
+              setBotonesSegunEstadoPago('oferta_aceptada');
+              actualizarEscrowBar('sin_pagar');
+            }
+          }
           // Solo marcar leído si el chat está visible en pantalla
           const pantallaActiva = document.getElementById('s-chat')?.classList.contains('activa');
           const chatMobileVis = document.getElementById('chat-main')?.classList.contains('visible-mobile');
@@ -4339,16 +4355,25 @@ async function aceptarOfertaReal(monto) {
   if(perfilActual?.rol === 'conductor') {
     if(convActual && convActual.id !== 'demo') {
       await sb.from('conversaciones').update({ precio_acordado: monto }).eq('id', convActual.id);
-      await sb.from('mensajes').insert({
+      const { data: msgInsertado } = await sb.from('mensajes').insert({
         conversacion_id: convActual.id,
         emisor_id: perfilActual.id,
         contenido: '✅ Precio aceptado: $' + parseInt(monto).toLocaleString('es-CO') + '. El cliente procederá con el pago.',
         tipo: 'oferta_aceptada'
-      });
+      }).select().single();
+      // Renderizar localmente para el conductor (el realtime no llega al emisor)
+      if(msgInsertado) {
+        const wrap = document.getElementById('msgs-wrap');
+        if(wrap && !wrap.querySelector(`[data-msg-id="${msgInsertado.id}"]`)) {
+          renderMensaje(msgInsertado);
+          wrap.scrollTop = wrap.scrollHeight;
+        }
+      }
     }
     actualizarMonto(monto);
-    toast('✅ Oferta aceptada. Esperando pago del cliente.', 'success');
     actualizarEscrowBar('esperando_pago');
+    setBotonesSegunEstadoPago('esperando_conductor');
+    toast('✅ Oferta aceptada. Esperando pago del cliente.', 'success');
     return;
   }
   actualizarMonto(monto);
