@@ -4526,9 +4526,6 @@ async function prepararWompiConMonto(monto) {
     sessionStorage.setItem('wompi_monto', String(monto));
     if(convActual) sessionStorage.setItem('convActual', JSON.stringify(convActual));
 
-    // Widget embebido con innerHTML — único método que respeta data-signature:integrity con ":"
-    console.log('✅ Abriendo widget Wompi, monto:', montoCentavos, 'ref:', referencia);
-
     const modalViejo = document.getElementById('wompi-modal');
     if(modalViejo) modalViejo.remove();
 
@@ -4545,17 +4542,13 @@ async function prepararWompiConMonto(monto) {
     closeBtn.onclick = () => modal.remove();
     inner.appendChild(closeBtn);
 
-    // Limpiar cualquier instancia previa de widget.js para evitar conflictos
     document.querySelectorAll('script[src*="checkout.wompi.co/widget.js"]').forEach(el => el.remove());
     if(window.$wompi) delete window.$wompi;
 
     const nombre = ((perfilActual.nombre||'')+' '+(perfilActual.apellido||'')).trim();
-    console.log('✅ Cargando widget Wompi:', { key: WOMPI_PUBLIC_KEY, monto: montoCentavos, ref: referencia, integrity: integrity.substring(0,8)+'...' });
 
-    // Crear form+script con setAttribute (preserva atributos con ":")
     const formEl = document.createElement('form');
     const s = document.createElement('script');
-    // Forzar recarga limpia con timestamp para evitar caché
     s.setAttribute('src', 'https://checkout.wompi.co/widget.js?t=' + Date.now());
     s.setAttribute('data-render', 'button');
     s.setAttribute('data-public-key', WOMPI_PUBLIC_KEY);
