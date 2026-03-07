@@ -1477,7 +1477,14 @@ async function pagoWompiExitoso(txData, convIdParam) {
       leido: false
     });
     if(error) console.error('❌ Error guardando recibo:', error.message, error.details);
-    else console.log('✅ Recibo guardado en conv:', convId);
+    else {
+      console.log('✅ Recibo guardado en conv:', convId);
+      // Recargar mensajes inmediatamente para que el cliente vea el recibo sin recargar la página
+      // (el realtime no dispara para el mismo cliente que insertó el mensaje)
+      setTimeout(() => {
+        if(convActual?.id) cargarMensajes(convActual.id);
+      }, 400);
+    }
 
     // Obtener datos de la conversación para tener el conductor_id seguro
     let conductorId = convActual?.otro_id || null;
@@ -4190,7 +4197,8 @@ function suscribirMensajes(convId) {
         // Ignorar mensajes de otras conversaciones
         if(msg.conversacion_id !== convActual?.id) return;
         // Ignorar mensajes propios (ya se muestran al enviar)
-        if(msg.emisor_id === perfilActual?.id) {
+        // EXCEPCIÓN: recibo y entrega_confirmada deben renderizarse siempre (los inserta el sistema)
+        if(msg.emisor_id === perfilActual?.id && msg.tipo !== 'recibo' && msg.tipo !== 'entrega_confirmada') {
           await cargarConversaciones(convActual?.id);
           return;
         }
@@ -4207,6 +4215,20 @@ function suscribirMensajes(convId) {
               actualizarMonto(conv.precio_acordado);
               setBotonesSegunEstadoPago('oferta_aceptada');
               actualizarEscrowBar('sin_pagar');
+            }
+          }
+          // Cuando llega un recibo → actualizar UI en tiempo real para ambos
+          if(msg.tipo === 'recibo') {
+            if(perfilActual?.rol === 'cliente') {
+              setBotonesSegunEstadoPago('pagado');
+              actualizarEscrowBar('APPROVED');
+              const ppForm = document.getElementById('pp-form2');
+              const ppExitoso = document.getElementById('pp-exitoso2');
+              if(ppForm) ppForm.style.display = 'none';
+              if(ppExitoso) ppExitoso.style.display = 'block';
+            } else if(perfilActual?.rol === 'conductor') {
+              setBotonesSegunEstadoPago('esperando_conductor');
+              actualizarEscrowBar('APPROVED');
             }
           }
           // Solo marcar leído si el chat está visible en pantalla
