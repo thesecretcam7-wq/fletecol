@@ -2970,11 +2970,37 @@ async function cargarCarrusel() {
     wrap.style.display = 'block';
     slides.style.width = `${bannersVisibles.length * 100}%`;
 
+    // Guardar URLs para el click handler
+    window._bannerUrls = bannersVisibles.map(b => b.link_url || '');
+
     slides.innerHTML = bannersVisibles.map((b, i) => `
       <div class="carrusel-slide"
-        style="min-width:${100/bannersVisibles.length}%;background-image:url('${b.imagen_url}');"
-        onclick="abrirBanner('${b.link_url||''}')">
+        data-idx="${i}"
+        style="min-width:${100/bannersVisibles.length}%;background-image:url('${b.imagen_url}');cursor:${b.link_url?'pointer':'default'};">
       </div>`).join('');
+
+    // Touch: distinguir swipe de tap
+    let touchStartX = 0;
+    let touchStartTime = 0;
+    const slidesEl = document.getElementById('carrusel-slides');
+    slidesEl.addEventListener('touchstart', e => {
+      touchStartX = e.touches[0].clientX;
+      touchStartTime = Date.now();
+    }, { passive: true });
+    slidesEl.addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dt = Date.now() - touchStartTime;
+      if(Math.abs(dx) < 10 && dt < 300) {
+        // Es un tap, abrir URL
+        const idx = carruselActual;
+        const url = (window._bannerUrls || [])[idx];
+        if(url) window.open(url, '_blank');
+      } else if(dx < -40) {
+        carruselNext();
+      } else if(dx > 40) {
+        carruselPrev();
+      }
+    }, { passive: true });
 
     dots.innerHTML = bannersVisibles.map((_, i) => `
       <div class="carrusel-dot ${i===0?'active':''}" onclick="irSlide(${i})"></div>`).join('');
@@ -3009,6 +3035,16 @@ function carruselPrev() {
 function abrirBanner(url) {
   if(url) window.open(url, '_blank');
 }
+
+// Click en desktop para banners
+document.addEventListener('click', function(e) {
+  const slide = e.target.closest('.carrusel-slide');
+  if(slide) {
+    const idx = parseInt(slide.dataset.idx);
+    const url = (window._bannerUrls || [])[idx];
+    if(url) window.open(url, '_blank');
+  }
+});
 
 // ══ CUENTA BANCARIA ══
 const TIPOS_CUENTA = {
