@@ -1841,12 +1841,7 @@ async function verificarRetornoWompi() {
     const aprobado = tx ? tx.status === 'APPROVED' : true;
 
     if(aprobado) {
-      // Actualizar estado del pago (silenciado — RLS puede bloquearlo sin afectar el flujo)
-      sb.from('pagos').update({ estado: 'APPROVED' }).eq('wompi_referencia', ref).then(({error}) => {
-        if(error) console.warn('pagos update:', error.message);
-      });
-
-      // Restaurar convActual del snapshot guardado antes del pago
+      // Restaurar convActual del snapshot PRIMERO
       const snap = sessionStorage.getItem('wompi_conv_snapshot');
       if(snap) {
         try { convActual = JSON.parse(snap); } catch(e) {}
@@ -1857,6 +1852,12 @@ async function verificarRetornoWompi() {
       const convOtroId = sessionStorage.getItem('wompi_otro_id');
       const convOtroNombre = sessionStorage.getItem('wompi_otro_nombre');
 
+      // Actualizar estado del pago con await — CRÍTICO para que cargarMensajes lo vea como APPROVED
+      const { error: errPago } = await sb.from('pagos')
+        .update({ estado: 'APPROVED' })
+        .eq('wompi_referencia', ref);
+      if(errPago) console.warn('pagos update:', errPago.message);
+
       // Ir al chat e intentar abrir la conversación específica
       irApp('s-chat');
 
@@ -1866,13 +1867,18 @@ async function verificarRetornoWompi() {
         await abrirChatConConductor(convOtroId, convOtroNombre || 'Usuario', 0, '', '');
       }
 
-      // En mobile: forzar apertura del chat (irApp muestra la lista, no el chat)
+      const convIdFinal = snapConvId || convActual?.id;
+      // pagoWompiExitoso inserta el recibo con await — esperar que termine
+      await pagoWompiExitoso(tx || { reference: ref }, convIdFinal);
+
+      // Recargar mensajes DESPUÉS de insertar recibo — para mostrar banner confirmar entrega
+      if(convIdFinal) await cargarMensajes(convIdFinal);
+
+      // En mobile: forzar apertura del panel del chat
       if(esMobile()) {
-        setTimeout(() => abrirChatMobile(), 300);
+        setTimeout(() => abrirChatMobile(), 200);
       }
 
-      const convIdFinal = snapConvId || convActual?.id;
-      await pagoWompiExitoso(tx || { reference: ref }, convIdFinal);
       toast('✅ ¡Pago aprobado!', 'success');
       return true; // indicar que procesamos retorno de Wompi
     } else if(tx) {
