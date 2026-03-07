@@ -2202,10 +2202,25 @@ function suscribirBadge() {
       table: 'mensajes'
     }, async (payload) => {
       const msg = payload.new;
-      // Solo contar mensajes dirigidos a este usuario (no propios)
+      // Ignorar mensajes propios
       if(msg.emisor_id === perfilActual.id) return;
-      // Verificar que pertenece a una conversación del usuario
-      await cargarConversaciones(convActual?.id);
+      // Verificar que la conversación pertenece a este usuario
+      const { data: conv } = await sb.from('conversaciones')
+        .select('id')
+        .eq('id', msg.conversacion_id)
+        .or(`usuario1_id.eq.${perfilActual.id},usuario2_id.eq.${perfilActual.id}`)
+        .maybeSingle();
+      if(!conv) return; // No es de este usuario
+      // Si el chat de esa conversación está abierto, no incrementar
+      if(convActual?.id === msg.conversacion_id) return;
+      // Incrementar badge directamente
+      const badge = document.getElementById('chat-badge');
+      if(badge) {
+        const actual = parseInt(badge.textContent) || 0;
+        const nuevo = actual + 1;
+        badge.textContent = nuevo > 9 ? '9+' : nuevo;
+        badge.style.display = 'flex';
+      }
     })
     .subscribe();
 }
@@ -4112,9 +4127,9 @@ function renderMensaje(m) {
       wrap.scrollTop = wrap.scrollHeight;
       return;
     }
-    if(m.tipo === 'foto_evidencia') {
+    if(m.tipo === 'texto' && m.contenido?.startsWith('__foto__')) {
       let info = {};
-      try { info = JSON.parse(m.contenido); } catch(e) {}
+      try { info = JSON.parse(m.contenido.replace('__foto__','')); } catch(e) {}
       const lado = esMio ? 'flex-direction:row-reverse' : '';
       div.innerHTML = `
         <div class="msg-row2" style="${lado}">
@@ -4950,8 +4965,8 @@ async function subirFotoEvidencia(input) {
     const { error: msgError } = await sb.from('mensajes').insert({
       conversacion_id: convActual.id,
       emisor_id: perfilActual.id,
-      tipo: 'foto_evidencia',
-      contenido: JSON.stringify({ url, label }),
+      tipo: 'texto',
+      contenido: '__foto__' + JSON.stringify({ url, label }),
       leido: false
     });
 
@@ -4962,8 +4977,8 @@ async function subirFotoEvidencia(input) {
       id: 'foto-' + Date.now(),
       conversacion_id: convActual.id,
       emisor_id: perfilActual.id,
-      tipo: 'foto_evidencia',
-      contenido: JSON.stringify({ url, label }),
+      tipo: 'texto',
+      contenido: '__foto__' + JSON.stringify({ url, label }),
       created_at: new Date().toISOString()
     };
     renderMensaje(msg);
