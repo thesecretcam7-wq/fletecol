@@ -1533,14 +1533,17 @@ async function pagoWompiExitoso(txData, convIdParam) {
       else console.log('✅ Ruta del conductor marcada como en_curso');
     }
 
-    // Quitar carga publicada por el cliente de búsquedas
+    // Eliminar carga publicada por el cliente al confirmar el pago
     if(perfilActual?.id) {
       const { error: eCarga } = await sb.from('cargas')
-        .update({ estado: 'en_curso' })
+        .delete()
         .eq('cliente_id', perfilActual.id)
         .eq('estado', 'activa');
-      if(eCarga) console.warn('carga en_curso:', eCarga.message);
-      else console.log('✅ Carga del cliente marcada como en_curso');
+      if(eCarga) console.warn('eliminar carga:', eCarga.message);
+      else {
+        console.log('✅ Carga del cliente eliminada');
+        if(typeof cargarRutas === 'function') cargarRutas();
+      }
     }
     return;
   }
