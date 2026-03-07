@@ -902,24 +902,15 @@ html{color-scheme:light;overscroll-behavior-x:none;}*,*::before,*::after{box-siz
                 </div>
                 <div class="toggle" id="t-ayudantes" onclick="toggleAyudantes(this)"></div>
               </div>
-              <!-- Sección costo ayudantes — visible solo si activan toggle -->
+              <!-- Sección ayudantes — visible solo si activan toggle -->
               <div id="sec-ayudantes" style="display:none;margin-top:12px;border-top:1px solid rgba(0,0,0,0.05);padding-top:12px;">
-                <div class="form-row">
-                  <div class="form-group">
-                    <label class="form-label">Número de ayudantes</label>
-                    <select class="form-input" id="m-num-ayudantes">
-                      <option value="1">1 ayudante</option>
-                      <option value="2">2 ayudantes</option>
-                      <option value="3">3 ayudantes</option>
-                    </select>
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">💰 Costo por ayudante</label>
-                    <input class="form-input" type="number" id="m-costo-ayudante" placeholder="50000" oninput="calcTotalAyudantes()">
-                  </div>
-                </div>
-                <div id="total-ayudantes-banner" style="display:none;background:rgba(0,212,106,0.06);border:1px solid rgba(0,212,106,0.15);border-radius:9px;padding:10px 12px;font-size:12px;">
-                  💰 Total ayudantes: <strong id="total-ayudantes-val" style="color:var(--verde);">$0</strong> · Se suma al precio del flete
+                <div class="form-group">
+                  <label class="form-label">Número de ayudantes</label>
+                  <select class="form-input" id="m-num-ayudantes">
+                    <option value="1">1 ayudante</option>
+                    <option value="2">2 ayudantes</option>
+                    <option value="3">3 ayudantes</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -3402,22 +3393,6 @@ function toggleAyudantes(el) {
   el.classList.toggle('on');
   const sec = document.getElementById('sec-ayudantes');
   if(sec) sec.style.display = el.classList.contains('on') ? 'block' : 'none';
-  if(!el.classList.contains('on')) {
-    const banner = document.getElementById('total-ayudantes-banner');
-    if(banner) banner.style.display = 'none';
-  }
-}
-
-function calcTotalAyudantes() {
-  const num   = parseInt(document.getElementById('m-num-ayudantes')?.value) || 1;
-  const costo = parseInt(document.getElementById('m-costo-ayudante')?.value) || 0;
-  const total = num * costo;
-  const banner = document.getElementById('total-ayudantes-banner');
-  const val    = document.getElementById('total-ayudantes-val');
-  if(banner && val) {
-    banner.style.display = total > 0 ? 'block' : 'none';
-    val.textContent = '$' + total.toLocaleString('es-CO');
-  }
 }
 
 const vehInfo = {
@@ -3718,7 +3693,7 @@ async function publicarCarga() {
   const esMudanza = tipo === 'mudanza';
   const necesitaAyudantes = document.getElementById('t-ayudantes')?.classList.contains('on') && esMudanza;
   const numAyudantes  = esMudanza && necesitaAyudantes ? parseInt(document.getElementById('m-num-ayudantes')?.value)||1 : 0;
-  const costoAyudante = esMudanza && necesitaAyudantes ? parseInt(document.getElementById('m-costo-ayudante')?.value)||0 : 0;
+  const costoAyudante = 0; // El costo lo negocia el conductor por chat
 
   // Armar descripción automática para mudanza
   let descAuto = '';
@@ -3736,7 +3711,7 @@ async function publicarCarga() {
     if(inmueble)     descAuto += inmueble + '. ';
     if(pisoO)        descAuto += 'Piso origen: ' + pisoO + '. ';
     if(pisoD)        descAuto += 'Piso destino: ' + pisoD + '. ';
-    if(necesitaAyudantes) descAuto += `Necesita ${numAyudantes} ayudante(s) a $${costoAyudante.toLocaleString('es-CO')} c/u.`;
+    if(necesitaAyudantes) descAuto += `Necesita ${numAyudantes} ayudante(s) para cargar.`;
   }
 
   const descripcionFinal = [descAuto, document.getElementById('c-desc').value].filter(Boolean).join(' ').trim();
