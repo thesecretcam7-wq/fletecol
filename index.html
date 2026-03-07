@@ -1025,6 +1025,8 @@ html{overscroll-behavior-x:none;color-scheme:light;}*,*::before,*::after{box-siz
           <button id="btn-confirmar-entrega" class="btn-accion-cliente" style="display:none;background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;" onclick="confirmarEntrega2()">📦 Confirmar entrega</button>
         </div>
         <div style="display:flex;gap:8px;align-items:flex-end;">
+          <button onclick="document.getElementById('foto-evidencia-input').click()" title="Enviar foto" style="width:42px;height:42px;border-radius:11px;background:var(--gris3);border:1px solid var(--gris4);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">📷</button>
+          <input type="file" id="foto-evidencia-input" accept="image/*" capture="environment" style="display:none;" onchange="subirFotoEvidencia(this)">
           <textarea class="msg-input2" id="m-input2" rows="1" placeholder="Escribe tu mensaje..." oninput="checkMsg(this)" onkeydown="enterSend2(event)"></textarea>
           <button class="btn-send2" id="btn-send2" onclick="enviarMsg()">➤</button>
         </div>
@@ -4110,6 +4112,25 @@ function renderMensaje(m) {
       wrap.scrollTop = wrap.scrollHeight;
       return;
     }
+    if(m.tipo === 'foto_evidencia') {
+      let info = {};
+      try { info = JSON.parse(m.contenido); } catch(e) {}
+      const lado = esMio ? 'flex-direction:row-reverse' : '';
+      div.innerHTML = `
+        <div class="msg-row2" style="${lado}">
+          <div class="msg-av2">${esMio ? '🧑' : '👨'}</div>
+          <div>
+            <div style="font-size:10px;color:var(--texto);margin-bottom:4px;">${info.label || '📷 Foto de evidencia'}</div>
+            <div style="background:var(--gris2);border-radius:10px;overflow:hidden;max-width:220px;cursor:pointer;" onclick="window.open('${info.url}','_blank')">
+              <img src="${info.url}" style="width:100%;display:block;border-radius:10px;" loading="lazy">
+            </div>
+            <div class="msg-time2">${hora}${esMio ? ' · ✓✓' : ''}</div>
+          </div>
+        </div>`;
+      wrap.appendChild(div);
+      wrap.scrollTop = wrap.scrollHeight;
+      return;
+    }
     if(m.tipo === 'recibo') {
     let info = {};
     try { info = JSON.parse(m.contenido); } catch(e) {}
@@ -4898,5 +4919,64 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+<script>
+async function subirFotoEvidencia(input) {
+  const file = input.files[0];
+  if(!file) return;
+  if(!convActual?.id) { toast('Abre una conversación primero', 'error'); return; }
+  if(!perfilActual?.id) { toast('Debes iniciar sesión', 'error'); return; }
+
+  // Validar tamaño (max 5MB)
+  if(file.size > 5 * 1024 * 1024) { toast('La foto no puede superar 5MB', 'error'); return; }
+
+  toast('📤 Subiendo foto...', 'info');
+
+  try {
+    const ext = file.name.split('.').pop() || 'jpg';
+    const path = `evidencias/${convActual.id}/${Date.now()}-${perfilActual.id.slice(0,8)}.${ext}`;
+
+    const { error: uploadError } = await sb.storage
+      .from('documentos')
+      .upload(path, file, { upsert: false, contentType: file.type });
+
+    if(uploadError) throw uploadError;
+
+    const { data: urlData } = sb.storage.from('documentos').getPublicUrl(path);
+    const url = urlData?.publicUrl;
+    if(!url) throw new Error('No se pudo obtener la URL de la foto');
+
+    const label = perfilActual.rol === 'conductor' ? '📷 Foto del conductor' : '📷 Foto del cliente';
+
+    const { error: msgError } = await sb.from('mensajes').insert({
+      conversacion_id: convActual.id,
+      emisor_id: perfilActual.id,
+      tipo: 'foto_evidencia',
+      contenido: JSON.stringify({ url, label }),
+      leido: false
+    });
+
+    if(msgError) throw msgError;
+
+    // Mostrar localmente sin esperar el realtime
+    const msg = {
+      id: 'foto-' + Date.now(),
+      conversacion_id: convActual.id,
+      emisor_id: perfilActual.id,
+      tipo: 'foto_evidencia',
+      contenido: JSON.stringify({ url, label }),
+      created_at: new Date().toISOString()
+    };
+    renderMensaje(msg);
+    document.getElementById('msgs-wrap').scrollTop = 99999;
+    toast('✅ Foto enviada', 'success');
+  } catch(e) {
+    console.error('[foto evidencia]', e);
+    toast('Error subiendo la foto: ' + e.message, 'error');
+  }
+
+  // Limpiar input para permitir subir la misma foto dos veces
+  input.value = '';
+}
+</script>
 </body>
 </html>
