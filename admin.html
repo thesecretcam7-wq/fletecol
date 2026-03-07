@@ -1517,7 +1517,11 @@ async function cargarCuentas() {
 async function cargarBanners() {
   const grid = document.getElementById('banners-grid');
   if(!grid) return;
-  const { data: banners } = await sb.from('banners').select('*').order('orden');
+  const { data: banners, error } = await sb.from('banners').select('*').order('orden');
+  if(error) {
+    grid.innerHTML = `<div style="text-align:center;color:#ef4444;padding:40px;grid-column:1/-1;">❌ Error al cargar banners: ${error.message}</div>`;
+    return;
+  }
   if(!banners || banners.length === 0) {
     grid.innerHTML = '<div style="text-align:center;color:#888;padding:40px;grid-column:1/-1;">No hay banners. Crea el primero.</div>';
     return;
@@ -1665,6 +1669,7 @@ function previewBanner(url) {
 }
 
 async function guardarBanner() {
+  const btnGuardar = document.querySelector('#modal-banner button[onclick="guardarBanner()"]');
   const id = document.getElementById('banner-edit-id').value;
   const imagen_url = document.getElementById('banner-imagen').value.trim();
   const link_url = document.getElementById('banner-link').value.trim();
@@ -1673,11 +1678,39 @@ async function guardarBanner() {
   let ciudad = document.getElementById('banner-ciudad').value;
   if(ciudad === 'otra') ciudad = document.getElementById('banner-ciudad-custom').value.trim() || 'todas';
   if(!imagen_url) { alert('La URL de imagen es requerida'); return; }
-  const datos = { imagen_url, link_url, orden, activo, ciudad };
-  if(id) { await sb.from('banners').update(datos).eq('id', id); }
-  else { await sb.from('banners').insert(datos); }
-  cerrarModalBanner();
-  cargarBanners();
+
+  btnGuardar.textContent = 'Guardando...';
+  btnGuardar.disabled = true;
+
+  try {
+    const datos = { imagen_url, link_url, orden, activo, ciudad };
+    let error;
+
+    if(id) {
+      const res = await sb.from('banners').update(datos).eq('id', id);
+      error = res.error;
+    } else {
+      const res = await sb.from('banners').insert(datos);
+      error = res.error;
+    }
+
+    if(error) {
+      console.error('Error Supabase:', error);
+      alert('Error al guardar: ' + (error.message || JSON.stringify(error)));
+      btnGuardar.textContent = 'Guardar';
+      btnGuardar.disabled = false;
+      return;
+    }
+
+    cerrarModalBanner();
+    cargarBanners();
+
+  } catch(e) {
+    console.error('Error inesperado:', e);
+    alert('Error inesperado: ' + e.message);
+    btnGuardar.textContent = 'Guardar';
+    btnGuardar.disabled = false;
+  }
 }
 
 async function eliminarBanner(id) {
