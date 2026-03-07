@@ -837,7 +837,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
     </div>
 
     <!-- CARGA (solo clientes) -->
-    <div class="pub-form active" id="pf-carga">
+    <div class="pub-form" id="pf-carga">
       <div class="card">
         <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;margin-bottom:4px;">Publicar mi carga</div>
         <div style="font-size:13px;color:var(--texto);margin-bottom:20px;">Los conductores de tu zona te harán ofertas.</div>
@@ -2238,6 +2238,8 @@ async function redirigirSegunEstado() {
   const estado = perfilActual.estado;
   if(estado === 'aprobado') {
     await irApp('s-rutas');
+    // Inicializar formulario publicar según rol (conductor vs cliente)
+    cargarVehiculoConductor();
   } else {
     // pendiente, rechazado, baneado → pantalla de espera con mensaje según estado
     actualizarPantallaPendiente(estado, perfilActual.motivo_rechazo, perfilActual.rol);
