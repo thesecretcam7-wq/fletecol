@@ -1000,9 +1000,20 @@ html{color-scheme:light;overscroll-behavior-x:none;}*,*::before,*::after{box-siz
       </div>
       <div class="input-area2">
         <div class="input-warn2" id="i-warn2">🚫 <span id="i-warn-txt2"></span></div>
+        <!-- Banner confirmar entrega — solo visible cuando hay pago APPROVED -->
+        <div id="banner-confirmar-entrega" style="display:none;background:linear-gradient(135deg,#0a2e1a,#0d3d22);border:1.5px solid #1a6b3a;border-radius:12px;padding:12px 14px;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:22px;">🔒</span>
+            <div style="flex:1;">
+              <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:14px;color:#4ade80;">Pago retenido en FleteCOL</div>
+              <div style="font-size:11px;color:#86efac;margin-top:1px;">Confirma cuando recibas el servicio para liberar el pago al conductor</div>
+            </div>
+          </div>
+          <button onclick="confirmarEntrega2()" style="width:100%;margin-top:10px;background:var(--verde);color:#fff;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;">✅ Confirmar que recibí todo bien</button>
+        </div>
         <div style="display:flex;gap:7px;margin-bottom:8px;">
           <button id="btn-oferta-bottom" class="btn-accion-cliente" style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;" onclick="hacerOferta()">💰 Hacer oferta</button>
-          <button id="btn-confirmar-entrega" class="btn-accion-cliente" style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;display:none;" onclick="pedirConfEntrega()">📦 Confirmar entrega</button>
+          <button id="btn-confirmar-entrega" class="btn-accion-cliente" style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;display:none;" onclick="confirmarEntrega2()">📦 Confirmar entrega</button>
         </div>
         <div style="display:flex;gap:8px;align-items:flex-end;">
           <textarea class="msg-input2" id="m-input2" rows="1" placeholder="Escribe tu mensaje..." oninput="checkMsg(this)" onkeydown="enterSend2(event)"></textarea>
@@ -1573,55 +1584,45 @@ function setBotonesSegunEstadoPago(estado) {
   const btnOfertaBottom = document.getElementById('btn-oferta-bottom');
   const btnPagar = document.getElementById('chat-pay-btn');
   const btnConfirmar = document.getElementById('btn-confirmar-entrega');
-  // Asegurar que chat-acciones esté visible cuando hay botón activo
+  const bannerConfirmar = document.getElementById('banner-confirmar-entrega');
   const chatAcciones = document.getElementById('chat-acciones');
 
   if(estado === 'pagado') {
-    // Pago APPROVED — cliente debe confirmar entrega
+    // Pago APPROVED — mostrar banner prominente de confirmar entrega
     if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
     if(btnOfertaBottom) btnOfertaBottom.style.display = 'none';
-    // Botón pagar se convierte en confirmar entrega (visible en header)
-    if(btnPagar) {
-      btnPagar.style.display = '';
-      btnPagar.textContent = '✅ Confirmar entrega';
-      btnPagar.style.background = 'var(--verde)';
-      btnPagar.style.color = '#fff';
-      btnPagar.onclick = confirmarEntregaMobile;
-    }
-    if(chatAcciones) chatAcciones.style.display = 'flex';
-    // Botón confirmar en barra inferior también visible con estilo verde
-    if(btnConfirmar) {
-      btnConfirmar.style.display = '';
-      btnConfirmar.textContent = '✅ Confirmar entrega';
-      btnConfirmar.style.background = 'var(--verde)';
-      btnConfirmar.style.color = '#fff';
-      btnConfirmar.style.border = 'none';
-      btnConfirmar.style.fontWeight = '700';
-    }
+    if(btnPagar) { btnPagar.style.display = 'none'; }
+    if(chatAcciones) chatAcciones.style.display = 'none';
+    // Banner verde prominente visible en chat (funciona en mobile y desktop)
+    if(bannerConfirmar) bannerConfirmar.style.display = 'block';
+    if(btnConfirmar) btnConfirmar.style.display = 'none'; // ocultamos el pequeño, usamos el banner
   } else if(estado === 'oferta_aceptada') {
     // Oferta aceptada — solo pagar
     if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
     if(btnOfertaBottom) btnOfertaBottom.style.display = 'none';
     if(btnPagar) { btnPagar.style.display = ''; btnPagar.textContent = '🔒 Pagar'; btnPagar.style.background = 'var(--amarillo)'; btnPagar.style.color = 'var(--negro)'; btnPagar.onclick = abrirPagoMobile; }
     if(chatAcciones) chatAcciones.style.display = 'flex';
-    if(btnConfirmar) { btnConfirmar.style.display = 'none'; btnConfirmar.textContent = '📦 Confirmar entrega'; btnConfirmar.style.background = 'var(--gris3)'; btnConfirmar.style.color = 'var(--texto)'; }
+    if(bannerConfirmar) bannerConfirmar.style.display = 'none';
+    if(btnConfirmar) btnConfirmar.style.display = 'none';
   } else if(estado === 'entregado') {
-    // Entrega confirmada — restablecer para nuevo flete
+    // Entrega confirmada — todo oculto, transacción completa
     if(btnOfertaHeader) btnOfertaHeader.style.display = '';
     if(btnOfertaBottom) btnOfertaBottom.style.display = '';
     if(btnPagar) { btnPagar.style.display = 'none'; btnPagar.textContent = '🔒 Pagar'; btnPagar.style.background = 'var(--amarillo)'; btnPagar.style.color = 'var(--negro)'; btnPagar.onclick = abrirPagoMobile; }
-    if(btnConfirmar) { btnConfirmar.style.display = 'none'; btnConfirmar.textContent = '📦 Confirmar entrega'; btnConfirmar.style.background = 'var(--gris3)'; btnConfirmar.style.color = 'var(--texto)'; }
+    if(bannerConfirmar) bannerConfirmar.style.display = 'none';
+    if(btnConfirmar) btnConfirmar.style.display = 'none';
   } else if(estado === 'esperando_conductor') {
-    // Conductor aceptó, esperando pago
     if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
     if(btnOfertaBottom) btnOfertaBottom.style.display = 'none';
     if(btnPagar) btnPagar.style.display = 'none';
+    if(bannerConfirmar) bannerConfirmar.style.display = 'none';
     if(btnConfirmar) btnConfirmar.style.display = 'none';
   } else {
-    // Sin oferta — solo botones de oferta
+    // Sin oferta — botones de oferta disponibles
     if(btnOfertaHeader) btnOfertaHeader.style.display = '';
     if(btnOfertaBottom) btnOfertaBottom.style.display = '';
     if(btnPagar) btnPagar.style.display = 'none';
+    if(bannerConfirmar) bannerConfirmar.style.display = 'none';
     if(btnConfirmar) btnConfirmar.style.display = 'none';
   }
 }
@@ -4700,9 +4701,15 @@ function mostrarPago(){toast('💳 Selecciona el método de pago en el panel der
 function selMet(el,tipo){document.querySelectorAll('.metodo').forEach(m=>m.classList.remove('sel'));document.querySelectorAll('.metodo-detalle2').forEach(d=>d.classList.remove('visible'));el.classList.add('sel');document.getElementById('md-'+tipo).classList.add('visible');}
 function procesarPago2(){document.getElementById('pp-form2').style.display='none';document.getElementById('pp-procesando2').style.display='block';setTimeout(()=>{document.getElementById('pp-procesando2').style.display='none';document.getElementById('pp-exitoso2').style.display='block';document.getElementById('escrow-est2').textContent='🔒 Retenido';document.getElementById('chat-pay-btn').style.display='none';const d=document.createElement('div');d.className='sys-msg';d.innerHTML='🔒 <strong style="color:var(--naranja)">Pago retenido en FleteCOL</strong> · El conductor fue notificado.';document.getElementById('msgs-wrap').appendChild(d);toast('🔒 Pago procesado','success');},2000);}
 async function confirmarEntrega2(){
-  document.getElementById('pp-exitoso2').style.display='none';
-  document.getElementById('pp-completado2').style.display='block';
-  document.getElementById('escrow-est2').textContent='✅ Liberado';
+  // Ocultar banner de confirmar entrega
+  const bannerConf = document.getElementById('banner-confirmar-entrega');
+  if(bannerConf) bannerConf.style.display = 'none';
+  const ppExitoso = document.getElementById('pp-exitoso2');
+  const ppCompletado = document.getElementById('pp-completado2');
+  const escrowEst = document.getElementById('escrow-est2');
+  if(ppExitoso) ppExitoso.style.display='none';
+  if(ppCompletado) ppCompletado.style.display='block';
+  if(escrowEst) escrowEst.textContent='✅ Liberado';
   toast('🎉 Entrega confirmada','success');
 
   const convId = convActual?.id;
