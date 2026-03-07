@@ -1690,18 +1690,8 @@ async function abrirPagoMobile() {
       return;
     }
   }
-  if(!esMobile()) {
-    mostrarPago();
-    return;
-  }
-  // Mobile: abrir modal desde abajo con el contenido del panel
-  const panel = document.getElementById('pago-panel');
-  const modalContent = document.getElementById('pago-modal-content');
-  if(panel && modalContent) {
-    modalContent.innerHTML = panel.innerHTML;
-  }
-  const modal = document.getElementById('pago-modal-mobile');
-  if(modal) modal.classList.add('open');
+  // Ir directo a Wompi sin mostrar modal intermedio (mobile y desktop)
+  await prepararWompi();
 }
 
 function cerrarPagoMobile(e) {
