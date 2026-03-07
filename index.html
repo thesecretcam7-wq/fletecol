@@ -1690,8 +1690,18 @@ async function abrirPagoMobile() {
       return;
     }
   }
-  // Ir directo a Wompi sin mostrar modal intermedio (mobile y desktop)
-  await prepararWompi();
+  if(!esMobile()) {
+    mostrarPago();
+    return;
+  }
+  // Mobile: abrir modal desde abajo con el contenido del panel
+  const panel = document.getElementById('pago-panel');
+  const modalContent = document.getElementById('pago-modal-content');
+  if(panel && modalContent) {
+    modalContent.innerHTML = panel.innerHTML;
+  }
+  const modal = document.getElementById('pago-modal-mobile');
+  if(modal) modal.classList.add('open');
 }
 
 function cerrarPagoMobile(e) {
@@ -4504,34 +4514,61 @@ async function prepararWompiConMonto(monto) {
     const montoCentavos = monto * 100;
     const referencia = 'FLETE-' + Date.now() + '-' + perfilActual.id.slice(0,8);
     const redirectUrl = window.location.origin + '/?pago=ok&ref=' + referencia;
-
     // Guardar datos para recuperarlos al regresar de Wompi
     sessionStorage.setItem('wompi_ref', referencia);
-    sessionStorage.setItem('wompi_monto', String(monto));
     if(convActual) sessionStorage.setItem('wompi_conv_snapshot', JSON.stringify(convActual));
     if(convActual?.otro_id) sessionStorage.setItem('wompi_otro_id', convActual.otro_id);
     if(convActual?.otro_nombre) sessionStorage.setItem('wompi_otro_nombre', convActual.otro_nombre);
-
     await registrarPagoPendiente(referencia, monto);
     const integrity = await generarIntegridad(referencia, montoCentavos);
+    console.log('✅ integrity:', integrity, 'monto:', montoCentavos, 'ref:', referencia);
+    sessionStorage.setItem('wompi_ref', referencia);
+    sessionStorage.setItem('wompi_monto', String(monto));
+    if(convActual) sessionStorage.setItem('convActual', JSON.stringify(convActual));
 
-    // Redirigir directo a Wompi — sin modal intermedio
-    const params = new URLSearchParams();
-    params.set('public-key', WOMPI_PUBLIC_KEY);
-    params.set('currency', 'COP');
-    params.set('amount-in-cents', String(montoCentavos));
-    params.set('reference', referencia);
-    params.set('integrity', integrity);
-    params.set('redirect-url', redirectUrl);
-    params.set('customer-data:email', perfilActual.email || '');
-    params.set('customer-data:full-name', ((perfilActual.nombre||'')+' '+(perfilActual.apellido||'')).trim());
-    params.set('customer-data:phone-number', (perfilActual.telefono || '3000000000').replace(/^\+57/, ''));
+    const modalViejo = document.getElementById('wompi-modal');
+    if(modalViejo) modalViejo.remove();
 
-    window.location.href = 'https://checkout.wompi.co/p/?' + params.toString();
+    const modal = document.createElement('div');
+    modal.id = 'wompi-modal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
+
+    const inner = document.createElement('div');
+    inner.style.cssText = 'background:#fff;border-radius:8px;padding:32px 24px;max-width:480px;width:95%;max-height:90vh;overflow-y:auto;position:relative;text-align:center;';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '✕';
+    closeBtn.style.cssText = 'position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;';
+    closeBtn.onclick = () => modal.remove();
+    inner.appendChild(closeBtn);
+
+    document.querySelectorAll('script[src*="checkout.wompi.co/widget.js"]').forEach(el => el.remove());
+    if(window.$wompi) delete window.$wompi;
+
+    const nombre = ((perfilActual.nombre||'')+' '+(perfilActual.apellido||'')).trim();
+
+    const formEl = document.createElement('form');
+    const s = document.createElement('script');
+    s.setAttribute('src', 'https://checkout.wompi.co/widget.js?t=' + Date.now());
+    s.setAttribute('data-render', 'button');
+    s.setAttribute('data-public-key', WOMPI_PUBLIC_KEY);
+    s.setAttribute('data-currency', 'COP');
+    s.setAttribute('data-amount-in-cents', String(montoCentavos));
+    s.setAttribute('data-reference', referencia);
+    s.setAttribute('data-signature:integrity', integrity);
+    s.setAttribute('data-redirect-url', redirectUrl);
+    s.setAttribute('data-customer-data:email', perfilActual.email || '');
+    s.setAttribute('data-customer-data:full-name', nombre);
+    s.setAttribute('data-customer-data:phone-number', (perfilActual.telefono || '3000000000').replace(/^\+57/, ''));
+    s.setAttribute('data-customer-data:phone-number-prefix', '+57');
+    formEl.appendChild(s);
+    inner.appendChild(formEl);
+    modal.appendChild(inner);
+    document.body.appendChild(modal);
 
   } catch(e) {
     console.error(e);
-    toast('Error preparando el pago: ' + e.message, 'error');
+    toast('Error: ' + e.message, 'error');
   }
 }
 
