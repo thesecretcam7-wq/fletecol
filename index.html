@@ -3606,29 +3606,40 @@ async function enviarCambioVehiculo() {
 async function publicarRuta() {
   if(!usuarioActual) { toast('Debes iniciar sesión para publicar', 'error'); return; }
   const btn = document.getElementById('btn-pub-ruta');
-  btn.disabled = true; btn.textContent = 'Publicando...';
+  btn.disabled = true; btn.textContent = '⏳ Publicando...';
+  try {
+    const origen = document.getElementById('r-origen').value.trim();
+    const destino = document.getElementById('r-destino').value.trim();
+    const fecha = document.getElementById('r-fecha').value;
+    if(!origen) { toast('Ingresa el origen', 'error'); return; }
+    if(!destino) { toast('Ingresa el destino', 'error'); return; }
+    if(!fecha) { toast('Selecciona la fecha', 'error'); return; }
 
-  const conductorData = perfilActual ? { conductor_id: perfilActual.id } : {};
+    const conductorData = perfilActual ? { conductor_id: perfilActual.id } : {};
+    const { error } = await sb.from('rutas').insert({
+      ...conductorData,
+      origen, destino, fecha,
+      hora:      document.getElementById('r-hora').value,
+      vehiculo:  vehSeleccionado,
+      capacidad: document.getElementById('r-capacidad').value,
+      precio:    parseInt(document.getElementById('r-precio').value) || 0,
+      descripcion: document.getElementById('r-desc').value,
+      estado:    'activa'
+    });
 
-  const { error } = await sb.from('rutas').insert({
-    ...conductorData,
-    origen:    document.getElementById('r-origen').value,
-    destino:   document.getElementById('r-destino').value,
-    fecha:     document.getElementById('r-fecha').value,
-    hora:      document.getElementById('r-hora').value,
-    vehiculo:  vehSeleccionado,
-    capacidad: document.getElementById('r-capacidad').value,
-    precio:    parseInt(document.getElementById('r-precio').value) || 0,
-    descripcion: document.getElementById('r-desc').value,
-    estado:    'activa'
-  });
-
-  btn.disabled = false; btn.textContent = '📢 Publicar ruta';
-
-  if(error) { toast('Error al publicar: '+error.message, 'error'); return; }
-  toast('✅ Ruta publicada exitosamente', 'success');
-  misRutas.push({ titulo: document.getElementById('r-origen').value + ' → ' + document.getElementById('r-destino').value, sub: vehSeleccionado + ' · ' + document.getElementById('r-fecha').value, icon:'🚐' });
-  setTimeout(() => irApp('s-mis'), 1000);
+    if(error) { toast('Error al publicar: ' + error.message, 'error'); return; }
+    toast('✅ Ruta publicada exitosamente', 'success');
+    // Limpiar formulario
+    ['r-origen','r-destino','r-fecha','r-hora','r-capacidad','r-precio','r-desc'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.value = '';
+    });
+    setTimeout(() => irApp('s-rutas'), 1200);
+  } catch(e) {
+    console.error('[publicarRuta]', e);
+    toast('Error inesperado al publicar', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '📢 Publicar ruta';
+  }
 }
 
 async function publicarCarga() {
