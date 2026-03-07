@@ -10,9 +10,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --amarillo:#C41E2A;--negro:#FFFFFF;--gris1:#F8F8F8;--gris2:#F1F1F1;
-  --gris3:#E4E4E7;--gris4:#D4D4D8;--gris5:#71717A;--blanco:#111113;
-  --texto:#52525B;--verde:#16A34A;--rojo:#DC2626;--azul:#2563EB;--naranja:#C41E2A;
+  --primario:#C41E2A;--fondo:#FFFFFF;--gris1:#F8F8F8;--gris2:#F1F1F1;
+  --gris3:#E4E4E7;--gris4:#D4D4D8;--gris5:#71717A;--texto-fuerte:#111113;
+  --texto:#52525B;--verde:#16A34A;--rojo:#DC2626;--azul:#2563EB;
+  /* aliases para compatibilidad con código existente */
+  --amarillo:var(--primario);--negro:var(--fondo);--blanco:var(--texto-fuerte);--naranja:var(--primario);
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::before,*::after{box-sizing:border-box;}body{background:#FFFFFF !important;color:#111113 !important;font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden;overscroll-behavior-x:none;max-width:100vw;touch-action:pan-y;-webkit-text-size-adjust:100%;}
@@ -52,12 +54,12 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
 
 /* ══ BUTTONS ══ */
 .btn-primary{background:var(--amarillo);color:#FAFAFA;border:none;border-radius:6px;padding:13px 28px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:8px;}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(245,196,0,0.25);}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(196,30,42,0.25);}
 .btn-primary:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
 .btn-secondary{background:transparent;color:var(--blanco);border:1.5px solid var(--gris4);border-radius:6px;padding:13px 28px;font-family:'Inter',sans-serif;font-weight:600;font-size:14px;cursor:pointer;transition:all 0.2s;}
 .btn-secondary:hover{border-color:var(--amarillo);color:var(--amarillo);}
 .btn-full{width:100%;padding:14px;background:var(--amarillo);color:#FAFAFA;border:none;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;}
-.btn-full:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(245,196,0,0.25);}
+.btn-full:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(196,30,42,0.25);}
 .btn-full:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
 
 /* ══ FORM ══ */
@@ -91,8 +93,8 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
 ::-webkit-scrollbar-thumb{background:var(--gris4);border-radius:2px;}
 
 /* ══ LANDING ══ */
-.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:60px 24px;background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(245,196,0,0.08) 0%,transparent 60%);}
-.hero-chip{background:rgba(245,196,0,0.1);border:1px solid rgba(245,196,0,0.2);color:var(--amarillo);padding:6px 16px;border-radius:8px;font-size:12px;font-weight:700;margin-bottom:24px;}
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:60px 24px;background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(196,30,42,0.08) 0%,transparent 60%);}
+.hero-chip{background:rgba(196,30,42,0.1);border:1px solid rgba(196,30,42,0.2);color:var(--amarillo);padding:6px 16px;border-radius:8px;font-size:12px;font-weight:700;margin-bottom:24px;}
 .hero-title{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:clamp(36px,6vw,64px);line-height:1.1;margin-bottom:20px;letter-spacing:0px;}
 .hero-title span{color:var(--amarillo);}
 .hero-sub{font-size:clamp(14px,2vw,18px);color:var(--texto);max-width:540px;line-height:1.7;margin-bottom:36px;}
@@ -105,7 +107,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
 .vcard:hover{border-color:var(--amarillo);transform:translateY(-3px);}
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;padding:0 24px;}
 .step{text-align:center;padding:24px 16px;}
-.step-num{width:44px;height:44px;border-radius:50%;background:rgba(245,196,0,0.1);border:2px solid var(--amarillo);color:var(--amarillo);font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;}
+.step-num{width:44px;height:44px;border-radius:50%;background:rgba(196,30,42,0.1);border:2px solid var(--amarillo);color:var(--amarillo);font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;}
 
 /* ══ AUTH ══ */
 .auth-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;}
@@ -121,7 +123,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
 .social-btn:hover{border-color:var(--gris5);}
 .role-selector{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
 .role-opt{padding:16px;border:2px solid var(--gris4);border-radius:6px;background:var(--gris3);cursor:pointer;text-align:center;transition:all 0.2s;}
-.role-opt.sel{border-color:var(--amarillo);background:rgba(245,196,0,0.06);}
+.role-opt.sel{border-color:var(--amarillo);background:rgba(196,30,42,0.06);}
 .role-opt.sel .role-name{color:var(--amarillo);}
 .stepper{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:28px;}
 .step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid var(--gris4);color:var(--texto);transition:all 0.3s;}
@@ -145,8 +147,8 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
 .sb-input::placeholder{color:var(--gris5);}
 .filtros-bar{padding:12px 28px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,0.04);}
 .ftag{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--gris4);background:transparent;color:var(--texto);transition:all 0.15s;font-family:'Inter',sans-serif;}
-.ftag.active{background:rgba(245,196,0,0.1);border-color:var(--amarillo);color:var(--amarillo);}
-.loc-banner{background:rgba(245,196,0,0.06);border-bottom:1px solid rgba(245,196,0,0.15);padding:10px 28px;display:flex;align-items:center;justify-content:space-between;font-size:12px;flex-wrap:wrap;gap:8px;}
+.ftag.active{background:rgba(196,30,42,0.1);border-color:var(--amarillo);color:var(--amarillo);}
+.loc-banner{background:rgba(196,30,42,0.06);border-bottom:1px solid rgba(196,30,42,0.15);padding:10px 28px;display:flex;align-items:center;justify-content:space-between;font-size:12px;flex-wrap:wrap;gap:8px;}
 .loc-banner.gps{background:rgba(0,212,106,0.05);border-bottom-color:rgba(0,212,106,0.15);}
 .rutas-wrap{display:grid;grid-template-columns:1fr 340px;flex:1;overflow:hidden;}
 .rutas-list{padding:20px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
@@ -157,7 +159,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
 .ruta-card::before{content:'';position:absolute;left:0;top:15%;bottom:15%;width:3px;background:transparent;transition:background 0.2s;border-radius:0 2px 2px 0;}
 .ruta-card:hover{border-color:rgba(0,0,0,0.08);}
 .ruta-card:hover::before,.ruta-card.sel::before{background:var(--amarillo);}
-.ruta-card.sel{border-color:var(--amarillo);background:rgba(245,196,0,0.03);}
+.ruta-card.sel{border-color:var(--amarillo);background:rgba(196,30,42,0.03);}
 .rc-av{width:40px;height:40px;border-radius:50%;background:var(--gris4);display:flex;align-items:center;justify-content:center;font-size:18px;position:relative;}
 .rc-online{position:absolute;bottom:1px;right:1px;width:9px;height:9px;border-radius:50%;background:var(--verde);border:2px solid var(--gris2);}
 .route-city{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;}
@@ -181,14 +183,14 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
 .pub-form.active{display:block;}
 .veh-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
 .veh-opt{padding:14px 8px;border-radius:12px;border:2px solid var(--gris4);background:var(--gris3);cursor:pointer;text-align:center;transition:all 0.2s;}
-.veh-opt.sel{border-color:var(--amarillo);background:rgba(245,196,0,0.06);}
+.veh-opt.sel{border-color:var(--amarillo);background:rgba(196,30,42,0.06);}
 .veh-opt.sel .von{color:var(--amarillo);}
 .toggle-row{display:flex;align-items:center;justify-content:space-between;background:var(--gris3);border-radius:11px;padding:12px 14px;margin-bottom:8px;}
 .toggle{width:42px;height:22px;border-radius:11px;background:var(--gris4);cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;}
 .toggle.on{background:var(--amarillo);}
 .toggle::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform 0.2s;}
 .toggle.on::after{transform:translateX(20px);}
-.aviso{background:rgba(245,196,0,0.06);border:1px solid rgba(245,196,0,0.15);border-radius:11px;padding:12px 14px;font-size:12px;color:#bbb;margin-bottom:14px;display:flex;gap:8px;line-height:1.5;}
+.aviso{background:rgba(196,30,42,0.06);border:1px solid rgba(196,30,42,0.15);border-radius:11px;padding:12px 14px;font-size:12px;color:#bbb;margin-bottom:14px;display:flex;gap:8px;line-height:1.5;}
 
 /* ══ CHAT ══ */
 .chat-layout{display:grid;grid-template-columns:260px 1fr;flex:1;overflow:hidden;height:calc(100% - 0px);}
@@ -225,7 +227,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
 /* ══ PAGO PANEL ══ */
 .pago-panel{background:var(--gris1);border-left:1px solid rgba(0,0,0,0.04);padding:18px 14px;overflow-y:auto;display:none;}
 .metodo{display:flex;align-items:center;gap:10px;background:var(--gris2);border:2px solid var(--gris4);border-radius:11px;padding:11px 13px;margin-bottom:7px;cursor:pointer;transition:all 0.15s;}
-.metodo.sel{border-color:var(--amarillo);background:rgba(245,196,0,0.04);}
+.metodo.sel{border-color:var(--amarillo);background:rgba(196,30,42,0.04);}
 .metodo-radio2{width:14px;height:14px;border-radius:50%;border:2px solid var(--gris5);flex-shrink:0;transition:all 0.15s;}
 .metodo.sel .metodo-radio2{border-color:var(--amarillo);background:var(--amarillo);}
 .metodo-detalle2{display:none;background:var(--gris3);border-radius:9px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:var(--texto);line-height:1.6;}
@@ -498,7 +500,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
           <div class="form-group"><label class="form-label">🔒 Contraseña</label><input class="form-input" type="password" id="reg-pass" placeholder="Mínimo 8 caracteres"></div>
           <div class="form-group"><label class="form-label">🔒 Confirmar contraseña</label><input class="form-input" type="password" id="reg-pass2" placeholder="Repite tu contraseña"></div>
           <div id="conductor-extra" style="display:none;">
-            <div style="background:rgba(245,196,0,0.05);border:1px solid rgba(245,196,0,0.15);border-radius:12px;padding:14px;margin-bottom:14px;">
+            <div style="background:rgba(196,30,42,0.05);border:1px solid rgba(196,30,42,0.15);border-radius:12px;padding:14px;margin-bottom:14px;">
               <div style="font-size:12px;font-weight:700;color:var(--amarillo);margin-bottom:10px;">🚛 Información del vehículo</div>
               <div class="form-group">
                 <label class="form-label">Tipo de vehículo</label>
@@ -532,7 +534,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
           <div style="font-weight:700;font-size:15px;margin-bottom:8px;">📄 Sube tus documentos</div>
 
           <!-- Banner sesión -->
-          <div id="session-check-banner" style="background:rgba(245,196,0,0.06);border:1px solid rgba(245,196,0,0.2);border-radius:10px;padding:10px 12px;font-size:12px;color:#bbb;margin-bottom:16px;display:flex;gap:8px;align-items:flex-start;">
+          <div id="session-check-banner" style="background:rgba(196,30,42,0.06);border:1px solid rgba(196,30,42,0.2);border-radius:10px;padding:10px 12px;font-size:12px;color:#bbb;margin-bottom:16px;display:flex;gap:8px;align-items:flex-start;">
             <span>⚠️</span><span id="session-check-txt">Verificando sesión...</span>
           </div>
 
@@ -622,7 +624,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
           <div style="font-size:56px;margin-bottom:16px;">🎉</div>
           <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;margin-bottom:8px;">¡Solicitud enviada!</div>
           <div style="font-size:13px;color:var(--texto);line-height:1.7;margin-bottom:24px;">Nuestro equipo revisará tu información y documentos en las próximas <strong style="color:var(--amarillo)">24 horas</strong>. Te notificaremos por correo cuando tu cuenta esté aprobada.</div>
-          <div style="background:rgba(245,196,0,0.06);border:1px solid rgba(245,196,0,0.15);border-radius:12px;padding:14px;font-size:12px;color:var(--texto);line-height:1.6;">
+          <div style="background:rgba(196,30,42,0.06);border:1px solid rgba(196,30,42,0.15);border-radius:12px;padding:14px;font-size:12px;color:var(--texto);line-height:1.6;">
             ⏳ <strong style="color:var(--amarillo)">Mientras esperas</strong>, puedes cerrar esta ventana. Cuando tu cuenta sea aprobada, podrás ingresar a la plataforma.
           </div>
         </div>
@@ -858,7 +860,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
 
         <!-- SECCIÓN MUDANZA — solo visible si seleccionan mudanza -->
         <div id="sec-mudanza" style="display:none;">
-          <div style="background:rgba(245,196,0,0.04);border:1px solid rgba(245,196,0,0.15);border-radius:6px;padding:16px;margin-bottom:16px;">
+          <div style="background:rgba(196,30,42,0.04);border:1px solid rgba(196,30,42,0.15);border-radius:6px;padding:16px;margin-bottom:16px;">
             <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;color:var(--amarillo);margin-bottom:14px;">🛋️ Detalles de la mudanza</div>
             <div class="form-group">
               <label class="form-label">¿Qué incluye la mudanza?</label>
@@ -887,8 +889,8 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
             <div class="form-group">
               <label class="form-label">¿Hay ascensor?</label>
               <div style="display:flex;gap:10px;">
-                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="radio" name="ascensor" id="asc-origen-si" value="si" style="accent-color:var(--amarillo);"> Sí en origen</label>
-                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="radio" name="ascensor-d" id="asc-destino-si" value="si" style="accent-color:var(--amarillo);"> Sí en destino</label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="radio" name="ascensor" id="asc-origen-si" value="origen_si" style="accent-color:var(--amarillo);"> Sí en origen</label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="radio" name="ascensor" id="asc-destino-si" value="destino_si" style="accent-color:var(--amarillo);"> Sí en destino</label>
                 <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="radio" name="ascensor" id="asc-no" value="no" style="accent-color:var(--amarillo);"> No hay</label>
               </div>
             </div>
@@ -987,7 +989,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
         <div id="escrow-txt">💳 <span style="color:var(--texto);">Precio acordado</span></div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:14px;color:var(--amarillo);" id="escrow-amt2">$0</span>
-          <span style="background:rgba(245,196,0,0.1);color:var(--amarillo);padding:3px 9px;border-radius:8px;font-size:10px;font-weight:700;" id="escrow-est2">Sin pagar</span>
+          <span style="background:rgba(196,30,42,0.1);color:var(--amarillo);padding:3px 9px;border-radius:8px;font-size:10px;font-weight:700;" id="escrow-est2">Sin pagar</span>
         </div>
       </div>
       <!-- Mensajes vacíos por defecto -->
@@ -1170,7 +1172,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
           <input id="cuenta-cedula" type="text" inputmode="numeric" placeholder="Sin puntos ni espacios" style="width:100%;padding:10px 14px;background:var(--gris3);border:1px solid var(--gris4);border-radius:10px;color:var(--blanco);font-size:13px;box-sizing:border-box;">
         </div>
 
-        <div style="background:rgba(245,196,0,0.07);border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--texto);line-height:1.6;">
+        <div style="background:rgba(196,30,42,0.07);border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--texto);line-height:1.6;">
           🔒 Tu información bancaria está segura. Solo el administrador puede verla para procesar tus pagos.
         </div>
 
@@ -1179,7 +1181,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
     </div>
 
     <!-- Aviso Wompi -->
-    <div style="background:rgba(245,196,0,0.04);border:1px solid rgba(245,196,0,0.15);border-radius:6px;padding:16px;margin-bottom:20px;">
+    <div style="background:rgba(196,30,42,0.04);border:1px solid rgba(196,30,42,0.15);border-radius:6px;padding:16px;margin-bottom:20px;">
       <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;margin-bottom:10px;">⏳ Pagos — Próximamente</div>
       <div style="font-size:13px;color:var(--texto);line-height:1.7;margin-bottom:14px;">Estamos configurando la pasarela de pagos Wompi para que puedas pagar de forma segura. Muy pronto disponible:</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -1219,15 +1221,15 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
       <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;margin-bottom:14px;">🔒 ¿Cómo funciona el pago seguro?</div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <div style="display:flex;gap:12px;align-items:flex-start;">
-          <div style="width:28px;height:28px;border-radius:50%;background:rgba(245,196,0,0.1);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:12px;color:var(--amarillo);flex-shrink:0;">1</div>
+          <div style="width:28px;height:28px;border-radius:50%;background:rgba(196,30,42,0.1);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:12px;color:var(--amarillo);flex-shrink:0;">1</div>
           <div><div style="font-size:13px;font-weight:600;margin-bottom:2px;">Negocias el precio con el conductor</div><div style="font-size:11px;color:var(--texto);">A través del chat, acuerdan el valor del flete</div></div>
         </div>
         <div style="display:flex;gap:12px;align-items:flex-start;">
-          <div style="width:28px;height:28px;border-radius:50%;background:rgba(245,196,0,0.1);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:12px;color:var(--amarillo);flex-shrink:0;">2</div>
+          <div style="width:28px;height:28px;border-radius:50%;background:rgba(196,30,42,0.1);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:12px;color:var(--amarillo);flex-shrink:0;">2</div>
           <div><div style="font-size:13px;font-weight:600;margin-bottom:2px;">Pagas a FleteCOL</div><div style="font-size:11px;color:var(--texto);">El dinero queda retenido de forma segura — ni el conductor ni nadie lo puede tomar aún</div></div>
         </div>
         <div style="display:flex;gap:12px;align-items:flex-start;">
-          <div style="width:28px;height:28px;border-radius:50%;background:rgba(245,196,0,0.1);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:12px;color:var(--amarillo);flex-shrink:0;">3</div>
+          <div style="width:28px;height:28px;border-radius:50%;background:rgba(196,30,42,0.1);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:12px;color:var(--amarillo);flex-shrink:0;">3</div>
           <div><div style="font-size:13px;font-weight:600;margin-bottom:2px;">Conductor realiza la entrega</div><div style="font-size:11px;color:var(--texto);">El conductor recoge y entrega tu mercancía</div></div>
         </div>
         <div style="display:flex;gap:12px;align-items:flex-start;">
@@ -1250,7 +1252,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
           <span style="font-size:13px;">🏦 Wompi (pasarela)</span>
           <span style="font-size:13px;color:var(--texto);">$8.700</span>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(245,196,0,0.05);border-radius:9px;padding:10px 12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(196,30,42,0.05);border-radius:9px;padding:10px 12px;">
           <span style="font-size:13px;">💛 FleteCOL</span>
           <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;color:var(--amarillo);">$21.300</span>
         </div>
@@ -1292,7 +1294,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
       <div class="perfil-av" id="perfil-av" onclick="cambiarFotoPerfil()" style="cursor:pointer;position:relative;" title="Cambiar foto"><span id="perfil-av-inner">🧑</span><div style="position:absolute;bottom:0;right:0;background:var(--amarillo);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;">📷</div></div><input type="file" id="file-foto-perfil-edit" accept="image/*" style="display:none;" onchange="actualizarFotoPerfil(this)">
       <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;" id="perfil-nombre">Mi perfil</div>
       <div style="font-size:13px;color:var(--texto);margin-top:4px;" id="perfil-rol">—</div>
-      <div style="margin-top:8px;"><span style="background:rgba(245,196,0,0.1);color:var(--amarillo);padding:4px 12px;border-radius:8px;font-size:12px;font-weight:700;" id="perfil-estado">Cargando...</span></div>
+      <div style="margin-top:8px;"><span style="background:rgba(196,30,42,0.1);color:var(--amarillo);padding:4px 12px;border-radius:8px;font-size:12px;font-weight:700;" id="perfil-estado">Cargando...</span></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px;">
       <div class="perfil-stat"><div class="perfil-stat-val" id="perfil-viajes">0</div><div style="font-size:11px;color:var(--texto);margin-top:4px;">Viajes</div></div>
@@ -1305,6 +1307,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
       <div class="cp-row"><span style="color:var(--texto);">Ciudad</span><span id="perfil-ciudad" style="font-weight:600;">—</span></div>
       <div class="cp-row"><span style="color:var(--texto);">Ciudad</span><span id="perfil-depto" style="font-weight:600;">—</span></div>
     </div>
+    <button class="btn-full" style="background:var(--gris3);color:var(--blanco);border:1px solid var(--gris4);margin-bottom:8px;" onclick="irApp('s-mis')">📋 Mis publicaciones</button>
     <button class="btn-full" style="background:var(--rojo);margin-top:8px;" onclick="logout()">Cerrar sesión</button>
   </div>
 </div>
@@ -1562,9 +1565,7 @@ async function pagoWompiExitoso(txData, convIdParam) {
   }
 }
 
-async function verificarEstadoPagoConv(convId) {
-  // Toda la lógica está en cargarMensajes — esta función ya no hace nada
-}
+// Estado del pago se gestiona en cargarMensajes (fuente única de verdad)
 
 function setBotonesSegunEstadoPago(estado) {
   // estado: 'sin_oferta' | 'oferta_aceptada' | 'pagado' | 'entregado'
@@ -1624,12 +1625,12 @@ function actualizarEscrowBar(estado) {
     txt.innerHTML = '⏳ <span style="color:var(--amarillo);">Esperando pago del cliente</span>';
     est.textContent = '⏳ Pendiente';
     est.style.color = 'var(--amarillo)';
-    est.style.background = 'rgba(245,196,0,0.1)';
+    est.style.background = 'rgba(196,30,42,0.1)';
   } else {
     txt.innerHTML = '💳 <span style="color:var(--texto);">Precio acordado</span>';
     est.textContent = 'Sin pagar';
     est.style.color = 'var(--amarillo)';
-    est.style.background = 'rgba(245,196,0,0.1)';
+    est.style.background = 'rgba(196,30,42,0.1)';
   }
 }
 
@@ -2230,7 +2231,7 @@ function actualizarPantallaPendiente(estado, motivo, rol) {
     msg.innerHTML = 'Tu solicitud fue recibida. El equipo de <strong style="color:var(--amarillo)">FleteCOL</strong> está verificando tu información y documentos.';
     if(estadoLabel) estadoLabel.style.color = 'var(--amarillo)';
     if(estadoLabel) estadoLabel.textContent = 'Pendiente de revisión';
-    if(card) card.style.borderColor = 'rgba(245,196,0,0.3)';
+    if(card) card.style.borderColor = 'rgba(196,30,42,0.3)';
     cedulaAv.style.display = 'block';
     motivoBox.style.display = 'none';
 
@@ -2293,12 +2294,12 @@ function mostrarBannerEstado(estado, nombre, motivo) {
   overlay.innerHTML =
     '<div style="background:var(--gris2);border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:32px 24px;max-width:380px;width:100%;text-align:center;">'
     + '<div style="font-size:56px;margin-bottom:16px;">' + icon + '</div>'
-    + '<div style="font-family:Syne,sans-serif;font-weight:800;font-size:22px;color:' + color + ';margin-bottom:10px;">' + titulo + '</div>'
-    + '<div style="font-size:14px;color:#7A8499;line-height:1.7;margin-bottom:' + (motivo ? '10px' : '24px') + ';">' + sub + '</div>'
-    + (motivo ? '<div style="background:rgba(255,69,69,0.06);border:1px solid rgba(255,69,69,0.15);border-radius:12px;padding:12px 14px;font-size:13px;color:#ccc;line-height:1.6;text-align:left;margin-bottom:24px;"><strong style="color:#FF4545;">Motivo:</strong> ' + motivo + '</div>' : '')
-    + '<button id="btn-notif-cerrar" style="width:100%;padding:14px;background:' + color + ';color:' + (esAprobado ? '#080A0F' : '#fff') + ';border:none;border-radius:12px;font-family:Syne,sans-serif;font-weight:800;font-size:15px;cursor:pointer;">'
+    + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-weight:800;font-size:22px;color:' + color + ';margin-bottom:10px;">' + titulo + '</div>'
+    + '<div style="font-size:14px;color:var(--texto);line-height:1.7;margin-bottom:' + (motivo ? '10px' : '24px') + ';">' + sub + '</div>'
+    + (motivo ? '<div style="background:rgba(255,69,69,0.06);border:1px solid rgba(255,69,69,0.15);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--texto);line-height:1.6;text-align:left;margin-bottom:24px;"><strong style="color:#FF4545;">Motivo:</strong> ' + motivo + '</div>' : '')
+    + '<button id="btn-notif-cerrar" style="width:100%;padding:14px;background:' + color + ';color:' + (esAprobado ? '#FFFFFF' : '#fff') + ';border:none;border-radius:12px;font-family:\'Barlow Condensed\',sans-serif;font-weight:800;font-size:15px;cursor:pointer;">'
     + (esAprobado ? '¡Empezar ahora! →' : 'Entendido') + '</button>'
-    + (!esAprobado ? '<div style="font-size:12px;color:#7A8499;margin-top:12px;">Puedes registrarte nuevamente con documentos correctos.</div>' : '')
+    + (!esAprobado ? '<div style="font-size:12px;color:var(--texto);margin-top:12px;">Puedes registrarte nuevamente con documentos correctos.</div>' : '')
     + '</div>';
 
   document.body.appendChild(overlay);
@@ -3151,8 +3152,6 @@ async function cargarRutas() {
     return;
   }
 
-  document.getElementById('count-r').textContent = totalItems;
-
   // Renderizar rutas de conductores
   const htmlRutas = (rutas||[]).map(r => `
     <div class="ruta-card" onclick="selRuta(${JSON.stringify(r).replace(/"/g,'&quot;')})">
@@ -3195,7 +3194,7 @@ async function cargarRutas() {
             <div style="font-size:11px;color:var(--texto);">📦 Necesita conductor · ${c.tipo||'carga'}</div>
           </div>
         </div>
-        <div style="background:rgba(245,196,0,0.12);border:1px solid rgba(245,196,0,0.3);border-radius:8px;padding:4px 11px;font-size:11px;font-weight:600;color:var(--amarillo);">Busca conductor</div>
+        <div style="background:rgba(196,30,42,0.12);border:1px solid rgba(196,30,42,0.3);border-radius:8px;padding:4px 11px;font-size:11px;font-weight:600;color:var(--amarillo);">Busca conductor</div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
         <div><div style="font-size:10px;color:var(--texto)">Origen</div><div class="route-city">${c.origen||'—'}</div></div>
@@ -3389,7 +3388,7 @@ async function cargarVehiculoConductor() {
   vehSeleccionado = veh;
 
   container.innerHTML = `
-    <div style="background:rgba(245,196,0,0.04);border:2px solid var(--amarillo);border-radius:6px;padding:16px;display:flex;align-items:center;gap:14px;">
+    <div style="background:rgba(196,30,42,0.04);border:2px solid var(--amarillo);border-radius:6px;padding:16px;display:flex;align-items:center;gap:14px;">
       <div style="font-size:40px;">${info.emoji}</div>
       <div style="flex:1;">
         <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;color:var(--amarillo);">${info.nombre}</div>
@@ -3842,7 +3841,6 @@ async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, des
     await cargarMensajes(conv.id);
     suscribirMensajes(conv.id);
     await cargarConversaciones(conv.id);
-    await verificarEstadoPagoConv(conv.id);
   } catch(e) {
     console.error('Chat error:', e);
     toast('Error abriendo chat', 'error');
@@ -4093,7 +4091,7 @@ function renderMensaje(m) {
     wrap.scrollTop = wrap.scrollHeight;
     return;
   } else if(m.tipo === 'oferta') {
-    div.innerHTML = `<div class="msg-row2" style="${esMio?'flex-direction:row-reverse':''}"><div class="msg-av2">${esMio?'🧑':'👨'}</div><div><div style="background:rgba(245,196,0,0.07);border:1px solid rgba(245,196,0,0.18);border-radius:6px;padding:13px 15px;"><div style="font-weight:700;font-size:12px;color:var(--amarillo);margin-bottom:3px;">💰 ${esMio?'Mi oferta':'Oferta recibida'}</div><div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;margin-bottom:5px;">$${parseInt(m.oferta_monto).toLocaleString('es-CO')} COP</div>${!esMio?`<div style="display:flex;gap:8px;margin-top:8px;"><button onclick="aceptarOfertaReal(${m.oferta_monto})" style="background:var(--verde);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">✅ Aceptar</button></div>`:''}</div><div class="msg-time2">${hora}</div></div></div>`;
+    div.innerHTML = `<div class="msg-row2" style="${esMio?'flex-direction:row-reverse':''}"><div class="msg-av2">${esMio?'🧑':'👨'}</div><div><div style="background:rgba(196,30,42,0.07);border:1px solid rgba(196,30,42,0.18);border-radius:6px;padding:13px 15px;"><div style="font-weight:700;font-size:12px;color:var(--amarillo);margin-bottom:3px;">💰 ${esMio?'Mi oferta':'Oferta recibida'}</div><div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;margin-bottom:5px;">$${parseInt(m.oferta_monto).toLocaleString('es-CO')} COP</div>${!esMio?`<div style="display:flex;gap:8px;margin-top:8px;"><button onclick="aceptarOfertaReal(${m.oferta_monto})" style="background:var(--verde);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">✅ Aceptar</button></div>`:''}</div><div class="msg-time2">${hora}</div></div></div>`;
   } else {
     div.innerHTML = `<div class="msg-row2" style="${esMio?'flex-direction:row-reverse':''}"><div class="msg-av2">${esMio?'🧑':'👨'}</div><div><div class="bubble">${m.contenido}</div><div class="msg-time2">${hora}${esMio?' · ✓✓':''}</div></div></div>`;
   }
@@ -4204,7 +4202,7 @@ async function cargarConversaciones(convActivaId) {
     const hora = ultimo ? new Date(ultimo.created_at).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) : '';
     const activo = c.id === convActivaId;
 
-    return `<div class="conv-item" data-conv-id="${c.id}" onclick="abrirConvExistente('${c.id}')" style="padding:13px 14px;border-bottom:1px solid rgba(0,0,0,0.04);cursor:pointer;display:flex;gap:10px;align-items:center;background:${activo?'rgba(245,196,0,0.06)':'transparent'};">
+    return `<div class="conv-item" data-conv-id="${c.id}" onclick="abrirConvExistente('${c.id}')" style="padding:13px 14px;border-bottom:1px solid rgba(0,0,0,0.04);cursor:pointer;display:flex;gap:10px;align-items:center;background:${activo?'rgba(196,30,42,0.06)':'transparent'};">
       <div style="width:40px;height:40px;border-radius:50%;background:var(--gris3);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;">💬</div>
       <div style="flex:1;min-width:0;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;">
@@ -4279,7 +4277,6 @@ async function abrirConvExistente(convId) {
   await cargarMensajes(convId);
   suscribirMensajes(convId);
   await cargarConversaciones(convId);
-  await verificarEstadoPagoConv(convId);
 }
 
 async function enviarMsg() {
@@ -4561,7 +4558,7 @@ async function hacerOferta() {
     const wrap=document.getElementById('msgs-wrap');
     const div=document.createElement('div');
     div.className='msg-g mine';
-    div.innerHTML=`<div class="msg-row2" style="flex-direction:row-reverse"><div class="msg-av2">🧑</div><div><div style="background:rgba(245,196,0,0.07);border:1px solid rgba(245,196,0,0.18);border-radius:6px;padding:13px 15px;"><div style="font-weight:700;font-size:12px;color:var(--amarillo);margin-bottom:3px;">💰 Mi oferta</div><div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;margin-bottom:5px;">$${monto.toLocaleString('es-CO')} COP</div><div style="font-size:11px;color:var(--texto)">Esperando respuesta...</div></div></div></div>`;
+    div.innerHTML=`<div class="msg-row2" style="flex-direction:row-reverse"><div class="msg-av2">🧑</div><div><div style="background:rgba(196,30,42,0.07);border:1px solid rgba(196,30,42,0.18);border-radius:6px;padding:13px 15px;"><div style="font-weight:700;font-size:12px;color:var(--amarillo);margin-bottom:3px;">💰 Mi oferta</div><div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;margin-bottom:5px;">$${monto.toLocaleString('es-CO')} COP</div><div style="font-size:11px;color:var(--texto)">Esperando respuesta...</div></div></div></div>`;
     wrap.appendChild(div);
     wrap.scrollTop=wrap.scrollHeight;
     toast('💰 Oferta enviada','info');
