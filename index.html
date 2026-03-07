@@ -150,7 +150,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
 .loc-banner.gps{background:rgba(0,212,106,0.05);border-bottom-color:rgba(0,212,106,0.15);}
 .rutas-wrap{display:grid;grid-template-columns:1fr 340px;flex:1;overflow:hidden;}
 .rutas-list{padding:20px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
-.carrusel-slide{min-width:100%;height:110px;background-size:cover;background-position:center;cursor:pointer;border-radius:6px;}
+.carrusel-slide{min-width:100%;cursor:pointer;border-radius:10px;overflow:hidden;line-height:0;} .carrusel-slide img{width:100%;height:100%;object-fit:cover;display:block;border-radius:10px;}
 .carrusel-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.4);cursor:pointer;transition:all 0.2s;}
 .carrusel-dot.active{background:#fff;width:18px;border-radius:3px;}
 .ruta-card{background:var(--gris2);border:1px solid rgba(0,0,0,0.04);border-radius:8px;padding:18px;cursor:pointer;transition:all 0.2s;position:relative;}
@@ -744,8 +744,8 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
 
   <!-- CARRUSEL PUBLICITARIO -->
   <div id="carrusel-wrap" style="padding:0 16px 12px;display:none;">
-    <div style="position:relative;border-radius:6px;overflow:hidden;height:110px;background:var(--gris2);" id="carrusel-container">
-      <div id="carrusel-slides" style="display:flex;transition:transform 0.4s ease;height:100%;"></div>
+    <div style="position:relative;border-radius:10px;overflow:hidden;background:var(--gris2);max-width:680px;margin:0 auto;" id="carrusel-container">
+      <div id="carrusel-slides" style="display:flex;transition:transform 0.4s ease;"></div>
       <!-- Dots -->
       <div id="carrusel-dots" style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:5px;"></div>
       <!-- Flechas -->
@@ -2993,8 +2993,9 @@ async function cargarCarrusel() {
 
     slides.innerHTML = bannersVisibles.map((b, i) => `
       <div class="carrusel-slide"
-        style="min-width:${100/bannersVisibles.length}%;background-image:url('${b.imagen_url}');"
+        style="min-width:${100/bannersVisibles.length}%;"
         onclick="abrirBanner('${b.link_url||''}')">
+        <img src="${b.imagen_url}" alt="Publicidad" style="width:100%;max-height:160px;object-fit:cover;display:block;" loading="lazy">
       </div>`).join('');
 
     dots.innerHTML = bannersVisibles.map((_, i) => `
