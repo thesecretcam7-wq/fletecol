@@ -1938,6 +1938,7 @@ let misCargas = [];
 let convActual = null;
 let mensajesPendientes = []; // cola de mensajes que fallaron
 let chatSub = null;
+let rutasSub = null;
 
 // ══ INIT ══
 let estadoSub = null; // suscripción realtime al estado del usuario
@@ -1959,6 +1960,7 @@ async function init() {
       if(!vieneDePago) await redirigirSegunEstado(); // no redirigir si venimos de Wompi
       suscribirEstado(); // escuchar cambios en tiempo real
       suscribirBadge();  // actualizar badge de chat en tiempo real
+      suscribirRutasRealtime(); // actualizar buscador en tiempo real
     } else {
       ir('s-landing');
     }
@@ -2176,6 +2178,26 @@ async function verificarEstadoManual() {
 
 // Escucha en tiempo real si el admin cambia el estado del usuario
 let badgeSub = null;
+function suscribirRutasRealtime() {
+  if(rutasSub) { try { sb.removeChannel(rutasSub); } catch(e){} rutasSub = null; }
+  rutasSub = sb.channel('rutas-cargas-global-' + Date.now())
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rutas' }, () => {
+      if(document.getElementById('s-rutas')?.classList.contains('activa')) cargarRutas();
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cargas' }, () => {
+      if(document.getElementById('s-rutas')?.classList.contains('activa')) cargarRutas();
+    })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'cargas' }, () => {
+      if(document.getElementById('s-rutas')?.classList.contains('activa')) cargarRutas();
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'cargas' }, () => {
+      if(document.getElementById('s-rutas')?.classList.contains('activa')) cargarRutas();
+    })
+    .subscribe((status) => {
+      console.log('[realtime] rutas/cargas:', status);
+    });
+}
+
 function suscribirBadge() {
   if(!usuarioActual || !perfilActual) return;
   if(badgeSub) { try { sb.removeChannel(badgeSub); } catch(e){} badgeSub = null; }
