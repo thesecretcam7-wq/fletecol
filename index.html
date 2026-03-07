@@ -333,6 +333,24 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
   .loading-box{padding:24px 20px;margin:0 16px;}
   .form-input{font-size:16px;}
 }
+
+/* ══ AUTOCOMPLETE CIUDADES ══ */
+.autocomplete-wrap { position:relative; }
+.autocomplete-list {
+  position:absolute; top:100%; left:0; right:0; z-index:9999;
+  background:var(--gris2); border:1px solid var(--gris4);
+  border-radius:0 0 10px 10px; max-height:200px; overflow-y:auto;
+  box-shadow:0 8px 24px rgba(0,0,0,0.18);
+}
+.autocomplete-item {
+  padding:10px 14px; font-size:13px; cursor:pointer;
+  border-bottom:1px solid var(--gris3); color:var(--blanco);
+  display:flex; align-items:center; gap:8px;
+}
+.autocomplete-item:last-child { border-bottom:none; }
+.autocomplete-item:hover, .autocomplete-item.sel { background:var(--gris3); }
+.autocomplete-item span.city-name { font-weight:600; }
+.autocomplete-item span.city-dep { font-size:11px; color:var(--texto); }
 </style>
 </head>
 <body>
@@ -4713,5 +4731,125 @@ async function verRutasConAuth() {
 init();
 // chat inicializado vacío
 </script>
+
+<script>
+// ══ AUTOCOMPLETE CIUDADES COLOMBIA ══
+const CIUDADES_CO = [
+  {n:'Bogotá',d:'Cundinamarca'},{n:'Medellín',d:'Antioquia'},{n:'Cali',d:'Valle del Cauca'},
+  {n:'Barranquilla',d:'Atlántico'},{n:'Cartagena',d:'Bolívar'},{n:'Cúcuta',d:'Norte de Santander'},
+  {n:'Bucaramanga',d:'Santander'},{n:'Pereira',d:'Risaralda'},{n:'Manizales',d:'Caldas'},
+  {n:'Ibagué',d:'Tolima'},{n:'Santa Marta',d:'Magdalena'},{n:'Villavicencio',d:'Meta'},
+  {n:'Pasto',d:'Nariño'},{n:'Montería',d:'Córdoba'},{n:'Valledupar',d:'Cesar'},
+  {n:'Armenia',d:'Quindío'},{n:'Neiva',d:'Huila'},{n:'Popayán',d:'Cauca'},
+  {n:'Sincelejo',d:'Sucre'},{n:'Tunja',d:'Boyacá'},{n:'Riohacha',d:'La Guajira'},
+  {n:'Quibdó',d:'Chocó'},{n:'Florencia',d:'Caquetá'},{n:'Mocoa',d:'Putumayo'},
+  {n:'Yopal',d:'Casanare'},{n:'Arauca',d:'Arauca'},{n:'Inírida',d:'Guainía'},
+  {n:'San José del Guaviare',d:'Guaviare'},{n:'Leticia',d:'Amazonas'},{n:'Puerto Carreño',d:'Vichada'},
+  {n:'Mitú',d:'Vaupés'},{n:'Bello',d:'Antioquia'},{n:'Itagüí',d:'Antioquia'},
+  {n:'Envigado',d:'Antioquia'},{n:'Soledad',d:'Atlántico'},{n:'Soacha',d:'Cundinamarca'},
+  {n:'Dosquebradas',d:'Risaralda'},{n:'Palmira',d:'Valle del Cauca'},{n:'Buenaventura',d:'Valle del Cauca'},
+  {n:'Barrancabermeja',d:'Santander'},{n:'Floridablanca',d:'Santander'},{n:'Girón',d:'Santander'},
+  {n:'Tuluá',d:'Valle del Cauca'},{n:'Cartago',d:'Valle del Cauca'},{n:'Rionegro',d:'Antioquia'},
+  {n:'Apartadó',d:'Antioquia'},{n:'Turbo',d:'Antioquia'},{n:'Fusagasugá',d:'Cundinamarca'},
+  {n:'Facatativá',d:'Cundinamarca'},{n:'Zipaquirá',d:'Cundinamarca'},{n:'Chía',d:'Cundinamarca'},
+  {n:'Girardot',d:'Cundinamarca'},{n:'Honda',d:'Tolima'},{n:'Espinal',d:'Tolima'},
+  {n:'Sogamoso',d:'Boyacá'},{n:'Duitama',d:'Boyacá'},{n:'Chiquinquirá',d:'Boyacá'},
+  {n:'Ocaña',d:'Norte de Santander'},{n:'Pamplona',d:'Norte de Santander'},
+  {n:'Lorica',d:'Córdoba'},{n:'Cereté',d:'Córdoba'},{n:'Sahagún',d:'Córdoba'},
+  {n:'Magangué',d:'Bolívar'},{n:'Mompox',d:'Bolívar'},{n:'El Banco',d:'Magdalena'},
+  {n:'Ciénaga',d:'Magdalena'},{n:'Fundación',d:'Magdalena'},{n:'Aguachica',d:'Cesar'},
+  {n:'La Dorada',d:'Caldas'},{n:'Anserma',d:'Caldas'},{n:'Salamina',d:'Caldas'},
+  {n:'La Virginia',d:'Risaralda'},{n:'Santander de Quilichao',d:'Cauca'},
+  {n:'Puerto Asís',d:'Putumayo'},{n:'Acacías',d:'Meta'},{n:'Granada',d:'Meta'},
+  {n:'Saravena',d:'Arauca'},{n:'Tame',d:'Arauca'},{n:'Aguazul',d:'Casanare'},
+  {n:'Orocué',d:'Casanare'},{n:'Tumaco',d:'Nariño'},{n:'Ipiales',d:'Nariño'},
+  {n:'Turbo',d:'Antioquia'},{n:'Caucasia',d:'Antioquia'},{n:'Puerto Berrío',d:'Antioquia'},
+];
+
+let _acTimer = {};
+
+function iniciarAutocompleteCiudad(inputId) {
+  const input = document.getElementById(inputId);
+  if(!input || input.dataset.ac) return;
+  input.dataset.ac = '1';
+
+  // Envolver en div relativo
+  const parent = input.parentElement;
+  const wrap = document.createElement('div');
+  wrap.className = 'autocomplete-wrap';
+  wrap.style.cssText = 'position:relative;';
+  parent.insertBefore(wrap, input);
+  wrap.appendChild(input);
+
+  const list = document.createElement('div');
+  list.className = 'autocomplete-list';
+  list.style.display = 'none';
+  wrap.appendChild(list);
+
+  let selIdx = -1;
+
+  input.addEventListener('input', () => {
+    clearTimeout(_acTimer[inputId]);
+    _acTimer[inputId] = setTimeout(() => mostrarSugerencias(input, list), 150);
+    selIdx = -1;
+  });
+
+  input.addEventListener('keydown', (e) => {
+    const items = list.querySelectorAll('.autocomplete-item');
+    if(e.key === 'ArrowDown') { selIdx = Math.min(selIdx+1, items.length-1); actualizarSel(items, selIdx); e.preventDefault(); }
+    else if(e.key === 'ArrowUp') { selIdx = Math.max(selIdx-1, 0); actualizarSel(items, selIdx); e.preventDefault(); }
+    else if(e.key === 'Enter' && selIdx >= 0) { items[selIdx]?.click(); e.preventDefault(); }
+    else if(e.key === 'Escape') { list.style.display = 'none'; }
+  });
+
+  input.addEventListener('focus', () => {
+    if(input.value.length > 0) mostrarSugerencias(input, list);
+  });
+
+  document.addEventListener('click', (e) => {
+    if(!wrap.contains(e.target)) list.style.display = 'none';
+  });
+}
+
+function mostrarSugerencias(input, list) {
+  const q = input.value.toLowerCase().trim();
+  if(q.length < 1) { list.style.display = 'none'; return; }
+  const matches = CIUDADES_CO.filter(c =>
+    c.n.toLowerCase().startsWith(q) || c.n.toLowerCase().includes(q)
+  ).slice(0, 8);
+  if(!matches.length) { list.style.display = 'none'; return; }
+  list.innerHTML = matches.map((c,i) => `
+    <div class="autocomplete-item" data-val="${c.n}" data-idx="${i}">
+      <span>📍</span>
+      <span class="city-name">${c.n}</span>
+      <span class="city-dep">${c.d}</span>
+    </div>`).join('');
+  list.querySelectorAll('.autocomplete-item').forEach(item => {
+    item.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      input.value = item.dataset.val;
+      list.style.display = 'none';
+      input.dispatchEvent(new Event('change'));
+    });
+  });
+  list.style.display = 'block';
+}
+
+function actualizarSel(items, idx) {
+  items.forEach((it,i) => it.classList.toggle('sel', i===idx));
+  items[idx]?.scrollIntoView({ block:'nearest' });
+}
+
+// Inicializar en todos los campos de ciudad cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+  ['r-origen','r-destino','c-origen','c-destino','f-origen','f-destino','reg-ciudad'].forEach(id => {
+    iniciarAutocompleteCiudad(id);
+  });
+});
+
+// También inicializar al navegar a la pantalla publicar (por si el DOM no tenía los campos)
+const _origIrApp = typeof irApp === 'function' ? irApp : null;
+</script>
+
 </body>
 </html>
