@@ -15,7 +15,7 @@
   --texto:#52525B;--verde:#16A34A;--rojo:#DC2626;--azul:#2563EB;--naranja:#C41E2A;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-html{color-scheme:light;overscroll-behavior-x:none;}*,*::before,*::after{box-sizing:border-box;}body{background:#FFFFFF !important;color:#111113 !important;font-family:'Inter',sans-serif;min-height:100vh;max-width:100vw;touch-action:pan-y;-webkit-text-size-adjust:100%;overscroll-behavior-x:none;}
+html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::before,*::after{box-sizing:border-box;}body{background:#FFFFFF !important;color:#111113 !important;font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden;overscroll-behavior-x:none;max-width:100vw;touch-action:pan-y;-webkit-text-size-adjust:100%;}
 
 /* ══ SCREENS ══ */
 .screen{display:none;min-height:100vh;flex-direction:column;}
@@ -29,7 +29,7 @@ html{color-scheme:light;overscroll-behavior-x:none;}*,*::before,*::after{box-siz
 .logo-tag{font-size:9px;background:var(--amarillo);color:#FFFFFF;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;vertical-align:middle;}
 
 /* ══ BOTTOM NAV ══ */
-.bottom-nav{position:fixed !important;bottom:0 !important;left:0 !important;right:0 !important;background:#F8F8F8;border-top:1px solid rgba(0,0,0,0.08);display:none;z-index:9999;grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom,0px);transform:none !important;will-change:auto;-webkit-transform:none !important;}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#F8F8F8;border-top:1px solid rgba(0,0,0,0.08);display:none;z-index:1000;grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom,0px);transform:translateZ(0);-webkit-transform:translateZ(0);will-change:transform;}
 .app-screen{padding-bottom:80px;}
 .bottom-nav.visible{display:grid;}
 .bnav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px;cursor:pointer;transition:all 0.15s;gap:3px;border:none;background:transparent;font-family:'Inter',sans-serif;min-width:44px;}
@@ -150,7 +150,7 @@ html{color-scheme:light;overscroll-behavior-x:none;}*,*::before,*::after{box-siz
 .loc-banner.gps{background:rgba(0,212,106,0.05);border-bottom-color:rgba(0,212,106,0.15);}
 .rutas-wrap{display:grid;grid-template-columns:1fr 340px;flex:1;overflow:hidden;}
 .rutas-list{padding:20px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
-.carrusel-slide{min-width:100%;height:100%;background-size:contain;background-position:center;background-repeat:no-repeat;background-color:#f1f1f1;cursor:pointer;border-radius:6px;}
+.carrusel-slide{min-width:100%;height:110px;background-size:cover;background-position:center;cursor:pointer;border-radius:6px;}
 .carrusel-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.4);cursor:pointer;transition:all 0.2s;}
 .carrusel-dot.active{background:#fff;width:18px;border-radius:3px;}
 .ruta-card{background:var(--gris2);border:1px solid rgba(0,0,0,0.04);border-radius:8px;padding:18px;cursor:pointer;transition:all 0.2s;position:relative;}
@@ -262,7 +262,7 @@ html{color-scheme:light;overscroll-behavior-x:none;}*,*::before,*::after{box-siz
 @media(max-width:700px){
   /* BASE */
   *{box-sizing:border-box;}
-  body{max-width:100vw;}
+  body{overflow-x:hidden;}
 
   /* AUTH */
   .auth-wrap{padding:16px 14px;align-items:flex-start;padding-top:24px;}
@@ -744,8 +744,8 @@ html{color-scheme:light;overscroll-behavior-x:none;}*,*::before,*::after{box-siz
 
   <!-- CARRUSEL PUBLICITARIO -->
   <div id="carrusel-wrap" style="padding:0 16px 12px;display:none;">
-    <div style="position:relative;border-radius:6px;overflow:hidden;background:#f1f1f1;" id="carrusel-container">
-      <div id="carrusel-slides" style="display:flex;transition:transform 0.4s ease;" id="carrusel-slides"></div>
+    <div style="position:relative;border-radius:6px;overflow:hidden;height:110px;background:var(--gris2);" id="carrusel-container">
+      <div id="carrusel-slides" style="display:flex;transition:transform 0.4s ease;height:100%;"></div>
       <!-- Dots -->
       <div id="carrusel-dots" style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:5px;"></div>
       <!-- Flechas -->
@@ -819,7 +819,7 @@ html{color-scheme:light;overscroll-behavior-x:none;}*,*::before,*::after{box-siz
     </div>
 
     <!-- CARGA (solo clientes) -->
-    <div class="pub-form" id="pf-carga">
+    <div class="pub-form active" id="pf-carga">
       <div class="card">
         <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;margin-bottom:4px;">Publicar mi carga</div>
         <div style="font-size:13px;color:var(--texto);margin-bottom:20px;">Los conductores de tu zona te harán ofertas.</div>
@@ -902,15 +902,24 @@ html{color-scheme:light;overscroll-behavior-x:none;}*,*::before,*::after{box-siz
                 </div>
                 <div class="toggle" id="t-ayudantes" onclick="toggleAyudantes(this)"></div>
               </div>
-              <!-- Sección ayudantes — visible solo si activan toggle -->
+              <!-- Sección costo ayudantes — visible solo si activan toggle -->
               <div id="sec-ayudantes" style="display:none;margin-top:12px;border-top:1px solid rgba(0,0,0,0.05);padding-top:12px;">
-                <div class="form-group">
-                  <label class="form-label">Número de ayudantes</label>
-                  <select class="form-input" id="m-num-ayudantes">
-                    <option value="1">1 ayudante</option>
-                    <option value="2">2 ayudantes</option>
-                    <option value="3">3 ayudantes</option>
-                  </select>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Número de ayudantes</label>
+                    <select class="form-input" id="m-num-ayudantes">
+                      <option value="1">1 ayudante</option>
+                      <option value="2">2 ayudantes</option>
+                      <option value="3">3 ayudantes</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">💰 Costo por ayudante</label>
+                    <input class="form-input" type="number" id="m-costo-ayudante" placeholder="50000" oninput="calcTotalAyudantes()">
+                  </div>
+                </div>
+                <div id="total-ayudantes-banner" style="display:none;background:rgba(0,212,106,0.06);border:1px solid rgba(0,212,106,0.15);border-radius:9px;padding:10px 12px;font-size:12px;">
+                  💰 Total ayudantes: <strong id="total-ayudantes-val" style="color:var(--verde);">$0</strong> · Se suma al precio del flete
                 </div>
               </div>
             </div>
@@ -991,7 +1000,7 @@ html{color-scheme:light;overscroll-behavior-x:none;}*,*::before,*::after{box-siz
       </div>
       <div class="input-area2">
         <div class="input-warn2" id="i-warn2">🚫 <span id="i-warn-txt2"></span></div>
-        <!-- Banner confirmar entrega — solo visible cuando hay pago APPROVED -->
+        <!-- Banner confirmar entrega — visible solo cuando pago APPROVED -->
         <div id="banner-confirmar-entrega" style="display:none;background:linear-gradient(135deg,#0a2e1a,#0d3d22);border:1.5px solid #1a6b3a;border-radius:12px;padding:12px 14px;margin-bottom:10px;">
           <div style="display:flex;align-items:center;gap:10px;">
             <span style="font-size:22px;">🔒</span>
@@ -1004,7 +1013,7 @@ html{color-scheme:light;overscroll-behavior-x:none;}*,*::before,*::after{box-siz
         </div>
         <div style="display:flex;gap:7px;margin-bottom:8px;">
           <button id="btn-oferta-bottom" class="btn-accion-cliente" style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;" onclick="hacerOferta()">💰 Hacer oferta</button>
-          <button id="btn-confirmar-entrega" class="btn-accion-cliente" style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;display:none;" onclick="confirmarEntrega2()">📦 Confirmar entrega</button>
+          <button id="btn-confirmar-entrega" class="btn-accion-cliente" style="display:none;background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;" onclick="confirmarEntrega2()">📦 Confirmar entrega</button>
         </div>
         <div style="display:flex;gap:8px;align-items:flex-end;">
           <textarea class="msg-input2" id="m-input2" rows="1" placeholder="Escribe tu mensaje..." oninput="checkMsg(this)" onkeydown="enterSend2(event)"></textarea>
@@ -1321,7 +1330,13 @@ html{color-scheme:light;overscroll-behavior-x:none;}*,*::before,*::after{box-siz
   <button onclick="irApp('s-perfil')" style="background:#FFFFFF;color:#F5C400;border:none;border-radius:8px;padding:7px 14px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">Subir docs →</button>
 </div>
 
-
+<nav class="bottom-nav" id="bottom-nav">
+  <button class="bnav-item" onclick="irApp('s-rutas')"><span class="bi-icon">🔍</span><span class="bi-label">Buscar</span></button>
+  <button class="bnav-item" onclick="irApp('s-publicar')"><span class="bi-icon">➕</span><span class="bi-label">Publicar</span></button>
+  <button class="bnav-item" onclick="irApp('s-chat')"><span class="bnav-rel"><span class="bi-icon">💬</span><span class="bnav-badge" id="chat-badge" style="display:none;">0</span></span><span class="bi-label">Chat</span></button>
+  <button class="bnav-item" onclick="irApp('s-pagos')"><span class="bi-icon">💰</span><span class="bi-label">Pagos</span></button>
+  <button class="bnav-item" onclick="irApp('s-perfil')"><span class="bi-icon" id="bnav-perfil-icon">🧑</span><span class="bi-label">Perfil</span></button>
+</nav>
 
 <div class="toast-container" id="toasts"></div>
 
@@ -1479,14 +1494,7 @@ async function pagoWompiExitoso(txData, convIdParam) {
       leido: false
     });
     if(error) console.error('❌ Error guardando recibo:', error.message, error.details);
-    else {
-      console.log('✅ Recibo guardado en conv:', convId);
-      // Recargar mensajes inmediatamente para que el cliente vea el recibo sin recargar la página
-      // (el realtime no dispara para el mismo cliente que insertó el mensaje)
-      setTimeout(() => {
-        if(convActual?.id) cargarMensajes(convActual.id);
-      }, 400);
-    }
+    else console.log('✅ Recibo guardado en conv:', convId);
 
     // Obtener datos de la conversación para tener el conductor_id seguro
     let conductorId = convActual?.otro_id || null;
@@ -1570,25 +1578,22 @@ async function verificarEstadoPagoConv(convId) {
 }
 
 function setBotonesSegunEstadoPago(estado) {
-  // estado: 'sin_oferta' | 'oferta_aceptada' | 'pagado' | 'entregado'
-  const btnOfertaHeader = document.getElementById('btn-oferta-header');
-  const btnOfertaBottom = document.getElementById('btn-oferta-bottom');
-  const btnPagar = document.getElementById('chat-pay-btn');
-  const btnConfirmar = document.getElementById('btn-confirmar-entrega');
-  const bannerConfirmar = document.getElementById('banner-confirmar-entrega');
-  const chatAcciones = document.getElementById('chat-acciones');
+  const btnOfertaHeader  = document.getElementById('btn-oferta-header');
+  const btnOfertaBottom  = document.getElementById('btn-oferta-bottom');
+  const btnPagar         = document.getElementById('chat-pay-btn');
+  const btnConfirmar     = document.getElementById('btn-confirmar-entrega');
+  const bannerConfirmar  = document.getElementById('banner-confirmar-entrega');
+  const chatAcciones     = document.getElementById('chat-acciones');
 
   if(estado === 'pagado') {
-    // Pago APPROVED — mostrar banner prominente de confirmar entrega
+    // Pago APPROVED — mostrar banner verde prominente (funciona en mobile y desktop)
     if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
     if(btnOfertaBottom) btnOfertaBottom.style.display = 'none';
-    if(btnPagar) { btnPagar.style.display = 'none'; }
+    if(btnPagar) btnPagar.style.display = 'none';
     if(chatAcciones) chatAcciones.style.display = 'none';
-    // Banner verde prominente visible en chat (funciona en mobile y desktop)
     if(bannerConfirmar) bannerConfirmar.style.display = 'block';
-    if(btnConfirmar) btnConfirmar.style.display = 'none'; // ocultamos el pequeño, usamos el banner
+    if(btnConfirmar) btnConfirmar.style.display = 'none';
   } else if(estado === 'oferta_aceptada') {
-    // Oferta aceptada — solo pagar
     if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
     if(btnOfertaBottom) btnOfertaBottom.style.display = 'none';
     if(btnPagar) { btnPagar.style.display = ''; btnPagar.textContent = '🔒 Pagar'; btnPagar.style.background = 'var(--amarillo)'; btnPagar.style.color = 'var(--negro)'; btnPagar.onclick = abrirPagoMobile; }
@@ -1596,7 +1601,6 @@ function setBotonesSegunEstadoPago(estado) {
     if(bannerConfirmar) bannerConfirmar.style.display = 'none';
     if(btnConfirmar) btnConfirmar.style.display = 'none';
   } else if(estado === 'entregado') {
-    // Entrega confirmada — todo oculto, transacción completa
     if(btnOfertaHeader) btnOfertaHeader.style.display = '';
     if(btnOfertaBottom) btnOfertaBottom.style.display = '';
     if(btnPagar) { btnPagar.style.display = 'none'; btnPagar.textContent = '🔒 Pagar'; btnPagar.style.background = 'var(--amarillo)'; btnPagar.style.color = 'var(--negro)'; btnPagar.onclick = abrirPagoMobile; }
@@ -1609,7 +1613,6 @@ function setBotonesSegunEstadoPago(estado) {
     if(bannerConfirmar) bannerConfirmar.style.display = 'none';
     if(btnConfirmar) btnConfirmar.style.display = 'none';
   } else {
-    // Sin oferta — botones de oferta disponibles
     if(btnOfertaHeader) btnOfertaHeader.style.display = '';
     if(btnOfertaBottom) btnOfertaBottom.style.display = '';
     if(btnPagar) btnPagar.style.display = 'none';
@@ -2348,11 +2351,8 @@ function actualizarUIperfil() {
 // ══ NAVEGACIÓN ══
 function ir(screenId) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('activa'));
-  const el = document.getElementById(screenId);
-  if(!el) { console.error('[ir] Pantalla no encontrada:', screenId); return; }
-  el.classList.add('activa');
-  const nav = document.getElementById('bottom-nav');
-  if(nav) nav.classList.remove('visible');
+  document.getElementById(screenId).classList.add('activa');
+  document.getElementById('bottom-nav').classList.remove('visible');
   if(screenId === 's-auth') setTimeout(iniciarBiometrico, 300);
 }
 
@@ -2378,8 +2378,7 @@ function verificarBannerDocs() {
 async function irApp(screenId) {
   detenerPolling(); // ya no necesitamos verificar
   ir(screenId);
-  const bnav = document.getElementById('bottom-nav');
-  if(bnav) bnav.classList.add('visible');
+  document.getElementById('bottom-nav').classList.add('visible');
   const map = {'s-rutas':0,'s-publicar':1,'s-chat':2,'s-pagos':3,'s-perfil':4};
   document.querySelectorAll('.bnav-item').forEach((b,i) => b.classList.toggle('active', i === map[screenId]));
   if(screenId === 's-rutas') cargarRutas();
@@ -2401,11 +2400,6 @@ async function irApp(screenId) {
   if(screenId === 's-mis') cargarMisPubs();
   if(screenId === 's-publicar') {
     if(!perfilActual && usuarioActual) await cargarPerfil();
-    // Ocultar ambos formularios antes de cargar para evitar parpadeo
-    const pfR = document.getElementById('pf-ruta');
-    const pfC = document.getElementById('pf-carga');
-    if(pfR) { pfR.classList.remove('active'); pfR.style.display = ''; }
-    if(pfC) { pfC.classList.remove('active'); pfC.style.display = ''; }
     cargarVehiculoConductor();
   }
 }
@@ -2997,41 +2991,11 @@ async function cargarCarrusel() {
     wrap.style.display = 'block';
     slides.style.width = `${bannersVisibles.length * 100}%`;
 
-    // Guardar URLs para el click handler
-    window._bannerUrls = bannersVisibles.map(b => b.link_url || '');
-
     slides.innerHTML = bannersVisibles.map((b, i) => `
       <div class="carrusel-slide"
-        data-idx="${i}"
-        style="min-width:${100/bannersVisibles.length}%;cursor:${b.link_url?'pointer':'default'};">
-        <img src="${b.imagen_url}" alt="Banner"
-          style="width:100%;display:block;border-radius:6px;"
-          onload="ajustarAlturaCarrusel(this)"
-          onerror="this.style.display='none'">
+        style="min-width:${100/bannersVisibles.length}%;background-image:url('${b.imagen_url}');"
+        onclick="abrirBanner('${b.link_url||''}')">
       </div>`).join('');
-
-    // Touch: distinguir swipe de tap
-    let touchStartX = 0;
-    let touchStartTime = 0;
-    const slidesEl = document.getElementById('carrusel-slides');
-    slidesEl.addEventListener('touchstart', e => {
-      touchStartX = e.touches[0].clientX;
-      touchStartTime = Date.now();
-    }, { passive: true });
-    slidesEl.addEventListener('touchend', e => {
-      const dx = e.changedTouches[0].clientX - touchStartX;
-      const dt = Date.now() - touchStartTime;
-      if(Math.abs(dx) < 10 && dt < 300) {
-        // Es un tap, abrir URL
-        const idx = carruselActual;
-        const url = (window._bannerUrls || [])[idx];
-        if(url) window.open(url, '_blank');
-      } else if(dx < -40) {
-        carruselNext();
-      } else if(dx > 40) {
-        carruselPrev();
-      }
-    }, { passive: true });
 
     dots.innerHTML = bannersVisibles.map((_, i) => `
       <div class="carrusel-dot ${i===0?'active':''}" onclick="irSlide(${i})"></div>`).join('');
@@ -3066,31 +3030,6 @@ function carruselPrev() {
 function abrirBanner(url) {
   if(url) window.open(url, '_blank');
 }
-
-function ajustarAlturaCarrusel(img) {
-  // Una vez cargada la primera imagen, ajusta la altura del contenedor
-  const container = document.getElementById('carrusel-container');
-  if(container && img.naturalHeight > 0) {
-    const ratio = img.naturalHeight / img.naturalWidth;
-    const ancho = container.offsetWidth;
-    const nuevaAltura = Math.round(ancho * ratio);
-    container.style.height = nuevaAltura + 'px';
-    // Sincronizar altura de todos los slides
-    document.querySelectorAll('.carrusel-slide').forEach(s => {
-      s.style.height = nuevaAltura + 'px';
-    });
-  }
-}
-
-// Click en desktop para banners
-document.addEventListener('click', function(e) {
-  const slide = e.target.closest('.carrusel-slide');
-  if(slide) {
-    const idx = parseInt(slide.dataset.idx);
-    const url = (window._bannerUrls || [])[idx];
-    if(url) window.open(url, '_blank');
-  }
-});
 
 // ══ CUENTA BANCARIA ══
 const TIPOS_CUENTA = {
@@ -3251,7 +3190,10 @@ async function cargarRutas() {
         <div style="background:var(--gris3);padding:4px 10px;border-radius:8px;font-size:11px;color:var(--texto);">⚖️ ${r.capacidad||'—'}</div>
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:17px;color:var(--amarillo);">${r.precio>0?'$'+r.precio.toLocaleString('es-CO'):'Negociable'}</div>
-          ${r.conductor_id === perfilActual?.id ? `<div style="display:flex;gap:8px;align-items:center;"><span style="font-size:11px;color:var(--texto);">Tu ruta</span><button onclick="eliminarRutaBuscar('${r.id}',this)" style="background:rgba(255,69,69,0.12);border:1px solid rgba(255,69,69,0.25);color:var(--rojo);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Eliminar</button></div>` : perfilActual?.rol === 'cliente' ? `<button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;cursor:pointer;" onclick="event.stopPropagation();abrirChatConConductor('${r.conductor_id||''}','${(r.conductor?.nombre||'Conductor')+' '+(r.conductor?.apellido||'')}',${r.precio||0},'${r.origen||''}','${r.destino||''}')">Negociar →</button>` : ''}
+          ${perfilActual?.rol === 'cliente' ? `<button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;cursor:pointer;" onclick="event.stopPropagation();abrirChatConConductor('${r.conductor_id||''}','${(r.conductor?.nombre||'Conductor')+' '+(r.conductor?.apellido||'')}',${r.precio||0},'${r.origen||''}','${r.destino||''}')">Negociar →</button>` : `<div style="display:flex;gap:8px;align-items:center;">
+              <span style="font-size:11px;color:var(--texto);">Tu ruta</span>
+              <button onclick="eliminarRutaBuscar('${r.id}',this)" style="background:rgba(255,69,69,0.12);border:1px solid rgba(255,69,69,0.25);color:var(--rojo);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Eliminar</button>
+            </div>`}
         </div>
       </div>
     </div>`).join('');
@@ -3277,11 +3219,14 @@ async function cargarRutas() {
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <div style="font-size:12px;color:var(--texto);flex:1;">${c.descripcion?c.descripcion.substring(0,60)+'...':''}</div>
-        ${c.cliente_id === perfilActual?.id
-          ? `<div style="display:flex;gap:8px;align-items:center;"><span style="font-size:11px;color:var(--texto);">Tu publicación</span><button onclick="eliminarCargaBuscar('${c.id}',this)" style="background:rgba(255,69,69,0.12);border:1px solid rgba(255,69,69,0.25);color:var(--rojo);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Eliminar</button></div>`
-          : perfilActual?.rol === 'conductor'
-            ? `<button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;cursor:pointer;" onclick="abrirChatConConductor('${c.cliente_id||''}','${(c.cliente?.nombre||'Cliente')+' '+(c.cliente?.apellido||'')}',0,'${c.origen||''}','${c.destino||''}',true)">Ofrecer precio →</button>`
-            : ''
+        ${perfilActual?.rol === 'conductor'
+          ? `<button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;cursor:pointer;" onclick="abrirChatConConductor('${c.cliente_id||''}','${(c.cliente?.nombre||'Cliente')+' '+(c.cliente?.apellido||'')}',0,'${c.origen||''}','${c.destino||''}',true)">Ofrecer precio →</button>`
+          : c.cliente_id === perfilActual?.id
+            ? `<div style="display:flex;gap:8px;align-items:center;">
+                <span style="font-size:11px;color:var(--texto);">Tu publicación</span>
+                <button onclick="eliminarCargaBuscar('${c.id}',this)" style="background:rgba(255,69,69,0.12);border:1px solid rgba(255,69,69,0.25);color:var(--rojo);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Eliminar</button>
+              </div>`
+            : `<span style="font-size:11px;color:var(--texto);padding:8px;">Publicado por cliente</span>`
         }
       </div>
     </div>`).join('');
@@ -3329,6 +3274,7 @@ function renderRutasDemo() {
         <div style="background:var(--gris3);padding:4px 10px;border-radius:8px;font-size:11px;color:var(--texto);">⚖️ ${r.cap}</div>
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:17px;color:var(--amarillo);">${r.precio>0?'$'+r.precio.toLocaleString('es-CO'):'Negociable'}</div>
+          <button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;cursor:pointer;" onclick="event.stopPropagation();abrirChatConConductor('demo-${r.nombre.replace(/ /g,'-')}','${r.nombre}',r.precio,'${r.origen}','${r.destino}')">Negociar →</button>
         </div>
       </div>
     </div>`).join('');
@@ -3393,6 +3339,22 @@ function toggleAyudantes(el) {
   el.classList.toggle('on');
   const sec = document.getElementById('sec-ayudantes');
   if(sec) sec.style.display = el.classList.contains('on') ? 'block' : 'none';
+  if(!el.classList.contains('on')) {
+    const banner = document.getElementById('total-ayudantes-banner');
+    if(banner) banner.style.display = 'none';
+  }
+}
+
+function calcTotalAyudantes() {
+  const num   = parseInt(document.getElementById('m-num-ayudantes')?.value) || 1;
+  const costo = parseInt(document.getElementById('m-costo-ayudante')?.value) || 0;
+  const total = num * costo;
+  const banner = document.getElementById('total-ayudantes-banner');
+  const val    = document.getElementById('total-ayudantes-val');
+  if(banner && val) {
+    banner.style.display = total > 0 ? 'block' : 'none';
+    val.textContent = '$' + total.toLocaleString('es-CO');
+  }
 }
 
 const vehInfo = {
@@ -3415,19 +3377,13 @@ async function cargarVehiculoConductor() {
     return;
   }
 
-  // Ocultar ambos primero
-  if(pfRuta) pfRuta.classList.remove('active');
-  if(pfCarga) pfCarga.classList.remove('active');
-
   if(perfilActual.rol === 'conductor') {
-    // Conductor: SOLO ve publicar ruta, nunca carga
-    if(pfRuta) pfRuta.classList.add('active');
-    if(pfCarga) pfCarga.style.display = 'none'; // doble seguridad
+    if(pfRuta) { pfRuta.classList.add('active'); }
+    if(pfCarga) { pfCarga.classList.remove('active'); }
     if(subtitulo) subtitulo.textContent = 'Avisa que tienes espacio libre en tu vehículo.';
   } else {
-    // Cliente: SOLO ve publicar carga, nunca ruta
-    if(pfCarga) { pfCarga.classList.add('active'); pfCarga.style.display = ''; }
-    if(pfRuta) pfRuta.style.display = 'none'; // doble seguridad
+    if(pfCarga) { pfCarga.classList.add('active'); }
+    if(pfRuta) { pfRuta.classList.remove('active'); }
     if(subtitulo) subtitulo.textContent = 'Publica tu carga y los conductores te contactarán por chat.';
   }
 
@@ -3693,7 +3649,7 @@ async function publicarCarga() {
   const esMudanza = tipo === 'mudanza';
   const necesitaAyudantes = document.getElementById('t-ayudantes')?.classList.contains('on') && esMudanza;
   const numAyudantes  = esMudanza && necesitaAyudantes ? parseInt(document.getElementById('m-num-ayudantes')?.value)||1 : 0;
-  const costoAyudante = 0; // El costo lo negocia el conductor por chat
+  const costoAyudante = esMudanza && necesitaAyudantes ? parseInt(document.getElementById('m-costo-ayudante')?.value)||0 : 0;
 
   // Armar descripción automática para mudanza
   let descAuto = '';
@@ -3711,7 +3667,7 @@ async function publicarCarga() {
     if(inmueble)     descAuto += inmueble + '. ';
     if(pisoO)        descAuto += 'Piso origen: ' + pisoO + '. ';
     if(pisoD)        descAuto += 'Piso destino: ' + pisoD + '. ';
-    if(necesitaAyudantes) descAuto += `Necesita ${numAyudantes} ayudante(s) para cargar.`;
+    if(necesitaAyudantes) descAuto += `Necesita ${numAyudantes} ayudante(s) a $${costoAyudante.toLocaleString('es-CO')} c/u.`;
   }
 
   const descripcionFinal = [descAuto, document.getElementById('c-desc').value].filter(Boolean).join(' ').trim();
@@ -4022,11 +3978,10 @@ async function cargarMensajes(convId) {
     if(perfilActual?.rol === 'cliente') {
       const tieneOfertaAceptada = (msgs||[]).some(m => m.tipo === 'oferta_aceptada');
       const tieneEntregaConfirmada = (msgs||[]).some(m => m.tipo === 'entrega_confirmada');
-      const payBtn = document.getElementById('chat-pay-btn');
+      const tieneRecibo = (msgs||[]).some(m => m.tipo === 'recibo');
       const ppForm = document.getElementById('pp-form2');
       const ppExitoso = document.getElementById('pp-exitoso2');
       const ppCompletado = document.getElementById('pp-completado2');
-      const escrowEst = document.getElementById('escrow-est2');
 
       if(tieneEntregaConfirmada) {
         setBotonesSegunEstadoPago('entregado');
@@ -4035,20 +3990,21 @@ async function cargarMensajes(convId) {
         if(ppCompletado) ppCompletado.style.display = 'block';
         actualizarEscrowBar('LIBERADO');
 
-      } else if(tieneOfertaAceptada) {
+      } else if(tieneOfertaAceptada || tieneRecibo) {
+        // Consultar BD siempre que haya oferta aceptada o recibo
         const { data: pagosData } = await sb.from('pagos')
           .select('estado').eq('conversacion_id', convId)
           .order('created_at', { ascending: false }).limit(1);
         const estadoPago = pagosData?.[0]?.estado;
 
-        if(estadoPago === 'LIBERADO' || tieneEntregaConfirmada) {
-          // Entrega ya confirmada (detectado por pago LIBERADO o mensaje)
+        if(estadoPago === 'LIBERADO') {
           setBotonesSegunEstadoPago('entregado');
           if(ppForm) ppForm.style.display = 'none';
           if(ppExitoso) ppExitoso.style.display = 'none';
           if(ppCompletado) ppCompletado.style.display = 'block';
           actualizarEscrowBar('LIBERADO');
-        } else if(estadoPago === 'APPROVED') {
+        } else if(estadoPago === 'APPROVED' || tieneRecibo) {
+          // tieneRecibo = fallback si la BD no actualizó aún
           setBotonesSegunEstadoPago('pagado');
           if(ppForm) ppForm.style.display = 'none';
           if(ppExitoso) ppExitoso.style.display = 'block';
@@ -4173,8 +4129,7 @@ function suscribirMensajes(convId) {
         // Ignorar mensajes de otras conversaciones
         if(msg.conversacion_id !== convActual?.id) return;
         // Ignorar mensajes propios (ya se muestran al enviar)
-        // EXCEPCIÓN: recibo y entrega_confirmada deben renderizarse siempre (los inserta el sistema)
-        if(msg.emisor_id === perfilActual?.id && msg.tipo !== 'recibo' && msg.tipo !== 'entrega_confirmada') {
+        if(msg.emisor_id === perfilActual?.id) {
           await cargarConversaciones(convActual?.id);
           return;
         }
@@ -4191,20 +4146,6 @@ function suscribirMensajes(convId) {
               actualizarMonto(conv.precio_acordado);
               setBotonesSegunEstadoPago('oferta_aceptada');
               actualizarEscrowBar('sin_pagar');
-            }
-          }
-          // Cuando llega un recibo → actualizar UI en tiempo real para ambos
-          if(msg.tipo === 'recibo') {
-            if(perfilActual?.rol === 'cliente') {
-              setBotonesSegunEstadoPago('pagado');
-              actualizarEscrowBar('APPROVED');
-              const ppForm = document.getElementById('pp-form2');
-              const ppExitoso = document.getElementById('pp-exitoso2');
-              if(ppForm) ppForm.style.display = 'none';
-              if(ppExitoso) ppExitoso.style.display = 'block';
-            } else if(perfilActual?.rol === 'conductor') {
-              setBotonesSegunEstadoPago('esperando_conductor');
-              actualizarEscrowBar('APPROVED');
             }
           }
           // Solo marcar leído si el chat está visible en pantalla
@@ -4676,7 +4617,6 @@ function mostrarPago(){toast('💳 Selecciona el método de pago en el panel der
 function selMet(el,tipo){document.querySelectorAll('.metodo').forEach(m=>m.classList.remove('sel'));document.querySelectorAll('.metodo-detalle2').forEach(d=>d.classList.remove('visible'));el.classList.add('sel');document.getElementById('md-'+tipo).classList.add('visible');}
 function procesarPago2(){document.getElementById('pp-form2').style.display='none';document.getElementById('pp-procesando2').style.display='block';setTimeout(()=>{document.getElementById('pp-procesando2').style.display='none';document.getElementById('pp-exitoso2').style.display='block';document.getElementById('escrow-est2').textContent='🔒 Retenido';document.getElementById('chat-pay-btn').style.display='none';const d=document.createElement('div');d.className='sys-msg';d.innerHTML='🔒 <strong style="color:var(--naranja)">Pago retenido en FleteCOL</strong> · El conductor fue notificado.';document.getElementById('msgs-wrap').appendChild(d);toast('🔒 Pago procesado','success');},2000);}
 async function confirmarEntrega2(){
-  // Ocultar banner de confirmar entrega
   const bannerConf = document.getElementById('banner-confirmar-entrega');
   if(bannerConf) bannerConf.style.display = 'none';
   const ppExitoso = document.getElementById('pp-exitoso2');
@@ -4768,37 +4708,9 @@ async function verRutasConAuth() {
   }
 }
 
-// ══ FIX BOTTOM NAV FIXED ══
-// Garantizar que el bottom-nav permanezca fixed en iOS Safari
-function fijarBottomNav() {
-  const nav = document.getElementById('bottom-nav');
-  if(!nav) return;
-  nav.style.cssText = 'position:fixed !important;bottom:0 !important;left:0 !important;right:0 !important;z-index:9999 !important;background:#F8F8F8;border-top:1px solid rgba(0,0,0,0.08);grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom,0px);';
-}
-window.addEventListener('scroll', fijarBottomNav, { passive: true });
-window.addEventListener('resize', fijarBottomNav);
-document.addEventListener('DOMContentLoaded', fijarBottomNav);
-
-// ══ REALTIME BANNERS ══
-function suscribirBannersRealtime() {
-  sb.channel('banners-cambios')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'banners' }, () => {
-      cargarCarrusel();
-    })
-    .subscribe();
-}
-
 // ══ START ══
 init();
-suscribirBannersRealtime();
 // chat inicializado vacío
 </script>
-<nav class="bottom-nav" id="bottom-nav">
-  <button class="bnav-item" onclick="irApp('s-rutas')"><span class="bi-icon">🔍</span><span class="bi-label">Buscar</span></button>
-  <button class="bnav-item" onclick="irApp('s-publicar')"><span class="bi-icon">➕</span><span class="bi-label">Publicar</span></button>
-  <button class="bnav-item" onclick="irApp('s-chat')"><span class="bnav-rel"><span class="bi-icon">💬</span><span class="bnav-badge" id="chat-badge" style="display:none;">0</span></span><span class="bi-label">Chat</span></button>
-  <button class="bnav-item" onclick="irApp('s-pagos')"><span class="bi-icon">💰</span><span class="bi-label">Pagos</span></button>
-  <button class="bnav-item" onclick="irApp('s-perfil')"><span class="bi-icon" id="bnav-perfil-icon">🧑</span><span class="bi-label">Perfil</span></button>
-</nav>
 </body>
 </html>
