@@ -761,8 +761,20 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
         <div style="font-weight:800;font-size:18px;margin-bottom:20px;" id="modal-banner-title">Nuevo banner</div>
         <input type="hidden" id="banner-edit-id">
         <div style="margin-bottom:14px;">
-          <label style="font-size:12px;color:#888;display:block;margin-bottom:6px;">URL de la imagen *</label>
-          <input id="banner-imagen" type="text" placeholder="https://ejemplo.com/imagen.jpg" oninput="previewBanner(this.value)" style="width:100%;padding:10px 14px;background:#0d0f14;border:1px solid #2a2d35;border-radius:8px;color:#fff;font-size:13px;box-sizing:border-box;">
+          <label style="font-size:12px;color:#888;display:block;margin-bottom:6px;">Imagen *</label>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+            <label for="banner-file-input" id="btn-subir-img" style="flex:1;padding:10px 14px;background:#0d0f14;border:1px dashed #F5C400;border-radius:8px;color:#F5C400;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:background 0.2s;">
+              📁 Subir imagen desde computador
+            </label>
+            <input type="file" id="banner-file-input" accept="image/*" style="display:none;" onchange="subirImagenBanner(this)">
+          </div>
+          <div id="banner-upload-progress" style="display:none;margin-bottom:8px;">
+            <div style="height:4px;background:#2a2d35;border-radius:4px;overflow:hidden;">
+              <div id="banner-progress-bar" style="height:100%;background:#F5C400;width:0%;transition:width 0.3s;border-radius:4px;"></div>
+            </div>
+            <div id="banner-upload-status" style="font-size:11px;color:#888;margin-top:4px;text-align:center;">Subiendo...</div>
+          </div>
+          <input id="banner-imagen" type="text" placeholder="O pega una URL de imagen aquí" oninput="previewBanner(this.value)" style="width:100%;padding:10px 14px;background:#0d0f14;border:1px solid #2a2d35;border-radius:8px;color:#fff;font-size:13px;box-sizing:border-box;">
         </div>
         <div style="margin-bottom:14px;">
           <label style="font-size:12px;color:#888;display:block;margin-bottom:6px;">URL del link (al hacer clic)</label>
@@ -1526,6 +1538,79 @@ async function cargarBanners() {
         </div>
       </div>
     </div>`).join('');
+}
+
+async function subirImagenBanner(input) {
+  const file = input.files[0];
+  if(!file) return;
+
+  // Validar tipo y tamaño (max 3MB)
+  const tiposPermitidos = ['image/jpeg','image/png','image/webp','image/gif'];
+  if(!tiposPermitidos.includes(file.type)) {
+    alert('Solo se permiten imágenes JPG, PNG, WEBP o GIF');
+    return;
+  }
+  if(file.size > 3 * 1024 * 1024) {
+    alert('La imagen no puede superar 3MB');
+    return;
+  }
+
+  const progress = document.getElementById('banner-upload-progress');
+  const bar = document.getElementById('banner-progress-bar');
+  const status = document.getElementById('banner-upload-status');
+  const btnSubir = document.getElementById('btn-subir-img');
+
+  progress.style.display = 'block';
+  btnSubir.textContent = '⏳ Subiendo...';
+  btnSubir.style.opacity = '0.6';
+  btnSubir.style.pointerEvents = 'none';
+  bar.style.width = '30%';
+  status.textContent = 'Subiendo imagen...';
+
+  try {
+    const ext = file.name.split('.').pop();
+    const nombreArchivo = `banners/banner_${Date.now()}.${ext}`;
+
+    bar.style.width = '60%';
+
+    const { data, error } = await sb.storage
+      .from('documentos')
+      .upload(nombreArchivo, file, { upsert: true, contentType: file.type });
+
+    if(error) throw error;
+
+    bar.style.width = '100%';
+    status.textContent = '✅ Imagen subida correctamente';
+    status.style.color = '#22c55e';
+
+    // Construir URL pública
+    const { data: urlData } = sb.storage.from('documentos').getPublicUrl(nombreArchivo);
+    const url = urlData.publicUrl;
+
+    document.getElementById('banner-imagen').value = url;
+    previewBanner(url);
+
+    setTimeout(() => {
+      progress.style.display = 'none';
+      bar.style.width = '0%';
+      status.style.color = '#888';
+      btnSubir.textContent = '✅ Imagen cargada — subir otra';
+      btnSubir.style.opacity = '1';
+      btnSubir.style.pointerEvents = 'auto';
+    }, 1500);
+
+  } catch(e) {
+    bar.style.width = '0%';
+    status.textContent = '❌ Error al subir: ' + e.message;
+    status.style.color = '#ef4444';
+    btnSubir.textContent = '📁 Subir imagen desde computador';
+    btnSubir.style.opacity = '1';
+    btnSubir.style.pointerEvents = 'auto';
+    console.error('Error subiendo banner:', e);
+  }
+
+  // Limpiar input para poder subir el mismo archivo de nuevo
+  input.value = '';
 }
 
 function toggleCiudadCustom(val) {
