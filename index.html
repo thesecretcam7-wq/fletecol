@@ -2007,49 +2007,13 @@ let chatSub = null;
 let estadoSub = null; // suscripción realtime al estado del usuario
 
 async function init() {
-  // Restaurar mensajes pendientes si la página se recargó
   try {
     const pendSaved = sessionStorage.getItem('mensajesPendientes');
-    if(pendSaved) mensajesPendientes = JSON.parse(pendSaved);
-  } catch(e) {}
-  try {
-    // CRÍTICO: Registrar onAuthStateChange ANTES de getSession para no perder eventos OAuth
+    if(pendSaved) try { mensajesPendientes = JSON.parse(pendSaved); } catch(e) {}
+
     sb.auth.onAuthStateChange((event, session) => {
       if(event === 'TOKEN_REFRESHED' && session) {
         usuarioActual = session.user;
-        console.log('[auth] Token refrescado automáticamente');
-      }
-      if(event === 'SIGNED_IN' && session) {
-        usuarioActual = session.user;
-        if(enRegistro) return;
-        // Si hay perfil cargado Y no venimos de un redirect OAuth, es re-login — no redirigir
-        const esRedirectOAuth = sessionStorage.getItem('oauth_redirect');
-        if(perfilActual && !esRedirectOAuth) return;
-        sessionStorage.removeItem('oauth_redirect');
-        // Nuevo login o redirect OAuth
-        setTimeout(async () => {
-          await cargarPerfil();
-          if(!perfilActual && session.user.email) {
-            // Crear perfil si no existe (Google sin perfil aún)
-            const nombreCompleto = session.user.user_metadata?.full_name || '';
-            const partes = nombreCompleto.split(' ');
-            const nombre = partes[0] || 'Usuario';
-            const apellido = partes.slice(1).join(' ') || '';
-            await sb.from('usuarios').insert({
-              auth_id: session.user.id,
-              nombre, apellido,
-              email: session.user.email,
-              rol: null,
-              estado: 'incompleto',
-              foto_perfil: session.user.user_metadata?.avatar_url || null
-            });
-            sessionStorage.setItem('nuevo_google', '1');
-            await cargarPerfil();
-          }
-          await redirigirSegunEstado();
-          suscribirEstado();
-          suscribirBadge();
-        }, 0);
       }
       if(event === 'SIGNED_OUT') {
         usuarioActual = null;
@@ -2058,9 +2022,13 @@ async function init() {
         setTimeout(() => {
           detenerPolling();
           if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e){} estadoSub = null; }
-          if(chatSub) { try { sb.removeChannel(chatSub); } catch(e){} chatSub = null; }
+          if(chatSub)   { try { sb.removeChannel(chatSub);   } catch(e){} chatSub = null; }
           ir('s-landing');
         }, 0);
+      }
+      if(event === 'SIGNED_IN' && session && !perfilActual && !enRegistro) {
+        usuarioActual = session.user;
+        setTimeout(async () => { await manejarSesion(session); }, 0);
       }
     });
 
@@ -2068,43 +2036,9 @@ async function init() {
     document.getElementById('loading').style.display = 'none';
 
     if(session) {
-      usuarioActual = session.user;
-      await cargarPerfil();
-      if(!perfilActual && session.user.email) {
-        // Usuario nuevo de Google — crear perfil mínimo
-        const nombreCompleto = session.user.user_metadata?.full_name || '';
-        const partes = nombreCompleto.split(' ');
-        const nombre = partes[0] || 'Usuario';
-        const apellido = partes.slice(1).join(' ') || '';
-        const { error } = await sb.from('usuarios').insert({
-          auth_id: session.user.id,
-          nombre, apellido,
-          email: session.user.email,
-          rol: null,
-          estado: 'incompleto',
-          foto_perfil: session.user.user_metadata?.avatar_url || null
-        });
-        if(!error) {
-          sessionStorage.setItem('nuevo_google', '1');
-          await cargarPerfil();
-        }
-      }
-      const vieneDePago = await verificarRetornoWompi();
-      if(!vieneDePago) await redirigirSegunEstado();
-      suscribirEstado();
-      suscribirBadge();
+      await manejarSesion(session);
     } else {
-      // Verificar si hay token OAuth en el hash (redirect de Google)
-      const hash = window.location.hash;
-      if(hash && hash.includes('access_token')) {
-        // Marcar que venimos de OAuth para que SIGNED_IN siempre redirija
-        sessionStorage.setItem('oauth_redirect', '1');
-        console.log('[auth] Token OAuth en hash, esperando sesión...');
-        history.replaceState(null, '', window.location.pathname);
-        ir('s-landing');
-      } else {
-        ir('s-landing');
-      }
+      ir('s-landing');
     }
 
   } catch(e) {
@@ -2114,6 +2048,34 @@ async function init() {
   }
 }
 
+async function manejarSesion(session) {
+  if(usuarioActual?.id === session.user.id && perfilActual) return;
+  usuarioActual = session.user;
+  await cargarPerfil();
+
+  if(!perfilActual && session.user.email) {
+    const nombreCompleto = session.user.user_metadata?.full_name || '';
+    const partes = nombreCompleto.split(' ');
+    const { error } = await sb.from('usuarios').insert({
+      auth_id: session.user.id,
+      nombre:  partes[0] || 'Usuario',
+      apellido: partes.slice(1).join(' ') || '',
+      email:   session.user.email,
+      rol:     null,
+      estado:  'incompleto',
+      foto_perfil: session.user.user_metadata?.avatar_url || null
+    });
+    if(!error) {
+      sessionStorage.setItem('nuevo_google', '1');
+      await cargarPerfil();
+    }
+  }
+
+  const vieneDePago = await verificarRetornoWompi();
+  if(!vieneDePago) await redirigirSegunEstado();
+  suscribirEstado();
+  suscribirBadge();
+}
 // Reconectar chat cuando la página vuelve a estar activa
 // Guardar timestamp cuando la pestaña se oculta
 let tabHiddenAt = null;
