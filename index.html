@@ -2022,9 +2022,11 @@ async function init() {
       if(event === 'SIGNED_IN' && session) {
         usuarioActual = session.user;
         if(enRegistro) return;
-        // Si ya hay perfil cargado es re-login por token — no redirigir
-        if(perfilActual) return;
-        // Nuevo login (email/pass o Google en segunda pestaña)
+        // Si hay perfil cargado Y no venimos de un redirect OAuth, es re-login — no redirigir
+        const esRedirectOAuth = sessionStorage.getItem('oauth_redirect');
+        if(perfilActual && !esRedirectOAuth) return;
+        sessionStorage.removeItem('oauth_redirect');
+        // Nuevo login o redirect OAuth
         setTimeout(async () => {
           await cargarPerfil();
           if(!perfilActual && session.user.email) {
@@ -2088,7 +2090,17 @@ async function init() {
       suscribirEstado();
       suscribirBadge();
     } else {
-      ir('s-landing');
+      // Verificar si hay token OAuth en el hash (redirect de Google)
+      const hash = window.location.hash;
+      if(hash && hash.includes('access_token')) {
+        // Marcar que venimos de OAuth para que SIGNED_IN siempre redirija
+        sessionStorage.setItem('oauth_redirect', '1');
+        console.log('[auth] Token OAuth en hash, esperando sesión...');
+        history.replaceState(null, '', window.location.pathname);
+        ir('s-landing');
+      } else {
+        ir('s-landing');
+      }
     }
 
   } catch(e) {
