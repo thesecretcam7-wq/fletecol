@@ -2620,36 +2620,86 @@ async function confirmarRolInicial() {
       toast('✅ ¡Bienvenido! Ya puedes usar FleteCOL', 'success');
     }
   } else {
-    // Conductor → queda incompleto, entra a explorar la app
+    // Conductor → queda incompleto, entra a explorar la app libremente
     const { error } = await sb.from('usuarios')
       .update({ rol: 'conductor', estado: 'incompleto' })
       .eq('auth_id', usuarioActual.id);
     if(!error) {
       await cargarPerfil();
-      toast('🚛 Bienvenido conductor. Completa tu registro para empezar a publicar rutas.', 'info');
+      await irApp('s-rutas');
+      toast('🚛 Bienvenido a FleteCOL. Explora la app y completa tu registro cuando quieras.', 'info');
     }
   }
 }
 
 // ── Llevar al conductor al flujo de registro (paso 1: elegir rol) ─────────────
 function irRegistroIncompleto() {
-  // Para conductores Google: ir directo al paso 3 (documentos)
-  // authIdTemporal lo tomamos de la sesión activa
-  sb.auth.getSession().then(({ data:{ session } }) => {
-    if(session?.user?.id) authIdTemporal = session.user.id;
-  });
-  showAuthTab('registro', document.querySelector('.auth-tab:nth-child(2)'));
-  // Ocultar todos los pasos y mostrar solo el paso 3
-  [1,2,3,4].forEach(n => {
-    const el = document.getElementById('reg-step' + n);
-    if(el) el.style.display = 'none';
-  });
-  const step3 = document.getElementById('reg-step3');
-  if(step3) step3.style.display = 'block';
-  // Mostrar sección documentos de vehículo (es conductor)
-  const docsVeh = document.getElementById('docs-vehiculo');
-  if(docsVeh) docsVeh.style.display = 'block';
-  ir('s-auth');
+  if(document.getElementById('modal-docs-conductor')) return;
+
+  // Asegurar que authIdTemporal esté seteado para que enviarDocumentos funcione
+  if(usuarioActual?.id) authIdTemporal = usuarioActual.id;
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-docs-conductor';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;overflow-y:auto;padding:20px;box-sizing:border-box;';
+  modal.innerHTML = `
+    <div style="max-width:480px;margin:0 auto;padding-bottom:40px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;padding-top:8px;">
+        <div style="font-size:28px;">🚛</div>
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;color:var(--blanco);">Completa tu registro</div>
+          <div style="font-size:12px;color:var(--texto);">Sube tus documentos para ser aprobado</div>
+        </div>
+      </div>
+
+      <div style="font-size:11px;color:var(--amarillo);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin-bottom:10px;">🪪 Documentos personales — Obligatorios</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">
+        <div class="upload-box" id="box-cedula-f" onclick="document.getElementById('file-cedula-f').click()">
+          <input type="file" id="file-cedula-f" accept="image/*,.pdf" style="display:none;" onchange="subirDocumento(this,'cedula_frontal','box-cedula-f','lbl-cedula-f')">
+          <div class="upload-default"><div style="font-size:26px;margin-bottom:6px;">🪪</div><div style="font-size:13px;font-weight:700;color:var(--blanco);">Cédula — Parte frontal</div><div style="font-size:11px;color:var(--texto);">Foto clara donde se lea tu nombre · <strong style="color:var(--amarillo)">Subir</strong></div></div>
+          <div class="upload-ok" id="lbl-cedula-f" style="display:none;">✅ Cédula frontal subida</div>
+        </div>
+        <div class="upload-box" id="box-cedula-p" onclick="document.getElementById('file-cedula-p').click()">
+          <input type="file" id="file-cedula-p" accept="image/*,.pdf" style="display:none;" onchange="subirDocumento(this,'cedula_posterior','box-cedula-p','lbl-cedula-p')">
+          <div class="upload-default"><div style="font-size:26px;margin-bottom:6px;">🪪</div><div style="font-size:13px;font-weight:700;color:var(--blanco);">Cédula — Parte posterior</div><div style="font-size:11px;color:var(--texto);">La parte de atrás · <strong style="color:var(--amarillo)">Subir</strong></div></div>
+          <div class="upload-ok" id="lbl-cedula-p" style="display:none;">✅ Cédula posterior subida</div>
+        </div>
+        <div class="upload-box" id="box-selfie" onclick="document.getElementById('file-selfie').click()">
+          <input type="file" id="file-selfie" accept="image/*" style="display:none;" onchange="subirDocumento(this,'selfie_cedula','box-selfie','lbl-selfie')">
+          <div class="upload-default"><div style="font-size:26px;margin-bottom:6px;">🤳</div><div style="font-size:13px;font-weight:700;color:var(--blanco);">Selfie sosteniendo tu cédula</div><div style="font-size:11px;color:var(--texto);">Tómate una foto sujetando la cédula visible · <strong style="color:var(--amarillo)">Subir</strong></div></div>
+          <div class="upload-ok" id="lbl-selfie" style="display:none;">✅ Selfie subida</div>
+        </div>
+      </div>
+
+      <div style="font-size:11px;color:var(--amarillo);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin-bottom:10px;">🚛 Documentos del vehículo — Obligatorios</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">
+        <div class="upload-box" id="box-foto-veh" onclick="document.getElementById('file-foto-veh').click()">
+          <input type="file" id="file-foto-veh" accept="image/*" style="display:none;" onchange="subirDocumento(this,'foto_vehiculo','box-foto-veh','lbl-foto-veh')">
+          <div class="upload-default"><div style="font-size:26px;margin-bottom:6px;">📸</div><div style="font-size:13px;font-weight:700;color:var(--blanco);">Foto del vehículo — Frontal</div><div style="font-size:11px;color:var(--texto);">Donde se vea la placa · <strong style="color:var(--amarillo)">Subir</strong></div></div>
+          <div class="upload-ok" id="lbl-foto-veh" style="display:none;">✅ Foto frontal subida</div>
+        </div>
+        <div class="upload-box" id="box-foto-veh2" onclick="document.getElementById('file-foto-veh2').click()">
+          <input type="file" id="file-foto-veh2" accept="image/*" style="display:none;" onchange="subirDocumento(this,'foto_vehiculo2','box-foto-veh2','lbl-foto-veh2')">
+          <div class="upload-default"><div style="font-size:26px;margin-bottom:6px;">📸</div><div style="font-size:13px;font-weight:700;color:var(--blanco);">Foto del vehículo — Lateral o trasera</div><div style="font-size:11px;color:var(--texto);">Segunda foto · <strong style="color:var(--amarillo)">Subir</strong></div></div>
+          <div class="upload-ok" id="lbl-foto-veh2" style="display:none;">✅ Segunda foto subida</div>
+        </div>
+        <div class="upload-box" id="box-soat" onclick="document.getElementById('file-soat').click()">
+          <input type="file" id="file-soat" accept="image/*,.pdf" style="display:none;" onchange="subirDocumento(this,'soat','box-soat','lbl-soat')">
+          <div class="upload-default"><div style="font-size:26px;margin-bottom:6px;">📋</div><div style="font-size:13px;font-weight:700;color:var(--blanco);">SOAT vigente</div><div style="font-size:11px;color:var(--texto);">Seguro obligatorio vigente · <strong style="color:var(--amarillo)">Subir</strong></div></div>
+          <div class="upload-ok" id="lbl-soat" style="display:none;">✅ SOAT subido</div>
+        </div>
+      </div>
+
+      <div id="docs-error" style="font-size:12px;color:var(--rojo);display:none;background:rgba(255,69,69,0.06);border:1px solid rgba(255,69,69,0.15);border-radius:9px;padding:9px 12px;margin-bottom:12px;"></div>
+      <button id="btn-enviar-docs" onclick="enviarDocumentos()" style="width:100%;padding:14px;background:var(--amarillo);color:var(--negro);border:none;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;cursor:pointer;">
+        Enviar documentos →
+      </button>
+      <button onclick="document.getElementById('modal-docs-conductor').remove()" style="width:100%;padding:10px;background:transparent;color:var(--texto);border:none;font-size:13px;cursor:pointer;margin-top:8px;">
+        Ahora no
+      </button>
+    </div>
+  `;
+  document.body.appendChild(modal);
 }
 
 // ── Modal "Completa tu registro" — solo para conductores ─────────────────────
@@ -2947,8 +2997,12 @@ async function enviarDocumentos() {
     btn.textContent = 'Enviar →';
     enRegistro = false;
 
-    // Si es conductor Google (sesión activa), recargar perfil y volver a la app
-    if(!authIdTemporal && session?.user?.id) {
+    // Cerrar modal de documentos si existe
+    const modalDocs = document.getElementById('modal-docs-conductor');
+    if(modalDocs) modalDocs.remove();
+
+    // Si es conductor Google (sesión activa), recargar perfil y quedarse en la app
+    if(session?.user?.id) {
       await cargarPerfil();
       toast('📄 Documentos enviados. Te avisaremos cuando tu cuenta sea aprobada.', 'success');
       await irApp('s-rutas');
