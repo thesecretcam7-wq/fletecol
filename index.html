@@ -463,8 +463,9 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
   </nav>
   <div class="auth-wrap">
     <div class="auth-box">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:24px;margin-bottom:6px;">Bienvenido</div>
-      <div style="font-size:13px;color:var(--texto);margin-bottom:24px;">Crea tu cuenta o inicia sesión</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:24px;margin-bottom:4px;">Bienvenido a FleteCOL</div>
+      <div style="font-size:13px;color:var(--texto);margin-bottom:20px;">Conectamos carga con conductores en Colombia</div>
+
       <div class="auth-tabs">
         <button class="auth-tab active" onclick="showAuthTab('login',this)">Iniciar sesión</button>
         <button class="auth-tab" onclick="showAuthTab('registro',this)">Registrarse</button>
@@ -472,6 +473,21 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
 
       <!-- LOGIN -->
       <div class="auth-form active" id="auth-login">
+
+        <!-- Google — método principal -->
+        <button class="social-btn" onclick="loginGoogle()" style="background:var(--amarillo);color:var(--negro);border:none;font-weight:800;font-size:15px;padding:14px;margin-bottom:6px;display:flex;align-items:center;justify-content:center;gap:10px;">
+          <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.5 30.2 0 24 0 14.7 0 6.8 5.4 2.9 13.3l7.8 6C12.5 13 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17z"/><path fill="#FBBC05" d="M10.7 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A24 24 0 0 0 0 24c0 3.8.9 7.4 2.5 10.6l8.2-5.9z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.6 2.2-7.7 2.2-6.2 0-11.5-4.2-13.4-9.8l-8.2 5.9C6.7 42.5 14.7 48 24 48z"/></svg>
+          Continuar con Google
+        </button>
+        <div style="font-size:11px;color:var(--texto);text-align:center;margin-bottom:16px;">⚡ Acceso instantáneo · Sin contraseñas</div>
+
+        <!-- Separador -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+          <div style="flex:1;height:1px;background:var(--gris3);"></div>
+          <span style="font-size:11px;color:var(--gris5);white-space:nowrap;">o con correo y contraseña</span>
+          <div style="flex:1;height:1px;background:var(--gris3);"></div>
+        </div>
+
         <div class="form-group">
           <label class="form-label">📧 Correo electrónico</label>
           <input class="form-input" type="email" id="login-email" placeholder="tu@correo.com">
@@ -481,14 +497,12 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
           <input class="form-input" type="password" id="login-pass" placeholder="••••••••">
         </div>
         <div id="login-error" class="form-error" style="margin-bottom:10px;display:none;"></div>
-        <button class="btn-full" id="btn-login" onclick="login()">Iniciar sesión</button>
+        <button class="btn-full" id="btn-login" onclick="login()" style="background:var(--gris3);color:var(--blanco);">Iniciar sesión</button>
         <div id="btn-biometric-wrap" style="display:none;margin-top:10px;">
           <button class="btn-full" id="btn-biometric" onclick="loginBiometrico()" style="background:var(--gris3);border:1px solid var(--gris4);color:var(--blanco);display:flex;align-items:center;justify-content:center;gap:8px;">
             <span id="bio-icon">🔒</span> <span id="bio-txt">Usar Face ID / Huella</span>
           </button>
         </div>
-        <div class="divider">o</div>
-        <button class="social-btn" onclick="loginGoogle()">🇬 Continuar con Google</button>
         <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--texto);">¿Olvidaste tu contraseña? <span style="color:var(--amarillo);cursor:pointer;" onclick="resetPassword()">Recuperar</span></div>
       </div>
 
@@ -501,6 +515,15 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
             <div class="step-dot">3</div><div class="step-line"></div>
             <div class="step-dot">4</div>
           </div>
+
+          <!-- Sugerencia Google -->
+          <div style="background:rgba(245,196,0,0.06);border:1px solid rgba(245,196,0,0.18);border-radius:8px;padding:10px 12px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+            <span style="font-size:20px;">⚡</span>
+            <div style="flex:1;font-size:12px;color:var(--texto);line-height:1.5;">¿Tienes cuenta de Google? Es más rápido.<br>
+              <span style="color:var(--amarillo);cursor:pointer;font-weight:700;" onclick="showAuthTab('login', document.querySelector('.auth-tab'));setTimeout(()=>document.querySelector('.social-btn').click(),100)">Entrar con Google →</span>
+            </div>
+          </div>
+
           <div style="font-weight:700;font-size:14px;margin-bottom:14px;">¿Cómo usarás FleteCOL?</div>
           <div class="role-selector">
             <div class="role-opt" id="role-cliente" onclick="selRole('cliente')">
