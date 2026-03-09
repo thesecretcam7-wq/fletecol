@@ -396,6 +396,11 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
   .content { padding:16px; }
   .topbar { padding:0 16px; }
   .topbar-date { display:none; }
+  /* ── Anti-zoom móvil ── */
+  input, textarea, select,
+  .form-input, .soporte-reply-input, .search-box input {
+    font-size: 16px !important;
+  }
 }
 
 /* ═══ OVERLAY MÓVIL ═══ */
@@ -404,6 +409,36 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
   background:rgba(0,0,0,0.5); z-index:99;
 }
 .sidebar-overlay.open { display:block; }
+
+/* ═══ SOPORTE ADMIN ═══ */
+.soporte-admin-grid{display:grid;grid-template-columns:290px 1fr;height:calc(100vh - 60px - 96px);border:1px solid rgba(255,255,255,0.05);border-radius:16px;overflow:hidden;background:var(--gris2);}
+.soporte-tickets-list{border-right:1px solid rgba(255,255,255,0.05);overflow-y:auto;display:flex;flex-direction:column;}
+.soporte-list-header{padding:12px 16px;font-size:11px;font-weight:700;color:var(--texto);text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid rgba(255,255,255,0.05);background:var(--gris3);}
+.soporte-ticket-item{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:background 0.15s;}
+.soporte-ticket-item:hover{background:var(--gris3);}
+.soporte-ticket-item.active{background:rgba(245,196,0,0.08);border-right:3px solid var(--amarillo);}
+.soporte-ticket-id{font-size:11px;font-weight:700;color:var(--amarillo);margin-bottom:3px;}
+.soporte-ticket-preview{font-size:12px;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;}
+.soporte-ticket-meta{font-size:10px;color:var(--gris5);margin-top:5px;display:flex;gap:8px;align-items:center;}
+.stbadge{padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;}
+.stbadge.abierto{background:rgba(0,212,106,0.12);color:var(--verde);}
+.stbadge.cerrado{background:rgba(122,132,153,0.12);color:var(--texto);}
+.soporte-chat-panel{display:flex;flex-direction:column;background:var(--negro);}
+.soporte-chat-header{padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:space-between;background:var(--gris1);flex-shrink:0;}
+.soporte-chat-msgs{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:10px;}
+.s-amsg{max-width:75%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.6;word-break:break-word;}
+.s-amsg.user-msg{background:var(--gris3);color:var(--blanco);align-self:flex-start;border-bottom-left-radius:4px;}
+.s-amsg.admin-msg{background:var(--amarillo);color:#111;align-self:flex-end;border-bottom-right-radius:4px;}
+.s-amsg .msg-time{font-size:10px;margin-top:4px;opacity:0.55;}
+.s-amsg.user-msg .msg-time{text-align:left;}
+.s-amsg.admin-msg .msg-time{text-align:right;}
+.soporte-reply-area{padding:12px 16px;border-top:1px solid rgba(255,255,255,0.05);background:var(--gris1);display:flex;gap:10px;align-items:flex-end;flex-shrink:0;}
+.soporte-reply-input{flex:1;background:var(--gris3);border:1px solid var(--gris4);border-radius:10px;padding:10px 13px;color:var(--blanco);font-size:13px;font-family:'DM Sans',sans-serif;resize:none;outline:none;min-height:42px;max-height:100px;transition:border-color 0.2s;}
+.soporte-reply-input:focus{border-color:var(--amarillo);}
+.soporte-reply-btn{background:var(--amarillo);color:var(--negro);border:none;border-radius:10px;width:42px;height:42px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;font-weight:700;}
+.soporte-reply-btn:hover{transform:scale(1.05);}
+.soporte-reply-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+.soporte-no-sel{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--texto);font-size:13px;}
 </style>
 </head>
 <body>
@@ -457,6 +492,11 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
     <div class="nav-section-label" style="margin-top:12px;">Finanzas</div>
     <div class="nav-item" onclick="irA('p-pagos', this)">
       <span class="nav-icon">💰</span> Pagos y comisiones
+    </div>
+    <div class="nav-section-label" style="margin-top:12px;">Soporte</div>
+    <div class="nav-item" onclick="irA('p-soporte', this)">
+      <span class="nav-icon">💬</span> Chat de soporte
+      <span class="nav-badge green" id="badge-soporte">0</span>
     </div>
   </nav>
 
@@ -761,20 +801,8 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
         <div style="font-weight:800;font-size:18px;margin-bottom:20px;" id="modal-banner-title">Nuevo banner</div>
         <input type="hidden" id="banner-edit-id">
         <div style="margin-bottom:14px;">
-          <label style="font-size:12px;color:#888;display:block;margin-bottom:6px;">Imagen *</label>
-          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
-            <label for="banner-file-input" id="btn-subir-img" style="flex:1;padding:10px 14px;background:#0d0f14;border:1px dashed #F5C400;border-radius:8px;color:#F5C400;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:background 0.2s;">
-              📁 Subir imagen desde computador
-            </label>
-            <input type="file" id="banner-file-input" accept="image/*" style="display:none;" onchange="subirImagenBanner(this)">
-          </div>
-          <div id="banner-upload-progress" style="display:none;margin-bottom:8px;">
-            <div style="height:4px;background:#2a2d35;border-radius:4px;overflow:hidden;">
-              <div id="banner-progress-bar" style="height:100%;background:#F5C400;width:0%;transition:width 0.3s;border-radius:4px;"></div>
-            </div>
-            <div id="banner-upload-status" style="font-size:11px;color:#888;margin-top:4px;text-align:center;">Subiendo...</div>
-          </div>
-          <input id="banner-imagen" type="text" placeholder="O pega una URL de imagen aquí" oninput="previewBanner(this.value)" style="width:100%;padding:10px 14px;background:#0d0f14;border:1px solid #2a2d35;border-radius:8px;color:#fff;font-size:13px;box-sizing:border-box;">
+          <label style="font-size:12px;color:#888;display:block;margin-bottom:6px;">URL de la imagen *</label>
+          <input id="banner-imagen" type="text" placeholder="https://ejemplo.com/imagen.jpg" oninput="previewBanner(this.value)" style="width:100%;padding:10px 14px;background:#0d0f14;border:1px solid #2a2d35;border-radius:8px;color:#fff;font-size:13px;box-sizing:border-box;">
         </div>
         <div style="margin-bottom:14px;">
           <label style="font-size:12px;color:#888;display:block;margin-bottom:6px;">URL del link (al hacer clic)</label>
@@ -858,6 +886,49 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
               <tr><td colspan="6" style="text-align:center;padding:30px;color:#888;">Cargando pagos...</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ SOPORTE ══════════════ -->
+    <div class="pantalla" id="p-soporte">
+      <div class="section-header">
+        <div>
+          <div class="section-title">💬 Chat de soporte</div>
+          <div class="section-sub">Conversaciones con usuarios que necesitan ayuda</div>
+        </div>
+        <button onclick="cargarTicketsSoporte()" style="background:var(--gris3);border:1px solid var(--gris4);color:var(--texto);border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">🔄 Actualizar</button>
+      </div>
+      <div class="soporte-admin-grid">
+        <!-- Lista tickets -->
+        <div class="soporte-tickets-list" id="soporte-tickets-list">
+          <div class="soporte-list-header">Tickets</div>
+          <div style="padding:20px;font-size:12px;color:var(--texto);text-align:center;">Cargando...</div>
+        </div>
+        <!-- Panel chat -->
+        <div class="soporte-chat-panel" id="soporte-chat-panel">
+          <div class="soporte-no-sel" id="soporte-no-sel">
+            <div style="font-size:44px;">💬</div>
+            <div style="font-weight:700;font-size:15px;color:var(--blanco);">Selecciona un ticket</div>
+            <div>Elige una conversación para responder</div>
+          </div>
+          <div class="soporte-chat-header" id="soporte-chat-header" style="display:none;">
+            <div>
+              <div style="font-size:13px;font-weight:700;" id="soporte-chat-title">Ticket</div>
+              <div style="font-size:11px;color:var(--texto);" id="soporte-chat-sub"></div>
+            </div>
+            <button onclick="cerrarTicketAdmin()" id="btn-cerrar-ticket"
+              style="background:rgba(255,69,69,0.1);color:var(--rojo);border:1px solid rgba(255,69,69,0.2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">
+              ✕ Cerrar ticket
+            </button>
+          </div>
+          <div class="soporte-chat-msgs" id="soporte-admin-msgs" style="display:none;flex-direction:column;"></div>
+          <div class="soporte-reply-area" id="soporte-reply-area" style="display:none;">
+            <textarea class="soporte-reply-input" id="soporte-admin-input" placeholder="Escribe tu respuesta..." rows="1"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarRespuestaAdmin();}"
+              oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
+            <button class="soporte-reply-btn" onclick="enviarRespuestaAdmin()" id="soporte-reply-btn">➤</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1211,7 +1282,7 @@ function eliminarRuta(btn) {
 const pageTitles = {
   'p-dashboard':'Dashboard','p-pendientes':'Pendientes',
   'p-usuarios':'Todos los usuarios','p-baneados':'Usuarios baneados','p-banners':'Banners publicitarios','p-cuentas':'Cuentas bancarias',
-  'p-rutas':'Rutas publicadas','p-cargas':'Cargas publicadas','p-pagos':'Pagos y comisiones'
+  'p-rutas':'Rutas publicadas','p-cargas':'Cargas publicadas','p-pagos':'Pagos y comisiones','p-soporte':'Chat de soporte'
 };
 
 function irA(id, navEl) {
@@ -1227,6 +1298,7 @@ function irA(id, navEl) {
   if(id === 'p-banners') cargarBanners();
   if(id === 'p-cuentas') cargarCuentas();
   if(id === 'p-pagos') cargarPagos();
+  if(id === 'p-soporte') cargarTicketsSoporte();
 }
 
 // ══ FILTROS ══
@@ -1517,11 +1589,7 @@ async function cargarCuentas() {
 async function cargarBanners() {
   const grid = document.getElementById('banners-grid');
   if(!grid) return;
-  const { data: banners, error } = await sb.from('banners').select('*').order('orden');
-  if(error) {
-    grid.innerHTML = `<div style="text-align:center;color:#ef4444;padding:40px;grid-column:1/-1;">❌ Error al cargar banners: ${error.message}</div>`;
-    return;
-  }
+  const { data: banners } = await sb.from('banners').select('*').order('orden');
   if(!banners || banners.length === 0) {
     grid.innerHTML = '<div style="text-align:center;color:#888;padding:40px;grid-column:1/-1;">No hay banners. Crea el primero.</div>';
     return;
@@ -1542,79 +1610,6 @@ async function cargarBanners() {
         </div>
       </div>
     </div>`).join('');
-}
-
-async function subirImagenBanner(input) {
-  const file = input.files[0];
-  if(!file) return;
-
-  // Validar tipo y tamaño (max 3MB)
-  const tiposPermitidos = ['image/jpeg','image/png','image/webp','image/gif'];
-  if(!tiposPermitidos.includes(file.type)) {
-    alert('Solo se permiten imágenes JPG, PNG, WEBP o GIF');
-    return;
-  }
-  if(file.size > 3 * 1024 * 1024) {
-    alert('La imagen no puede superar 3MB');
-    return;
-  }
-
-  const progress = document.getElementById('banner-upload-progress');
-  const bar = document.getElementById('banner-progress-bar');
-  const status = document.getElementById('banner-upload-status');
-  const btnSubir = document.getElementById('btn-subir-img');
-
-  progress.style.display = 'block';
-  btnSubir.textContent = '⏳ Subiendo...';
-  btnSubir.style.opacity = '0.6';
-  btnSubir.style.pointerEvents = 'none';
-  bar.style.width = '30%';
-  status.textContent = 'Subiendo imagen...';
-
-  try {
-    const ext = file.name.split('.').pop();
-    const nombreArchivo = `banners/banner_${Date.now()}.${ext}`;
-
-    bar.style.width = '60%';
-
-    const { data, error } = await sb.storage
-      .from('documentos')
-      .upload(nombreArchivo, file, { upsert: true, contentType: file.type });
-
-    if(error) throw error;
-
-    bar.style.width = '100%';
-    status.textContent = '✅ Imagen subida correctamente';
-    status.style.color = '#22c55e';
-
-    // Construir URL pública
-    const { data: urlData } = sb.storage.from('documentos').getPublicUrl(nombreArchivo);
-    const url = urlData.publicUrl;
-
-    document.getElementById('banner-imagen').value = url;
-    previewBanner(url);
-
-    setTimeout(() => {
-      progress.style.display = 'none';
-      bar.style.width = '0%';
-      status.style.color = '#888';
-      btnSubir.textContent = '✅ Imagen cargada — subir otra';
-      btnSubir.style.opacity = '1';
-      btnSubir.style.pointerEvents = 'auto';
-    }, 1500);
-
-  } catch(e) {
-    bar.style.width = '0%';
-    status.textContent = '❌ Error al subir: ' + e.message;
-    status.style.color = '#ef4444';
-    btnSubir.textContent = '📁 Subir imagen desde computador';
-    btnSubir.style.opacity = '1';
-    btnSubir.style.pointerEvents = 'auto';
-    console.error('Error subiendo banner:', e);
-  }
-
-  // Limpiar input para poder subir el mismo archivo de nuevo
-  input.value = '';
 }
 
 function toggleCiudadCustom(val) {
@@ -1669,7 +1664,6 @@ function previewBanner(url) {
 }
 
 async function guardarBanner() {
-  const btnGuardar = document.querySelector('#modal-banner button[onclick="guardarBanner()"]');
   const id = document.getElementById('banner-edit-id').value;
   const imagen_url = document.getElementById('banner-imagen').value.trim();
   const link_url = document.getElementById('banner-link').value.trim();
@@ -1678,45 +1672,229 @@ async function guardarBanner() {
   let ciudad = document.getElementById('banner-ciudad').value;
   if(ciudad === 'otra') ciudad = document.getElementById('banner-ciudad-custom').value.trim() || 'todas';
   if(!imagen_url) { alert('La URL de imagen es requerida'); return; }
-
-  btnGuardar.textContent = 'Guardando...';
-  btnGuardar.disabled = true;
-
-  try {
-    const datos = { imagen_url, link_url, orden, activo, ciudad };
-    let error;
-
-    if(id) {
-      const res = await sb.from('banners').update(datos).eq('id', id);
-      error = res.error;
-    } else {
-      const res = await sb.from('banners').insert(datos);
-      error = res.error;
-    }
-
-    if(error) {
-      console.error('Error Supabase:', error);
-      alert('Error al guardar: ' + (error.message || JSON.stringify(error)));
-      btnGuardar.textContent = 'Guardar';
-      btnGuardar.disabled = false;
-      return;
-    }
-
-    cerrarModalBanner();
-    cargarBanners();
-
-  } catch(e) {
-    console.error('Error inesperado:', e);
-    alert('Error inesperado: ' + e.message);
-    btnGuardar.textContent = 'Guardar';
-    btnGuardar.disabled = false;
-  }
+  const datos = { imagen_url, link_url, orden, activo, ciudad };
+  if(id) { await sb.from('banners').update(datos).eq('id', id); }
+  else { await sb.from('banners').insert(datos); }
+  cerrarModalBanner();
+  cargarBanners();
 }
 
 async function eliminarBanner(id) {
   if(!confirm('¿Eliminar este banner?')) return;
   await sb.from('banners').delete().eq('id', id);
   cargarBanners();
+}
+
+// ══════════════════════════════════════════════
+//  AUDIO — Web Audio API (sin archivos externos)
+// ══════════════════════════════════════════════
+let _audioCtxAdmin = null;
+function getAudioCtxAdmin() {
+  if (!_audioCtxAdmin) _audioCtxAdmin = new (window.AudioContext || window.webkitAudioContext)();
+  return _audioCtxAdmin;
+}
+
+// Bip al enviar respuesta (admin)
+function sonarEnvioAdmin() {
+  try {
+    const ctx = getAudioCtxAdmin();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.06);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.12);
+  } catch(e) {}
+}
+
+// Triple bip ascendente cuando llega mensaje nuevo de usuario
+function sonarMensajeUsuario() {
+  try {
+    const ctx = getAudioCtxAdmin();
+    const notas = [660, 830, 990];
+    notas.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.1);
+      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.1);
+      gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + i * 0.1 + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.22);
+      osc.start(ctx.currentTime + i * 0.1);
+      osc.stop(ctx.currentTime + i * 0.1 + 0.25);
+    });
+  } catch(e) {}
+}
+
+// Sonido de ticket nuevo (diferente al de mensaje)
+function sonarTicketNuevo() {
+  try {
+    const ctx = getAudioCtxAdmin();
+    const notas = [440, 554, 659, 880];
+    notas.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.08);
+      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.08);
+      gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + i * 0.08 + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.08 + 0.2);
+      osc.start(ctx.currentTime + i * 0.08);
+      osc.stop(ctx.currentTime + i * 0.08 + 0.22);
+    });
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════
+//  SOPORTE ADMIN
+// ══════════════════════════════════════════════
+let soporteTicketSeleccionado = null;
+let soporteAdminSub = null;
+let ticketsConocidos = new Set();
+
+function formatHoraAdmin(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleString('es-CO', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+}
+
+async function cargarTicketsSoporte() {
+  const lista = document.getElementById('soporte-tickets-list');
+  if (!lista) return;
+
+  const { data: tickets } = await sb.from('soporte_tickets')
+    .select('*, soporte_mensajes(mensaje, created_at, origen)')
+    .order('created_at', { ascending: false });
+
+  if (!tickets || tickets.length === 0) {
+    lista.innerHTML = '<div class="soporte-list-header">Tickets</div><div style="padding:24px;font-size:12px;color:var(--texto);text-align:center;">No hay tickets aún.</div>';
+    document.getElementById('badge-soporte').textContent = '0';
+    return;
+  }
+
+  const abiertos = tickets.filter(t => t.estado === 'abierto').length;
+  document.getElementById('badge-soporte').textContent = abiertos;
+
+  // Detectar tickets nuevos y sonar
+  tickets.forEach(t => {
+    if (!ticketsConocidos.has(t.id) && ticketsConocidos.size > 0) sonarTicketNuevo();
+    ticketsConocidos.add(t.id);
+  });
+
+  lista.innerHTML = '<div class="soporte-list-header">Tickets (' + tickets.length + ')</div>' +
+    tickets.map(t => {
+      const msgs = (t.soporte_mensajes || []).sort((a,b) => new Date(b.created_at)-new Date(a.created_at));
+      const ultimo = msgs[0];
+      const preview = ultimo ? ultimo.mensaje.slice(0,42) + (ultimo.mensaje.length > 42 ? '…' : '') : 'Sin mensajes';
+      const activo = soporteTicketSeleccionado === t.id ? ' active' : '';
+      return `<div class="soporte-ticket-item${activo}" onclick="seleccionarTicketAdmin('${t.id}','${t.estado}',this)">
+        <div class="soporte-ticket-id">🎫 #${t.id.slice(0,8).toUpperCase()}</div>
+        <div class="soporte-ticket-preview">${preview}</div>
+        <div class="soporte-ticket-meta">
+          <span class="stbadge ${t.estado}">${t.estado === 'abierto' ? '● Abierto' : '✓ Cerrado'}</span>
+          <span>${formatHoraAdmin(t.created_at)}</span>
+        </div>
+      </div>`;
+    }).join('');
+
+  // Suscripción realtime a tickets nuevos
+  if (!window._soporteTicketsSub) {
+    window._soporteTicketsSub = sb.channel('admin-tickets-new')
+      .on('postgres_changes', { event:'INSERT', schema:'public', table:'soporte_tickets' }, () => {
+        cargarTicketsSoporte();
+      }).subscribe();
+  }
+}
+
+function renderMsgAdmin(msg) {
+  const esUser = msg.origen === 'usuario';
+  const div = document.createElement('div');
+  div.className = 's-amsg ' + (esUser ? 'user-msg' : 'admin-msg');
+  div.dataset.mid = msg.id;
+  div.innerHTML = `<div>${msg.mensaje}</div><div class="msg-time">${formatHoraAdmin(msg.created_at)}</div>`;
+  return div;
+}
+
+async function cargarMsgsAdmin(ticketId) {
+  const cont = document.getElementById('soporte-admin-msgs');
+  cont.innerHTML = '';
+  const { data } = await sb.from('soporte_mensajes')
+    .select('*').eq('ticket_id', ticketId).order('created_at', { ascending: true });
+  if (!data || data.length === 0) {
+    cont.innerHTML = '<div style="text-align:center;color:var(--texto);font-size:12px;padding:20px;">Sin mensajes aún.</div>';
+    return;
+  }
+  data.forEach(msg => cont.appendChild(renderMsgAdmin(msg)));
+  cont.scrollTop = cont.scrollHeight;
+}
+
+async function seleccionarTicketAdmin(ticketId, estado, el) {
+  soporteTicketSeleccionado = ticketId;
+  document.querySelectorAll('.soporte-ticket-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+
+  document.getElementById('soporte-no-sel').style.display = 'none';
+  document.getElementById('soporte-chat-header').style.display = 'flex';
+  const msgsEl = document.getElementById('soporte-admin-msgs');
+  msgsEl.style.display = 'flex';
+  msgsEl.style.flexDirection = 'column';
+  document.getElementById('soporte-reply-area').style.display = estado === 'abierto' ? 'flex' : 'none';
+  document.getElementById('soporte-chat-title').textContent = '🎫 Ticket #' + ticketId.slice(0,8).toUpperCase();
+  document.getElementById('soporte-chat-sub').textContent = estado === 'abierto' ? '● Ticket abierto' : '✓ Ticket cerrado';
+  document.getElementById('btn-cerrar-ticket').style.display = estado === 'abierto' ? 'inline-flex' : 'none';
+
+  await cargarMsgsAdmin(ticketId);
+
+  // Realtime mensajes del ticket seleccionado
+  if (soporteAdminSub) sb.removeChannel(soporteAdminSub);
+  soporteAdminSub = sb.channel('admin-chat-' + ticketId)
+    .on('postgres_changes', {
+      event:'INSERT', schema:'public', table:'soporte_mensajes',
+      filter:`ticket_id=eq.${ticketId}`
+    }, payload => {
+      const cont = document.getElementById('soporte-admin-msgs');
+      if (!cont.querySelector(`[data-mid="${payload.new.id}"]`)) {
+        cont.appendChild(renderMsgAdmin(payload.new));
+        cont.scrollTop = cont.scrollHeight;
+        // 🔔 Sonar solo si el mensaje lo envió el usuario (no el propio admin)
+        if (payload.new.origen === 'usuario') sonarMensajeUsuario();
+      }
+    }).subscribe();
+}
+
+async function enviarRespuestaAdmin() {
+  const inp = document.getElementById('soporte-admin-input');
+  const texto = inp.value.trim();
+  if (!texto || !soporteTicketSeleccionado) return;
+  const btn = document.getElementById('soporte-reply-btn');
+  btn.disabled = true;
+  inp.value = ''; inp.style.height = 'auto';
+  // 🔔 Sonido de envío
+  sonarEnvioAdmin();
+  await sb.from('soporte_mensajes').insert({
+    ticket_id: soporteTicketSeleccionado,
+    mensaje: texto,
+    origen: 'admin'
+  });
+  btn.disabled = false;
+  inp.focus();
+}
+
+async function cerrarTicketAdmin() {
+  if (!soporteTicketSeleccionado) return;
+  if (!confirm('¿Marcar este ticket como cerrado?')) return;
+  await sb.from('soporte_tickets').update({ estado: 'cerrado' }).eq('id', soporteTicketSeleccionado);
+  toast('Ticket cerrado correctamente', 'success');
+  soporteTicketSeleccionado = null;
+  document.getElementById('soporte-no-sel').style.display = 'flex';
+  document.getElementById('soporte-chat-header').style.display = 'none';
+  document.getElementById('soporte-admin-msgs').style.display = 'none';
+  document.getElementById('soporte-reply-area').style.display = 'none';
+  cargarTicketsSoporte();
 }
 </script>
 
