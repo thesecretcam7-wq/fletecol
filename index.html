@@ -99,7 +99,12 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
 .btn-full:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
 
 /* ══ FORM ══ */
-.form-group{margin-bottom:16px;}
+.form-group{margin-bottom:16px;position:relative;}
+.ac-list{position:absolute;top:100%;left:0;right:0;background:var(--gris2);border:1.5px solid var(--amarillo);border-radius:10px;z-index:200;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.12);margin-top:2px;}
+.ac-item{padding:10px 14px;font-size:13px;color:var(--blanco);cursor:pointer;border-bottom:1px solid var(--gris3);transition:background 0.15s;}
+.ac-item:last-child{border-bottom:none;}
+.ac-item:hover,.ac-item:active{background:var(--gris3);}
+.ac-item strong{color:var(--amarillo);}
 .form-label{display:block;font-size:11px;font-weight:600;color:var(--texto);margin-bottom:7px;text-transform:uppercase;letter-spacing:0.8px;}
 .form-input{width:100%;background:#FFFFFF;border:1.5px solid var(--gris4);border-radius:6px;padding:12px 15px;color:var(--blanco);font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border-color 0.2s;}
 .form-input:focus{border-color:var(--amarillo);}
@@ -852,8 +857,8 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
           </div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label class="form-label">📍 Origen</label><input class="form-input" id="r-origen" placeholder="Bogotá"></div>
-          <div class="form-group"><label class="form-label">🏁 Destino</label><input class="form-input" id="r-destino" placeholder="Medellín"></div>
+          <div class="form-group"><label class="form-label">📍 Origen</label><input class="form-input" id="r-origen" placeholder="Bogotá" autocomplete="off" oninput="acBarrios('r-origen','r-origen-list')"><div id="r-origen-list" class="ac-list" style="display:none;"></div></div>
+          <div class="form-group"><label class="form-label">🏁 Destino</label><input class="form-input" id="r-destino" placeholder="Medellín" autocomplete="off" oninput="acBarrios('r-destino','r-destino-list')"><div id="r-destino-list" class="ac-list" style="display:none;"></div></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label class="form-label">📅 Fecha</label><input class="form-input" type="date" id="r-fecha"></div>
@@ -980,8 +985,8 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
         <!-- CAMPOS COMUNES -->
         <div class="form-group"><label class="form-label">📝 Descripción adicional</label><input class="form-input" id="c-desc" placeholder="Detalles importantes para el conductor..."></div>
         <div class="form-row">
-          <div class="form-group"><label class="form-label">📍 Origen</label><input class="form-input" id="c-origen" placeholder="Chapinero, Bogotá"></div>
-          <div class="form-group"><label class="form-label">🏁 Destino</label><input class="form-input" id="c-destino" placeholder="Bello, Antioquia"></div>
+          <div class="form-group"><label class="form-label">📍 Origen</label><input class="form-input" id="c-origen" placeholder="Chapinero, Bogotá" autocomplete="off" oninput="acBarrios('c-origen','c-origen-list')"><div id="c-origen-list" class="ac-list" style="display:none;"></div></div>
+          <div class="form-group"><label class="form-label">🏁 Destino</label><input class="form-input" id="c-destino" placeholder="Bello, Antioquia" autocomplete="off" oninput="acBarrios('c-destino','c-destino-list')"><div id="c-destino-list" class="ac-list" style="display:none;"></div></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label class="form-label">⚖️ Peso aprox.</label><input class="form-input" id="c-peso" placeholder="300 kg"></div>
@@ -3672,6 +3677,57 @@ async function publicarRuta() {
   misRutas.push({ titulo: document.getElementById('r-origen').value + ' → ' + document.getElementById('r-destino').value, sub: vehSeleccionado + ' · ' + document.getElementById('r-fecha').value, icon:'🚐' });
   setTimeout(() => irApp('s-mis'), 1000);
 }
+
+// ── AUTOCOMPLETE BARRIOS ──────────────────────────────────────
+let acTimer = null;
+async function acBarrios(inputId, listId) {
+  const input = document.getElementById(inputId);
+  const list  = document.getElementById(listId);
+  const q     = input.value.trim();
+  if(q.length < 2) { list.style.display='none'; return; }
+
+  // Ciudad base: perfil → selector de ciudad → fallback Colombia
+  const ciudad = perfilActual?.ciudad
+    || document.getElementById('depto-sel')?.value
+    || '';
+
+  clearTimeout(acTimer);
+  acTimer = setTimeout(async () => {
+    try {
+      const query = ciudad ? `${q}, ${ciudad}, Colombia` : `${q}, Colombia`;
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=6&accept-language=es&countrycodes=co`;
+      const res  = await fetch(url, { headers:{ 'Accept-Language':'es' } });
+      const data = await res.json();
+
+      if(!data.length) { list.style.display='none'; return; }
+
+      list.innerHTML = data.map(p => {
+        const barrio  = p.address?.suburb || p.address?.neighbourhood || p.address?.quarter || p.address?.hamlet || '';
+        const munic   = p.address?.city    || p.address?.town || p.address?.village || p.address?.county || '';
+        const depto   = p.address?.state   || '';
+        const label   = [barrio, munic, depto].filter(Boolean).join(', ');
+        const boldQ   = label.replace(new RegExp(`(${q})`, 'gi'), '<strong>$1</strong>');
+        return `<div class="ac-item" onmousedown="elegirAC('${inputId}','${listId}','${label.replace(/'/g,"\\'")}')">📍 ${boldQ}</div>`;
+      }).join('');
+      list.style.display = 'block';
+    } catch(e) { list.style.display='none'; }
+  }, 350);
+}
+
+function elegirAC(inputId, listId, valor) {
+  document.getElementById(inputId).value = valor;
+  document.getElementById(listId).style.display = 'none';
+}
+
+// Cerrar listas al hacer clic fuera
+document.addEventListener('click', e => {
+  ['c-origen-list','c-destino-list','r-origen-list','r-destino-list'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el && !el.contains(e.target) && e.target.id !== id.replace('-list',''))
+      el.style.display = 'none';
+  });
+});
+// ─────────────────────────────────────────────────────────────
 
 async function publicarCarga() {
   if(perfilActual?.estado === 'pendiente') {
