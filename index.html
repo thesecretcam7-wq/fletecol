@@ -1551,7 +1551,25 @@ async function pagoWompiExitoso(txData, convIdParam) {
       leido: false
     });
     if(error) console.error('❌ Error guardando recibo:', error.message, error.details);
-    else console.log('✅ Recibo guardado en conv:', convId);
+    else {
+      console.log('✅ Recibo guardado en conv:', convId);
+      // Renderizar el recibo localmente para el cliente (el realtime ignora mensajes propios)
+      const wrap = document.getElementById('msgs-wrap');
+      if(wrap) {
+        const msgLocal = {
+          id: 'local-recibo-' + Date.now(),
+          conversacion_id: convId,
+          emisor_id: perfilActual.id,
+          tipo: 'recibo',
+          contenido: JSON.stringify({ monto, ref, metodo, pagador: perfilActual.nombre + ' ' + (perfilActual.apellido||'') }),
+          created_at: new Date().toISOString()
+        };
+        if(!wrap.querySelector('[data-msg-id="' + msgLocal.id + '"]')) {
+          renderMensaje(msgLocal);
+          wrap.scrollTop = 99999;
+        }
+      }
+    }
 
     // Obtener datos de la conversación para tener el conductor_id seguro
     let conductorId = convActual?.otro_id || null;
