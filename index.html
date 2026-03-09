@@ -23,7 +23,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 /* ══ NAV ══ */
-.topnav{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:var(--gris1);border-bottom:1px solid rgba(0,0,0,0.08);position:sticky;top:0;z-index:100;flex-shrink:0;}
+.topnav{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:var(--gris1);border-bottom:1px solid rgba(0,0,0,0.08);position:sticky;top:0;z-index:100;flex-shrink:0;overflow:visible;}
 .topnav-landing{justify-content:center;position:relative;}
 .logo{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;letter-spacing:1px;cursor:pointer;}
 .logo span{color:var(--amarillo);}
@@ -405,7 +405,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
 </div>
 
 <!-- ══════════ SCREEN 1: LANDING ══════════ -->
-<div class="screen activa" id="s-landing" style="overflow-x:hidden;width:100%;max-width:100vw;background:#FFFFFF;">
+<div class="screen activa" id="s-landing" style="overflow-x:clip;width:100%;max-width:100vw;background:#FFFFFF;">
   <nav class="topnav topnav-landing" id="nav-landing">
     <div style="position:absolute;left:20px;top:50%;transform:translateY(-50%);">
       <button class="nav-menu-btn" onclick="toggleNavMenu(event)">
@@ -833,6 +833,17 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
         </div>
         <div id="cp-detalles"></div>
         <button class="btn-full" style="margin-top:14px;" onclick="irApp('s-chat')">💬 Negociar precio</button>
+        <!-- Sección de reseñas: solo visible para clientes -->
+        <div id="cp-resenas-wrap" style="display:none; margin-top:14px;">
+          <div style="font-weight:700;font-size:13px;margin-bottom:8px;border-top:1px solid var(--gris3);padding-top:12px;">⭐ Reseñas recientes</div>
+          <div id="cp-resenas-lista" style="max-height:180px;overflow-y:auto;margin-bottom:10px;"></div>
+          <div id="cp-form-resena" style="border-top:1px solid var(--gris3);padding-top:10px;">
+            <div style="font-size:12px;color:var(--texto);margin-bottom:6px;">Deja tu reseña:</div>
+            <div id="cp-stars-input" data-val="0" style="font-size:26px;cursor:pointer;margin-bottom:6px;letter-spacing:2px;">☆☆☆☆☆</div>
+            <textarea id="cp-comentario" placeholder="Escribe un comentario (opcional)..." style="width:100%;border-radius:8px;border:1px solid var(--gris3);background:var(--gris2);color:var(--blanco);padding:8px;font-size:13px;resize:none;height:60px;box-sizing:border-box;font-family:inherit;"></textarea>
+            <button class="btn-full" style="margin-top:6px;" onclick="enviarResena()">Enviar reseña</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1450,7 +1461,7 @@ async function prepararWompi() {
     params.set('redirect-url', redirectUrl);
     params.set('customer-data:email', perfilActual.email || '');
     params.set('customer-data:full-name', ((perfilActual.nombre||'')+' '+(perfilActual.apellido||'')).trim());
-    params.set('customer-data:phone-number', perfilActual.telefono || '');
+    params.set('customer-data:phone-number', '');
 
     const wompiUrl = `https://checkout.wompi.co/p/?${params.toString()}`;
     console.log('✅ URL final:', wompiUrl);
@@ -3243,6 +3254,7 @@ async function cargarRutas() {
           <div>
             <div style="font-weight:700;font-size:13px;">${r.conductor?.nombre||'Conductor'} ${r.conductor?.apellido||''}</div>
             <div style="font-size:11px;color:var(--texto);">${'★'.repeat(Math.floor(r.conductor?.estrellas||5))} ${r.conductor?.estrellas||5} · ${r.conductor?.num_reviews||0} reseñas</div>
+            <div style="font-size:11px;color:var(--texto);">🛣️ ${r.conductor?.viajes_completados||0} rutas realizadas</div>
           </div>
         </div>
         <div style="background:var(--gris3);border-radius:8px;padding:4px 11px;font-size:11px;font-weight:600;">${r.vehiculo==='moto'?'🏍️':r.vehiculo==='camioneta'?'🚐':r.vehiculo==='camion'?'🚚':'🚛'} ${r.vehiculo}</div>
@@ -3317,9 +3329,9 @@ async function cargarRutas() {
 function renderRutasDemo() {
   // Rutas demo mientras no hay datos reales
   const demos = [
-    {nombre:'Juan Pablo R.',estrellas:4.9,reviews:47,veh:'camioneta',origen:'Bogotá',destino:'Medellín',fecha:'Mañana',hora:'6:00 AM',cap:'800 kg',precio:350000},
-    {nombre:'María F. García',estrellas:4.7,reviews:123,veh:'moto',origen:'Bogotá',destino:'Usaquén',fecha:'Hoy',hora:'Disponible',cap:'25 kg',precio:18000},
-    {nombre:'Transportes Díaz',estrellas:5.0,reviews:12,veh:'mula',origen:'Buenaventura',destino:'Bogotá',fecha:'Viernes',hora:'5:00 AM',cap:'20 ton',precio:0},
+    {nombre:'Juan Pablo R.',estrellas:4.9,reviews:47,viajes:312,veh:'camioneta',origen:'Bogotá',destino:'Medellín',fecha:'Mañana',hora:'6:00 AM',cap:'800 kg',precio:350000},
+    {nombre:'María F. García',estrellas:4.7,reviews:123,viajes:89,veh:'moto',origen:'Bogotá',destino:'Usaquén',fecha:'Hoy',hora:'Disponible',cap:'25 kg',precio:18000},
+    {nombre:'Transportes Díaz',estrellas:5.0,reviews:12,viajes:204,veh:'mula',origen:'Buenaventura',destino:'Bogotá',fecha:'Viernes',hora:'5:00 AM',cap:'20 ton',precio:0},
   ];
   document.getElementById('count-r').textContent = demos.length;
   document.getElementById('rutas-list').innerHTML = demos.map(r => `
@@ -3327,7 +3339,7 @@ function renderRutasDemo() {
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="rc-av">👨<div class="rc-online"></div></div>
-          <div><div style="font-weight:700;font-size:13px;">${r.nombre}</div><div style="font-size:11px;color:var(--texto);">${'★'.repeat(Math.floor(r.estrellas))} ${r.estrellas} · ${r.reviews} reseñas</div></div>
+          <div><div style="font-weight:700;font-size:13px;">${r.nombre}</div><div style="font-size:11px;color:var(--texto);">${'★'.repeat(Math.floor(r.estrellas))} ${r.estrellas} · ${r.reviews} reseñas</div><div style="font-size:11px;color:var(--texto);">🛣️ ${r.viajes||0} rutas realizadas</div></div>
         </div>
         <div style="background:var(--gris3);border-radius:8px;padding:4px 11px;font-size:11px;font-weight:600;">${r.veh==='moto'?'🏍️':r.veh==='camioneta'?'🚐':r.veh==='camion'?'🚚':'🚛'} ${r.veh}</div>
       </div>
@@ -3346,7 +3358,11 @@ function renderRutasDemo() {
     </div>`).join('');
 }
 
+// ID del conductor actualmente visible en el panel lateral
+let conductorActualId = null;
+
 function selRuta(r) {
+  conductorActualId = r.conductor_id || null;
   document.getElementById('cp-empty').style.display = 'none';
   document.getElementById('cp-perfil').style.display = 'block';
   document.getElementById('cp-emoji').textContent = '👨';
@@ -3359,6 +3375,102 @@ function selRuta(r) {
     <div class="cp-row"><span style="color:var(--texto)">Vehículo</span><span style="font-weight:600;">${r.vehiculo}</span></div>
     <div class="cp-row"><span style="color:var(--texto)">Capacidad</span><span style="font-weight:600;">${r.capacidad||'—'}</span></div>
     <div class="cp-row"><span style="color:var(--texto)">Ciudad</span><span style="font-weight:600;">${r.conductor?.ciudad||'—'}</span></div>`;
+  // Mostrar sección de reseñas solo si el usuario logueado es cliente
+  const wrap = document.getElementById('cp-resenas-wrap');
+  if (perfilActual?.rol === 'cliente' && conductorActualId) {
+    wrap.style.display = 'block';
+    seleccionarEstrellaResena(0); // reset estrellas
+    document.getElementById('cp-comentario').value = '';
+    cargarResenas(conductorActualId);
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+// ── Reseñas ──────────────────────────────────────────
+function seleccionarEstrellaResena(n) {
+  const el = document.getElementById('cp-stars-input');
+  if (!el) return;
+  el.dataset.val = n;
+  el.textContent = '★'.repeat(n) + '☆'.repeat(5 - n);
+}
+
+// Activar click en estrellas
+(function() {
+  document.addEventListener('click', function(e) {
+    const el = document.getElementById('cp-stars-input');
+    if (!el || !el.contains(e.target)) return;
+    const rect = el.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const starW = rect.width / 5;
+    const n = Math.ceil(x / starW);
+    seleccionarEstrellaResena(Math.min(5, Math.max(1, n)));
+  });
+})();
+
+async function cargarResenas(conductorId) {
+  const lista = document.getElementById('cp-resenas-lista');
+  lista.innerHTML = '<div style="font-size:12px;color:var(--texto);">Cargando reseñas…</div>';
+  try {
+    const { data, error } = await _supabase
+      .from('resenas')
+      .select('estrellas, comentario, created_at')
+      .eq('conductor_id', conductorId)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      lista.innerHTML = '<div style="font-size:12px;color:var(--texto);font-style:italic;">Sin reseñas aún. ¡Sé el primero!</div>';
+      return;
+    }
+    lista.innerHTML = data.map(rv => `
+      <div style="border-bottom:1px solid var(--gris3);padding:8px 0;font-size:12px;">
+        <div style="color:var(--amarillo);font-size:14px;">${'★'.repeat(rv.estrellas)}${'☆'.repeat(5-rv.estrellas)}</div>
+        ${rv.comentario ? `<div style="color:var(--blanco);margin-top:3px;">${rv.comentario}</div>` : ''}
+        <div style="color:var(--texto);font-size:11px;margin-top:2px;">${new Date(rv.created_at).toLocaleDateString('es-CO')}</div>
+      </div>`).join('');
+  } catch(e) {
+    lista.innerHTML = '<div style="font-size:12px;color:var(--texto);font-style:italic;">No se pudieron cargar las reseñas.</div>';
+  }
+}
+
+async function enviarResena() {
+  const estrellas = parseInt(document.getElementById('cp-stars-input').dataset.val || '0');
+  if (estrellas < 1) { toast('⭐ Selecciona al menos 1 estrella'); return; }
+  if (!conductorActualId) { toast('No se identificó el conductor'); return; }
+  const comentario = document.getElementById('cp-comentario').value.trim();
+  try {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (!user) { toast('Debes iniciar sesión'); return; }
+    // Insertar reseña
+    const { error: insErr } = await _supabase.from('resenas').insert({
+      conductor_id: conductorActualId,
+      cliente_id: user.id,
+      estrellas,
+      comentario: comentario || null
+    });
+    if (insErr) throw insErr;
+    // Recalcular promedio y num_reviews del conductor
+    const { data: todas, error: selErr } = await _supabase
+      .from('resenas').select('estrellas').eq('conductor_id', conductorActualId);
+    if (!selErr && todas && todas.length > 0) {
+      const prom = todas.reduce((s, r) => s + r.estrellas, 0) / todas.length;
+      await _supabase.from('usuarios').update({
+        estrellas: Math.round(prom * 10) / 10,
+        num_reviews: todas.length
+      }).eq('id', conductorActualId);
+      // Actualizar UI del panel
+      document.getElementById('cp-stars2').textContent = '★'.repeat(Math.floor(prom));
+      document.getElementById('cp-rev2').textContent = `${todas.length} reseñas`;
+      document.getElementById('cp-cal2').textContent = (Math.round(prom * 10) / 10).toFixed(1);
+    }
+    toast('✅ Reseña enviada, ¡gracias!');
+    seleccionarEstrellaResena(0);
+    document.getElementById('cp-comentario').value = '';
+    cargarResenas(conductorActualId);
+  } catch(e) {
+    toast('Error al enviar reseña. Verifica que la tabla exista en Supabase.');
+  }
 }
 
 function filtVeh(veh, btn) {
@@ -4888,8 +5000,20 @@ async function abrirSoporteApp() {
   const map = {'s-rutas':0,'s-publicar':1,'s-chat':2,'s-pagos':3,'s-perfil':4};
   document.querySelectorAll('.bnav-item').forEach((b,i) => b.classList.toggle('active', i === map['s-perfil']));
   document.getElementById('bottom-nav').classList.add('visible');
+  // Ajustar botón volver para regresar a perfil (no al landing)
+  if (pantalla) {
+    const btnVolver = pantalla.querySelector('button');
+    if (btnVolver && btnVolver.textContent.includes('Volver')) {
+      btnVolver.setAttribute('onclick', "irApp('s-perfil')");
+      btnVolver.textContent = '← Volver';
+    }
+  }
   // Iniciar soporte (obtiene o crea ticket, carga mensajes y suscripción)
-  await iniciarSoporte();
+  try {
+    await iniciarSoporte();
+  } catch(e) {
+    console.warn('Error al iniciar soporte:', e);
+  }
 }
 </script><script>
 // ══════════════════════════════════════════════
