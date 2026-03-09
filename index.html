@@ -4989,30 +4989,23 @@ init();
   </div>
 </div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js">
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+<script>
 // ══ SOPORTE DESDE APP (usuario logueado) ══
 async function abrirSoporteApp() {
-  // Usar ir() para navegación correcta
-  ir('s-soporte');
+  // Navegar a soporte como pantalla de app
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('activa'));
+  const pantalla = document.getElementById('s-soporte');
+  if (pantalla) pantalla.classList.add('activa');
+  // Mostrar bottom-nav y marcar Perfil activo
   document.getElementById('bottom-nav').classList.add('visible');
-  // Marcar "Perfil" activo en bottom nav
   const map = {'s-rutas':0,'s-publicar':1,'s-chat':2,'s-pagos':3,'s-perfil':4};
   document.querySelectorAll('.bnav-item').forEach((b,i) => b.classList.toggle('active', i === map['s-perfil']));
-  // Ajustar botón volver para regresar a perfil
-  const pantalla = document.getElementById('s-soporte');
-  if (pantalla) {
-    pantalla.querySelectorAll('button').forEach(btn => {
-      if (btn.textContent.includes('Volver') || btn.textContent.includes('←')) {
-        btn.setAttribute('onclick', "irApp('s-perfil')");
-      }
-    });
-  }
+  // Apuntar botón volver a perfil (no al landing)
+  const btnVolver = pantalla ? pantalla.querySelector('button') : null;
+  if (btnVolver) btnVolver.setAttribute('onclick', "irApp('s-perfil')");
   // Iniciar soporte
-  try {
-    await iniciarSoporte();
-  } catch(e) {
-    console.warn('Error al iniciar soporte:', e);
-  }
+  try { await iniciarSoporte(); } catch(e) { console.warn('soporte:', e); }
 }
 </script><script>
 // ══════════════════════════════════════════════
