@@ -4385,6 +4385,7 @@ function suscribirMensajes(convId) {
         if(wrap && !wrap.querySelector(`[data-msg-id="${msg.id}"]`)) {
           renderMensaje(msg);
           wrap.scrollTop = 99999;
+          sonarMensajeEntrante();
           // Si el cliente recibe oferta_aceptada → actualizar monto automáticamente
           if(msg.tipo === 'oferta_aceptada' && perfilActual?.rol === 'cliente') {
             const { data: conv } = await sb.from('conversaciones')
@@ -4555,6 +4556,7 @@ async function enviarMsg() {
   for(const p of PATRONES){p.r.lastIndex=0;if(p.r.test(txt)){bloq=true;break;}}
   if(bloq){toast('🚫 Mensaje bloqueado','error');return;}
   el.value='';el.style.height='auto';
+  sonarEnvio();
 
   // Mostrar mensaje optimistamente ANTES de enviarlo a Supabase
   const wrap = document.getElementById('msgs-wrap');
