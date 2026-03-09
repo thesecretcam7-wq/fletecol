@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="color-scheme" content="dark">
   <meta name="supported-color-schemes" content="dark">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FleteCOL — Transporte seguro en Colombia</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -15,7 +15,7 @@
   --texto:#52525B;--verde:#16A34A;--rojo:#DC2626;--azul:#2563EB;--naranja:#C41E2A;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-html{overscroll-behavior-x:none;color-scheme:light;}*,*::before,*::after{box-sizing:border-box;}body{background:#FFFFFF !important;color:#111113 !important;font-family:'Inter',sans-serif;min-height:100vh;overscroll-behavior-x:none;max-width:100vw;touch-action:pan-y;-webkit-text-size-adjust:100%;}
+html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::before,*::after{box-sizing:border-box;}body{background:#FFFFFF !important;color:#111113 !important;font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden;overscroll-behavior-x:none;max-width:100vw;touch-action:pan-y;-webkit-text-size-adjust:100%;}
 
 /* ══ SCREENS ══ */
 .screen{display:none;min-height:100vh;flex-direction:column;}
@@ -24,12 +24,50 @@ html{overscroll-behavior-x:none;color-scheme:light;}*,*::before,*::after{box-siz
 
 /* ══ NAV ══ */
 .topnav{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:var(--gris1);border-bottom:1px solid rgba(0,0,0,0.08);position:sticky;top:0;z-index:100;flex-shrink:0;}
+.topnav-landing{justify-content:center;position:relative;}
 .logo{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;letter-spacing:1px;cursor:pointer;}
 .logo span{color:var(--amarillo);}
 .logo-tag{font-size:9px;background:var(--amarillo);color:#FFFFFF;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;vertical-align:middle;}
 
+/* ══ MENÚ DESPLEGABLE ══ */
+.nav-menu-btn{background:transparent;border:1.5px solid var(--gris4);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;color:var(--blanco);font-family:'Inter',sans-serif;display:flex;align-items:center;gap:7px;transition:all 0.2s;}
+.nav-menu-btn:hover{border-color:var(--amarillo);color:var(--amarillo);}
+.nav-dropdown{position:absolute;left:0;top:calc(100% + 8px);background:#FFFFFF;border:1px solid rgba(0,0,0,0.09);border-radius:12px;min-width:230px;box-shadow:0 8px 32px rgba(0,0,0,0.13);z-index:300;overflow:hidden;animation:fadeIn 0.18s ease;}
+.nav-dropdown.hidden{display:none;}
+.nav-dd-item{display:flex;align-items:center;gap:10px;padding:13px 18px;font-size:13px;font-weight:600;color:var(--blanco);cursor:pointer;transition:background 0.15s;border:none;background:transparent;width:100%;font-family:'Inter',sans-serif;text-align:left;}
+.nav-dd-item:hover{background:var(--gris2);}
+.nav-dd-item.highlight{color:var(--amarillo);}
+.nav-dd-sep{height:1px;background:var(--gris3);margin:4px 0;}
+
+/* ══ PANTALLA POLÍTICAS ══ */
+.politicas-wrap{flex:1;padding:28px 24px;max-width:700px;margin:0 auto;width:100%;box-sizing:border-box;}
+.politicas-section{margin-bottom:28px;}
+.politicas-section h2{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;margin-bottom:10px;color:var(--blanco);}
+.politicas-section p{font-size:13px;color:var(--texto);line-height:1.8;margin-bottom:8px;}
+.politicas-section ul{font-size:13px;color:var(--texto);line-height:1.8;padding-left:18px;}
+.politicas-section ul li{margin-bottom:4px;}
+
+/* ══ CHAT SOPORTE ══ */
+.soporte-wrap{flex:1;display:flex;flex-direction:column;max-width:640px;margin:0 auto;width:100%;padding:0;height:calc(100vh - 56px);box-sizing:border-box;}
+.soporte-msgs{flex:1;overflow-y:auto;padding:20px 20px 8px;display:flex;flex-direction:column;gap:12px;}
+.smsg{max-width:80%;padding:11px 15px;border-radius:16px;font-size:13px;line-height:1.6;word-break:break-word;}
+.smsg.user{background:var(--amarillo);color:#111;align-self:flex-end;border-bottom-right-radius:4px;}
+.smsg.user .smsg-time{color:rgba(0,0,0,0.45);font-size:10px;margin-top:4px;text-align:right;}
+.smsg.admin-reply{background:var(--gris2);border:1px solid rgba(0,0,0,0.06);color:var(--blanco);align-self:flex-start;border-bottom-left-radius:4px;}
+.smsg.admin-reply .smsg-time{color:var(--gris5);font-size:10px;margin-top:4px;}
+.smsg-name{font-size:10px;font-weight:700;color:var(--amarillo);margin-bottom:3px;}
+.soporte-input-area{padding:12px 16px;background:var(--gris1);border-top:1px solid rgba(0,0,0,0.07);display:flex;gap:10px;align-items:flex-end;}
+.soporte-textarea{flex:1;background:#FFFFFF;border:1.5px solid var(--gris4);border-radius:10px;padding:10px 13px;font-size:13px;font-family:'Inter',sans-serif;color:var(--blanco);resize:none;outline:none;min-height:44px;max-height:100px;transition:border-color 0.2s;line-height:1.5;}
+.soporte-textarea:focus{border-color:var(--amarillo);}
+.soporte-send{background:var(--amarillo);border:none;border-radius:10px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;flex-shrink:0;transition:all 0.2s;}
+.soporte-send:hover{transform:scale(1.05);}
+.soporte-send:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+.soporte-empty{text-align:center;padding:40px 20px;color:var(--gris5);}
+.soporte-empty-icon{font-size:42px;margin-bottom:12px;}
+.soporte-ticket-badge{background:rgba(196,30,42,0.08);border:1px solid rgba(196,30,42,0.15);border-radius:8px;padding:8px 14px;font-size:11px;color:var(--texto);text-align:center;margin:0 16px 8px;}
+
 /* ══ BOTTOM NAV ══ */
-.bottom-nav{position:fixed !important;bottom:0 !important;left:0 !important;right:0 !important;background:#F8F8F8;border-top:1px solid rgba(0,0,0,0.08);display:none;z-index:9999 !important;grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom,0px);transform:translateZ(0) !important;-webkit-transform:translateZ(0) !important;will-change:transform;}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#F8F8F8;border-top:1px solid rgba(0,0,0,0.08);display:none;z-index:1000;grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom,0px);transform:translateZ(0);-webkit-transform:translateZ(0);will-change:transform;}
 .app-screen{padding-bottom:80px;}
 .bottom-nav.visible{display:grid;}
 .bnav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px;cursor:pointer;transition:all 0.15s;gap:3px;border:none;background:transparent;font-family:'Inter',sans-serif;min-width:44px;}
@@ -150,7 +188,7 @@ html{overscroll-behavior-x:none;color-scheme:light;}*,*::before,*::after{box-siz
 .loc-banner.gps{background:rgba(0,212,106,0.05);border-bottom-color:rgba(0,212,106,0.15);}
 .rutas-wrap{display:grid;grid-template-columns:1fr 340px;flex:1;overflow:hidden;}
 .rutas-list{padding:20px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
-.carrusel-slide{min-width:100%;cursor:pointer;border-radius:10px;overflow:hidden;line-height:0;} .carrusel-slide img{width:100%;object-fit:cover;display:block;border-radius:10px;max-height:160px;} @media(min-width:768px){.carrusel-slide img{max-height:220px;}}
+.carrusel-slide{min-width:100%;height:110px;background-size:cover;background-position:center;cursor:pointer;border-radius:6px;}
 .carrusel-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.4);cursor:pointer;transition:all 0.2s;}
 .carrusel-dot.active{background:#fff;width:18px;border-radius:3px;}
 .ruta-card{background:var(--gris2);border:1px solid rgba(0,0,0,0.04);border-radius:8px;padding:18px;cursor:pointer;transition:all 0.2s;position:relative;}
@@ -331,26 +369,13 @@ html{overscroll-behavior-x:none;color-scheme:light;}*,*::before,*::after{box-siz
   .btn-primary,.btn-secondary{font-size:13px;}
   .auth-box{padding:20px 14px;}
   .loading-box{padding:24px 20px;margin:0 16px;}
-  .form-input{font-size:16px;}
+  /* ── Anti-zoom: el navegador móvil hace zoom si font-size < 16px ── */
+  input, textarea, select,
+  .form-input, .sb-input, .soporte-textarea,
+  .msg-input2, .soporte-reply-input {
+    font-size: 16px !important;
+  }
 }
-
-/* ══ AUTOCOMPLETE CIUDADES ══ */
-.autocomplete-wrap { position:relative; }
-.autocomplete-list {
-  position:absolute; top:100%; left:0; right:0; z-index:9999;
-  background:var(--gris2); border:1px solid var(--gris4);
-  border-radius:0 0 10px 10px; max-height:200px; overflow-y:auto;
-  box-shadow:0 8px 24px rgba(0,0,0,0.18);
-}
-.autocomplete-item {
-  padding:10px 14px; font-size:13px; cursor:pointer;
-  border-bottom:1px solid var(--gris3); color:var(--blanco);
-  display:flex; align-items:center; gap:8px;
-}
-.autocomplete-item:last-child { border-bottom:none; }
-.autocomplete-item:hover, .autocomplete-item.sel { background:var(--gris3); }
-.autocomplete-item span.city-name { font-weight:600; }
-.autocomplete-item span.city-dep { font-size:11px; color:var(--texto); }
 </style>
 </head>
 <body>
@@ -376,12 +401,20 @@ html{overscroll-behavior-x:none;color-scheme:light;}*,*::before,*::after{box-siz
 
 <!-- ══════════ SCREEN 1: LANDING ══════════ -->
 <div class="screen activa" id="s-landing" style="overflow-x:hidden;width:100%;max-width:100vw;background:#FFFFFF;">
-  <nav class="topnav">
-    <div class="logo">Flete<span>COL</span><span class="logo-tag">BETA</span></div>
-    <div style="display:flex;gap:8px;">
-      <button class="btn-secondary" style="padding:9px 18px;font-size:13px;" onclick="irAuth('login')">Iniciar sesión</button>
-      <button class="btn-primary" style="padding:9px 18px;font-size:13px;" onclick="irAuth('registro')">Registrarse gratis</button>
+  <nav class="topnav topnav-landing" id="nav-landing">
+    <div style="position:absolute;left:20px;top:50%;transform:translateY(-50%);">
+      <button class="nav-menu-btn" onclick="toggleNavMenu(event)">
+        <span id="nav-menu-icon">☰</span> Menú
+      </button>
+      <div class="nav-dropdown hidden" id="nav-dropdown">
+        <button class="nav-dd-item" onclick="irAuth('login');cerrarNavMenu()">🔑 Iniciar sesión</button>
+        <button class="nav-dd-item" onclick="irAuth('registro');cerrarNavMenu()">🚀 Registrarse gratis</button>
+        <div class="nav-dd-sep"></div>
+        <button class="nav-dd-item" onclick="ir('s-politicas');cerrarNavMenu()">📄 Políticas de privacidad</button>
+        <button class="nav-dd-item highlight" onclick="ir('s-soporte');cerrarNavMenu()">💬 Chat de soporte</button>
+      </div>
     </div>
+    <div class="logo">Flete<span>COL</span><span class="logo-tag">BETA</span></div>
   </nav>
   <div class="hero">
     <div class="hero-chip">🇨🇴 Hecho en Colombia para Colombia</div>
@@ -762,8 +795,8 @@ html{overscroll-behavior-x:none;color-scheme:light;}*,*::before,*::after{box-siz
 
   <!-- CARRUSEL PUBLICITARIO -->
   <div id="carrusel-wrap" style="padding:0 16px 12px;display:none;">
-    <div style="position:relative;border-radius:10px;overflow:hidden;background:var(--gris2);max-width:500px;margin:0 auto;" id="carrusel-container">
-      <div id="carrusel-slides" style="display:flex;transition:transform 0.4s ease;"></div>
+    <div style="position:relative;border-radius:6px;overflow:hidden;height:110px;background:var(--gris2);" id="carrusel-container">
+      <div id="carrusel-slides" style="display:flex;transition:transform 0.4s ease;height:100%;"></div>
       <!-- Dots -->
       <div id="carrusel-dots" style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:5px;"></div>
       <!-- Flechas -->
@@ -837,7 +870,7 @@ html{overscroll-behavior-x:none;color-scheme:light;}*,*::before,*::after{box-siz
     </div>
 
     <!-- CARGA (solo clientes) -->
-    <div class="pub-form" id="pf-carga">
+    <div class="pub-form active" id="pf-carga">
       <div class="card">
         <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;margin-bottom:4px;">Publicar mi carga</div>
         <div style="font-size:13px;color:var(--texto);margin-bottom:20px;">Los conductores de tu zona te harán ofertas.</div>
@@ -920,15 +953,24 @@ html{overscroll-behavior-x:none;color-scheme:light;}*,*::before,*::after{box-siz
                 </div>
                 <div class="toggle" id="t-ayudantes" onclick="toggleAyudantes(this)"></div>
               </div>
-              <!-- Sección ayudantes — visible solo si activan toggle -->
+              <!-- Sección costo ayudantes — visible solo si activan toggle -->
               <div id="sec-ayudantes" style="display:none;margin-top:12px;border-top:1px solid rgba(0,0,0,0.05);padding-top:12px;">
-                <div class="form-group">
-                  <label class="form-label">Número de ayudantes</label>
-                  <select class="form-input" id="m-num-ayudantes">
-                    <option value="1">1 ayudante</option>
-                    <option value="2">2 ayudantes</option>
-                    <option value="3">3 ayudantes</option>
-                  </select>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Número de ayudantes</label>
+                    <select class="form-input" id="m-num-ayudantes">
+                      <option value="1">1 ayudante</option>
+                      <option value="2">2 ayudantes</option>
+                      <option value="3">3 ayudantes</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">💰 Costo por ayudante</label>
+                    <input class="form-input" type="number" id="m-costo-ayudante" placeholder="50000" oninput="calcTotalAyudantes()">
+                  </div>
+                </div>
+                <div id="total-ayudantes-banner" style="display:none;background:rgba(0,212,106,0.06);border:1px solid rgba(0,212,106,0.15);border-radius:9px;padding:10px 12px;font-size:12px;">
+                  💰 Total ayudantes: <strong id="total-ayudantes-val" style="color:var(--verde);">$0</strong> · Se suma al precio del flete
                 </div>
               </div>
             </div>
@@ -1009,24 +1051,11 @@ html{overscroll-behavior-x:none;color-scheme:light;}*,*::before,*::after{box-siz
       </div>
       <div class="input-area2">
         <div class="input-warn2" id="i-warn2">🚫 <span id="i-warn-txt2"></span></div>
-        <!-- Banner confirmar entrega — visible solo cuando pago APPROVED -->
-        <div id="banner-confirmar-entrega" style="display:none;background:linear-gradient(135deg,#0a2e1a,#0d3d22);border:1.5px solid #1a6b3a;border-radius:12px;padding:12px 14px;margin-bottom:10px;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span style="font-size:22px;">🔒</span>
-            <div style="flex:1;">
-              <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:14px;color:#4ade80;">Pago retenido en FleteCOL</div>
-              <div style="font-size:11px;color:#86efac;margin-top:1px;">Confirma cuando recibas el servicio para liberar el pago al conductor</div>
-            </div>
-          </div>
-          <button onclick="confirmarEntrega2()" style="width:100%;margin-top:10px;background:var(--verde);color:#fff;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;">✅ Confirmar que recibí todo bien</button>
-        </div>
         <div style="display:flex;gap:7px;margin-bottom:8px;">
           <button id="btn-oferta-bottom" class="btn-accion-cliente" style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;" onclick="hacerOferta()">💰 Hacer oferta</button>
-          <button id="btn-confirmar-entrega" class="btn-accion-cliente" style="display:none;background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;" onclick="confirmarEntrega2()">📦 Confirmar entrega</button>
+          <button class="btn-accion-cliente" style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;" onclick="pedirConfEntrega()">📦 Confirmar entrega</button>
         </div>
         <div style="display:flex;gap:8px;align-items:flex-end;">
-          <button onclick="document.getElementById('foto-evidencia-input').click()" title="Enviar foto" style="width:42px;height:42px;border-radius:11px;background:var(--gris3);border:1px solid var(--gris4);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">📷</button>
-          <input type="file" id="foto-evidencia-input" accept="image/*" capture="environment" style="display:none;" onchange="subirFotoEvidencia(this)">
           <textarea class="msg-input2" id="m-input2" rows="1" placeholder="Escribe tu mensaje..." oninput="checkMsg(this)" onkeydown="enterSend2(event)"></textarea>
           <button class="btn-send2" id="btn-send2" onclick="enviarMsg()">➤</button>
         </div>
@@ -1526,17 +1555,14 @@ async function pagoWompiExitoso(txData, convIdParam) {
       else console.log('✅ Ruta del conductor marcada como en_curso');
     }
 
-    // Eliminar carga publicada por el cliente al confirmar el pago
+    // Quitar carga publicada por el cliente de búsquedas
     if(perfilActual?.id) {
       const { error: eCarga } = await sb.from('cargas')
-        .delete()
+        .update({ estado: 'en_curso' })
         .eq('cliente_id', perfilActual.id)
         .eq('estado', 'activa');
-      if(eCarga) console.warn('eliminar carga:', eCarga.message);
-      else {
-        console.log('✅ Carga del cliente eliminada');
-        if(typeof cargarRutas === 'function') cargarRutas();
-      }
+      if(eCarga) console.warn('carga en_curso:', eCarga.message);
+      else console.log('✅ Carga del cliente marcada como en_curso');
     }
     return;
   }
@@ -1592,45 +1618,41 @@ async function verificarEstadoPagoConv(convId) {
 }
 
 function setBotonesSegunEstadoPago(estado) {
-  const btnOfertaHeader  = document.getElementById('btn-oferta-header');
-  const btnOfertaBottom  = document.getElementById('btn-oferta-bottom');
-  const btnPagar         = document.getElementById('chat-pay-btn');
-  const btnConfirmar     = document.getElementById('btn-confirmar-entrega');
-  const bannerConfirmar  = document.getElementById('banner-confirmar-entrega');
-  const chatAcciones     = document.getElementById('chat-acciones');
+  // estado: 'sin_oferta' | 'oferta_aceptada' | 'pagado' | 'entregado'
+  const btnOfertaHeader = document.getElementById('btn-oferta-header');
+  const btnOfertaBottom = document.getElementById('btn-oferta-bottom');
+  const btnPagar = document.getElementById('chat-pay-btn');
+  const btnConfirmar = document.querySelector('.btn-accion-cliente[onclick="pedirConfEntrega()"]');
 
   if(estado === 'pagado') {
-    // Pago APPROVED — mostrar banner verde prominente (funciona en mobile y desktop)
+    // Pago APPROVED — solo confirmar entrega
     if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
     if(btnOfertaBottom) btnOfertaBottom.style.display = 'none';
-    if(btnPagar) btnPagar.style.display = 'none';
-    if(chatAcciones) chatAcciones.style.display = 'none';
-    if(bannerConfirmar) bannerConfirmar.style.display = 'block';
-    if(btnConfirmar) btnConfirmar.style.display = 'none';
+    if(btnPagar) { btnPagar.style.display = ''; btnPagar.textContent = '✅ Confirmar entrega'; btnPagar.style.background = 'var(--verde)'; btnPagar.onclick = confirmarEntregaMobile; }
+    if(btnConfirmar) btnConfirmar.style.display = '';
   } else if(estado === 'oferta_aceptada') {
+    // Oferta aceptada — solo pagar
     if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
     if(btnOfertaBottom) btnOfertaBottom.style.display = 'none';
-    if(btnPagar) { btnPagar.style.display = ''; btnPagar.textContent = '🔒 Pagar'; btnPagar.style.background = 'var(--amarillo)'; btnPagar.style.color = 'var(--negro)'; btnPagar.onclick = abrirPagoMobile; }
-    if(chatAcciones) chatAcciones.style.display = 'flex';
-    if(bannerConfirmar) bannerConfirmar.style.display = 'none';
+    if(btnPagar) { btnPagar.style.display = ''; btnPagar.textContent = '🔒 Pagar'; btnPagar.style.background = 'var(--amarillo)'; btnPagar.onclick = abrirPagoMobile; }
     if(btnConfirmar) btnConfirmar.style.display = 'none';
   } else if(estado === 'entregado') {
+    // Entrega confirmada — todo disponible para nuevo flete
     if(btnOfertaHeader) btnOfertaHeader.style.display = '';
     if(btnOfertaBottom) btnOfertaBottom.style.display = '';
-    if(btnPagar) { btnPagar.style.display = 'none'; btnPagar.textContent = '🔒 Pagar'; btnPagar.style.background = 'var(--amarillo)'; btnPagar.style.color = 'var(--negro)'; btnPagar.onclick = abrirPagoMobile; }
-    if(bannerConfirmar) bannerConfirmar.style.display = 'none';
-    if(btnConfirmar) btnConfirmar.style.display = 'none';
+    if(btnPagar) { btnPagar.style.display = 'none'; btnPagar.textContent = '🔒 Pagar'; btnPagar.style.background = 'var(--amarillo)'; btnPagar.onclick = abrirPagoMobile; }
+    if(btnConfirmar) btnConfirmar.style.display = '';
   } else if(estado === 'esperando_conductor') {
+    // Conductor aceptó — no mostrar nada extra al conductor
     if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
     if(btnOfertaBottom) btnOfertaBottom.style.display = 'none';
     if(btnPagar) btnPagar.style.display = 'none';
-    if(bannerConfirmar) bannerConfirmar.style.display = 'none';
     if(btnConfirmar) btnConfirmar.style.display = 'none';
   } else {
+    // Sin oferta aceptada — solo oferta disponible
     if(btnOfertaHeader) btnOfertaHeader.style.display = '';
     if(btnOfertaBottom) btnOfertaBottom.style.display = '';
     if(btnPagar) btnPagar.style.display = 'none';
-    if(bannerConfirmar) bannerConfirmar.style.display = 'none';
     if(btnConfirmar) btnConfirmar.style.display = 'none';
   }
 }
@@ -1837,7 +1859,12 @@ async function verificarRetornoWompi() {
     const aprobado = tx ? tx.status === 'APPROVED' : true;
 
     if(aprobado) {
-      // Restaurar convActual del snapshot PRIMERO
+      // Actualizar estado del pago (silenciado — RLS puede bloquearlo sin afectar el flujo)
+      sb.from('pagos').update({ estado: 'APPROVED' }).eq('wompi_referencia', ref).then(({error}) => {
+        if(error) console.warn('pagos update:', error.message);
+      });
+
+      // Restaurar convActual del snapshot guardado antes del pago
       const snap = sessionStorage.getItem('wompi_conv_snapshot');
       if(snap) {
         try { convActual = JSON.parse(snap); } catch(e) {}
@@ -1848,12 +1875,6 @@ async function verificarRetornoWompi() {
       const convOtroId = sessionStorage.getItem('wompi_otro_id');
       const convOtroNombre = sessionStorage.getItem('wompi_otro_nombre');
 
-      // Actualizar estado del pago con await — CRÍTICO para que cargarMensajes lo vea como APPROVED
-      const { error: errPago } = await sb.from('pagos')
-        .update({ estado: 'APPROVED' })
-        .eq('wompi_referencia', ref);
-      if(errPago) console.warn('pagos update:', errPago.message);
-
       // Ir al chat e intentar abrir la conversación específica
       irApp('s-chat');
 
@@ -1863,18 +1884,13 @@ async function verificarRetornoWompi() {
         await abrirChatConConductor(convOtroId, convOtroNombre || 'Usuario', 0, '', '');
       }
 
-      const convIdFinal = snapConvId || convActual?.id;
-      // pagoWompiExitoso inserta el recibo con await — esperar que termine
-      await pagoWompiExitoso(tx || { reference: ref }, convIdFinal);
-
-      // Recargar mensajes DESPUÉS de insertar recibo — para mostrar banner confirmar entrega
-      if(convIdFinal) await cargarMensajes(convIdFinal);
-
-      // En mobile: forzar apertura del panel del chat
+      // En mobile: forzar apertura del chat (irApp muestra la lista, no el chat)
       if(esMobile()) {
-        setTimeout(() => abrirChatMobile(), 200);
+        setTimeout(() => abrirChatMobile(), 300);
       }
 
+      const convIdFinal = snapConvId || convActual?.id;
+      await pagoWompiExitoso(tx || { reference: ref }, convIdFinal);
       toast('✅ ¡Pago aprobado!', 'success');
       return true; // indicar que procesamos retorno de Wompi
     } else if(tx) {
@@ -1931,7 +1947,6 @@ let misCargas = [];
 let convActual = null;
 let mensajesPendientes = []; // cola de mensajes que fallaron
 let chatSub = null;
-let rutasSub = null;
 
 // ══ INIT ══
 let estadoSub = null; // suscripción realtime al estado del usuario
@@ -1953,7 +1968,6 @@ async function init() {
       if(!vieneDePago) await redirigirSegunEstado(); // no redirigir si venimos de Wompi
       suscribirEstado(); // escuchar cambios en tiempo real
       suscribirBadge();  // actualizar badge de chat en tiempo real
-      suscribirRutasRealtime(); // actualizar buscador en tiempo real
     } else {
       ir('s-landing');
     }
@@ -2171,26 +2185,6 @@ async function verificarEstadoManual() {
 
 // Escucha en tiempo real si el admin cambia el estado del usuario
 let badgeSub = null;
-function suscribirRutasRealtime() {
-  if(rutasSub) { try { sb.removeChannel(rutasSub); } catch(e){} rutasSub = null; }
-  rutasSub = sb.channel('rutas-cargas-global-' + Date.now())
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rutas' }, () => {
-      if(document.getElementById('s-rutas')?.classList.contains('activa')) cargarRutas();
-    })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cargas' }, () => {
-      if(document.getElementById('s-rutas')?.classList.contains('activa')) cargarRutas();
-    })
-    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'cargas' }, () => {
-      if(document.getElementById('s-rutas')?.classList.contains('activa')) cargarRutas();
-    })
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'cargas' }, () => {
-      if(document.getElementById('s-rutas')?.classList.contains('activa')) cargarRutas();
-    })
-    .subscribe((status) => {
-      console.log('[realtime] rutas/cargas:', status);
-    });
-}
-
 function suscribirBadge() {
   if(!usuarioActual || !perfilActual) return;
   if(badgeSub) { try { sb.removeChannel(badgeSub); } catch(e){} badgeSub = null; }
@@ -2202,25 +2196,10 @@ function suscribirBadge() {
       table: 'mensajes'
     }, async (payload) => {
       const msg = payload.new;
-      // Ignorar mensajes propios
+      // Solo contar mensajes dirigidos a este usuario (no propios)
       if(msg.emisor_id === perfilActual.id) return;
-      // Verificar que la conversación pertenece a este usuario
-      const { data: conv } = await sb.from('conversaciones')
-        .select('id')
-        .eq('id', msg.conversacion_id)
-        .or(`usuario1_id.eq.${perfilActual.id},usuario2_id.eq.${perfilActual.id}`)
-        .maybeSingle();
-      if(!conv) return; // No es de este usuario
-      // Si el chat de esa conversación está abierto, no incrementar
-      if(convActual?.id === msg.conversacion_id) return;
-      // Incrementar badge directamente
-      const badge = document.getElementById('chat-badge');
-      if(badge) {
-        const actual = parseInt(badge.textContent) || 0;
-        const nuevo = actual + 1;
-        badge.textContent = nuevo > 9 ? '9+' : nuevo;
-        badge.style.display = 'flex';
-      }
+      // Verificar que pertenece a una conversación del usuario
+      await cargarConversaciones(convActual?.id);
     })
     .subscribe();
 }
@@ -2277,8 +2256,6 @@ async function redirigirSegunEstado() {
   const estado = perfilActual.estado;
   if(estado === 'aprobado') {
     await irApp('s-rutas');
-    // Inicializar formulario publicar según rol (conductor vs cliente)
-    cargarVehiculoConductor();
   } else {
     // pendiente, rechazado, baneado → pantalla de espera con mensaje según estado
     actualizarPantallaPendiente(estado, perfilActual.motivo_rechazo, perfilActual.rol);
@@ -3052,9 +3029,8 @@ async function cargarCarrusel() {
 
     slides.innerHTML = bannersVisibles.map((b, i) => `
       <div class="carrusel-slide"
-        style="min-width:${100/bannersVisibles.length}%;"
+        style="min-width:${100/bannersVisibles.length}%;background-image:url('${b.imagen_url}');"
         onclick="abrirBanner('${b.link_url||''}')">
-        <img src="${b.imagen_url}" alt="Publicidad" class="carrusel-img" loading="lazy">
       </div>`).join('');
 
     dots.innerHTML = bannersVisibles.map((_, i) => `
@@ -3399,6 +3375,22 @@ function toggleAyudantes(el) {
   el.classList.toggle('on');
   const sec = document.getElementById('sec-ayudantes');
   if(sec) sec.style.display = el.classList.contains('on') ? 'block' : 'none';
+  if(!el.classList.contains('on')) {
+    const banner = document.getElementById('total-ayudantes-banner');
+    if(banner) banner.style.display = 'none';
+  }
+}
+
+function calcTotalAyudantes() {
+  const num   = parseInt(document.getElementById('m-num-ayudantes')?.value) || 1;
+  const costo = parseInt(document.getElementById('m-costo-ayudante')?.value) || 0;
+  const total = num * costo;
+  const banner = document.getElementById('total-ayudantes-banner');
+  const val    = document.getElementById('total-ayudantes-val');
+  if(banner && val) {
+    banner.style.display = total > 0 ? 'block' : 'none';
+    val.textContent = '$' + total.toLocaleString('es-CO');
+  }
 }
 
 const vehInfo = {
@@ -3631,40 +3623,29 @@ async function enviarCambioVehiculo() {
 async function publicarRuta() {
   if(!usuarioActual) { toast('Debes iniciar sesión para publicar', 'error'); return; }
   const btn = document.getElementById('btn-pub-ruta');
-  btn.disabled = true; btn.textContent = '⏳ Publicando...';
-  try {
-    const origen = document.getElementById('r-origen').value.trim();
-    const destino = document.getElementById('r-destino').value.trim();
-    const fecha = document.getElementById('r-fecha').value;
-    if(!origen) { toast('Ingresa el origen', 'error'); return; }
-    if(!destino) { toast('Ingresa el destino', 'error'); return; }
-    if(!fecha) { toast('Selecciona la fecha', 'error'); return; }
+  btn.disabled = true; btn.textContent = 'Publicando...';
 
-    const conductorData = perfilActual ? { conductor_id: perfilActual.id } : {};
-    const { error } = await sb.from('rutas').insert({
-      ...conductorData,
-      origen, destino, fecha,
-      hora:      document.getElementById('r-hora').value,
-      vehiculo:  vehSeleccionado,
-      capacidad: document.getElementById('r-capacidad').value,
-      precio:    parseInt(document.getElementById('r-precio').value) || 0,
-      descripcion: document.getElementById('r-desc').value,
-      estado:    'activa'
-    });
+  const conductorData = perfilActual ? { conductor_id: perfilActual.id } : {};
 
-    if(error) { toast('Error al publicar: ' + error.message, 'error'); return; }
-    toast('✅ Ruta publicada exitosamente', 'success');
-    // Limpiar formulario
-    ['r-origen','r-destino','r-fecha','r-hora','r-capacidad','r-precio','r-desc'].forEach(id => {
-      const el = document.getElementById(id); if(el) el.value = '';
-    });
-    setTimeout(() => irApp('s-rutas'), 1200);
-  } catch(e) {
-    console.error('[publicarRuta]', e);
-    toast('Error inesperado al publicar', 'error');
-  } finally {
-    btn.disabled = false; btn.textContent = '📢 Publicar ruta';
-  }
+  const { error } = await sb.from('rutas').insert({
+    ...conductorData,
+    origen:    document.getElementById('r-origen').value,
+    destino:   document.getElementById('r-destino').value,
+    fecha:     document.getElementById('r-fecha').value,
+    hora:      document.getElementById('r-hora').value,
+    vehiculo:  vehSeleccionado,
+    capacidad: document.getElementById('r-capacidad').value,
+    precio:    parseInt(document.getElementById('r-precio').value) || 0,
+    descripcion: document.getElementById('r-desc').value,
+    estado:    'activa'
+  });
+
+  btn.disabled = false; btn.textContent = '📢 Publicar ruta';
+
+  if(error) { toast('Error al publicar: '+error.message, 'error'); return; }
+  toast('✅ Ruta publicada exitosamente', 'success');
+  misRutas.push({ titulo: document.getElementById('r-origen').value + ' → ' + document.getElementById('r-destino').value, sub: vehSeleccionado + ' · ' + document.getElementById('r-fecha').value, icon:'🚐' });
+  setTimeout(() => irApp('s-mis'), 1000);
 }
 
 async function publicarCarga() {
@@ -3704,7 +3685,7 @@ async function publicarCarga() {
   const esMudanza = tipo === 'mudanza';
   const necesitaAyudantes = document.getElementById('t-ayudantes')?.classList.contains('on') && esMudanza;
   const numAyudantes  = esMudanza && necesitaAyudantes ? parseInt(document.getElementById('m-num-ayudantes')?.value)||1 : 0;
-  const costoAyudante = 0; // El costo lo negocia el conductor por chat
+  const costoAyudante = esMudanza && necesitaAyudantes ? parseInt(document.getElementById('m-costo-ayudante')?.value)||0 : 0;
 
   // Armar descripción automática para mudanza
   let descAuto = '';
@@ -3722,7 +3703,7 @@ async function publicarCarga() {
     if(inmueble)     descAuto += inmueble + '. ';
     if(pisoO)        descAuto += 'Piso origen: ' + pisoO + '. ';
     if(pisoD)        descAuto += 'Piso destino: ' + pisoD + '. ';
-    if(necesitaAyudantes) descAuto += `Necesita ${numAyudantes} ayudante(s) para cargar.`;
+    if(necesitaAyudantes) descAuto += `Necesita ${numAyudantes} ayudante(s) a $${costoAyudante.toLocaleString('es-CO')} c/u.`;
   }
 
   const descripcionFinal = [descAuto, document.getElementById('c-desc').value].filter(Boolean).join(' ').trim();
@@ -4033,10 +4014,11 @@ async function cargarMensajes(convId) {
     if(perfilActual?.rol === 'cliente') {
       const tieneOfertaAceptada = (msgs||[]).some(m => m.tipo === 'oferta_aceptada');
       const tieneEntregaConfirmada = (msgs||[]).some(m => m.tipo === 'entrega_confirmada');
-      const tieneRecibo = (msgs||[]).some(m => m.tipo === 'recibo');
+      const payBtn = document.getElementById('chat-pay-btn');
       const ppForm = document.getElementById('pp-form2');
       const ppExitoso = document.getElementById('pp-exitoso2');
       const ppCompletado = document.getElementById('pp-completado2');
+      const escrowEst = document.getElementById('escrow-est2');
 
       if(tieneEntregaConfirmada) {
         setBotonesSegunEstadoPago('entregado');
@@ -4045,21 +4027,20 @@ async function cargarMensajes(convId) {
         if(ppCompletado) ppCompletado.style.display = 'block';
         actualizarEscrowBar('LIBERADO');
 
-      } else if(tieneOfertaAceptada || tieneRecibo) {
-        // Consultar BD siempre que haya oferta aceptada o recibo
+      } else if(tieneOfertaAceptada) {
         const { data: pagosData } = await sb.from('pagos')
           .select('estado').eq('conversacion_id', convId)
           .order('created_at', { ascending: false }).limit(1);
         const estadoPago = pagosData?.[0]?.estado;
 
-        if(estadoPago === 'LIBERADO') {
+        if(estadoPago === 'LIBERADO' || tieneEntregaConfirmada) {
+          // Entrega ya confirmada (detectado por pago LIBERADO o mensaje)
           setBotonesSegunEstadoPago('entregado');
           if(ppForm) ppForm.style.display = 'none';
           if(ppExitoso) ppExitoso.style.display = 'none';
           if(ppCompletado) ppCompletado.style.display = 'block';
           actualizarEscrowBar('LIBERADO');
-        } else if(estadoPago === 'APPROVED' || tieneRecibo) {
-          // tieneRecibo = fallback si la BD no actualizó aún
+        } else if(estadoPago === 'APPROVED') {
           setBotonesSegunEstadoPago('pagado');
           if(ppForm) ppForm.style.display = 'none';
           if(ppExitoso) ppExitoso.style.display = 'block';
@@ -4123,25 +4104,6 @@ function renderMensaje(m) {
             <div style="font-weight:700;color:var(--verde);font-size:13px;">¡El conductor aceptó tu oferta!</div>
             <div style="font-size:12px;color:var(--texto);margin-top:4px;">Procede a realizar el pago 🔒</div>
            </div>`;
-      wrap.appendChild(div);
-      wrap.scrollTop = wrap.scrollHeight;
-      return;
-    }
-    if(m.tipo === 'texto' && m.contenido?.startsWith('__foto__')) {
-      let info = {};
-      try { info = JSON.parse(m.contenido.replace('__foto__','')); } catch(e) {}
-      const lado = esMio ? 'flex-direction:row-reverse' : '';
-      div.innerHTML = `
-        <div class="msg-row2" style="${lado}">
-          <div class="msg-av2">${esMio ? '🧑' : '👨'}</div>
-          <div>
-            <div style="font-size:10px;color:var(--texto);margin-bottom:4px;">${info.label || '📷 Foto de evidencia'}</div>
-            <div style="background:var(--gris2);border-radius:10px;overflow:hidden;max-width:220px;cursor:pointer;" onclick="window.open('${info.url}','_blank')">
-              <img src="${info.url}" style="width:100%;display:block;border-radius:10px;" loading="lazy">
-            </div>
-            <div class="msg-time2">${hora}${esMio ? ' · ✓✓' : ''}</div>
-          </div>
-        </div>`;
       wrap.appendChild(div);
       wrap.scrollTop = wrap.scrollHeight;
       return;
@@ -4568,6 +4530,9 @@ async function prepararWompiConMonto(monto) {
     sessionStorage.setItem('wompi_monto', String(monto));
     if(convActual) sessionStorage.setItem('convActual', JSON.stringify(convActual));
 
+    // Widget embebido con innerHTML — único método que respeta data-signature:integrity con ":"
+    console.log('✅ Abriendo widget Wompi, monto:', montoCentavos, 'ref:', referencia);
+
     const modalViejo = document.getElementById('wompi-modal');
     if(modalViejo) modalViejo.remove();
 
@@ -4584,13 +4549,17 @@ async function prepararWompiConMonto(monto) {
     closeBtn.onclick = () => modal.remove();
     inner.appendChild(closeBtn);
 
+    // Limpiar cualquier instancia previa de widget.js para evitar conflictos
     document.querySelectorAll('script[src*="checkout.wompi.co/widget.js"]').forEach(el => el.remove());
     if(window.$wompi) delete window.$wompi;
 
     const nombre = ((perfilActual.nombre||'')+' '+(perfilActual.apellido||'')).trim();
+    console.log('✅ Cargando widget Wompi:', { key: WOMPI_PUBLIC_KEY, monto: montoCentavos, ref: referencia, integrity: integrity.substring(0,8)+'...' });
 
+    // Crear form+script con setAttribute (preserva atributos con ":")
     const formEl = document.createElement('form');
     const s = document.createElement('script');
+    // Forzar recarga limpia con timestamp para evitar caché
     s.setAttribute('src', 'https://checkout.wompi.co/widget.js?t=' + Date.now());
     s.setAttribute('data-render', 'button');
     s.setAttribute('data-public-key', WOMPI_PUBLIC_KEY);
@@ -4684,14 +4653,9 @@ function mostrarPago(){toast('💳 Selecciona el método de pago en el panel der
 function selMet(el,tipo){document.querySelectorAll('.metodo').forEach(m=>m.classList.remove('sel'));document.querySelectorAll('.metodo-detalle2').forEach(d=>d.classList.remove('visible'));el.classList.add('sel');document.getElementById('md-'+tipo).classList.add('visible');}
 function procesarPago2(){document.getElementById('pp-form2').style.display='none';document.getElementById('pp-procesando2').style.display='block';setTimeout(()=>{document.getElementById('pp-procesando2').style.display='none';document.getElementById('pp-exitoso2').style.display='block';document.getElementById('escrow-est2').textContent='🔒 Retenido';document.getElementById('chat-pay-btn').style.display='none';const d=document.createElement('div');d.className='sys-msg';d.innerHTML='🔒 <strong style="color:var(--naranja)">Pago retenido en FleteCOL</strong> · El conductor fue notificado.';document.getElementById('msgs-wrap').appendChild(d);toast('🔒 Pago procesado','success');},2000);}
 async function confirmarEntrega2(){
-  const bannerConf = document.getElementById('banner-confirmar-entrega');
-  if(bannerConf) bannerConf.style.display = 'none';
-  const ppExitoso = document.getElementById('pp-exitoso2');
-  const ppCompletado = document.getElementById('pp-completado2');
-  const escrowEst = document.getElementById('escrow-est2');
-  if(ppExitoso) ppExitoso.style.display='none';
-  if(ppCompletado) ppCompletado.style.display='block';
-  if(escrowEst) escrowEst.textContent='✅ Liberado';
+  document.getElementById('pp-exitoso2').style.display='none';
+  document.getElementById('pp-completado2').style.display='block';
+  document.getElementById('escrow-est2').textContent='✅ Liberado';
   toast('🎉 Entrega confirmada','success');
 
   const convId = convActual?.id;
@@ -4780,218 +4744,249 @@ init();
 // chat inicializado vacío
 </script>
 
+<!-- ══════════ SCREEN: POLÍTICAS DE PRIVACIDAD ══════════ -->
+<div class="screen" id="s-politicas" style="background:#FFFFFF;">
+  <nav class="topnav">
+    <div class="logo" onclick="ir('s-landing')" style="cursor:pointer;">Flete<span>COL</span></div>
+    <button class="btn-secondary" style="padding:8px 16px;font-size:12px;" onclick="ir('s-landing')">← Volver</button>
+  </nav>
+  <div class="politicas-wrap">
+    <div style="margin-bottom:28px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:28px;margin-bottom:6px;">📄 Políticas de Privacidad</div>
+      <div style="font-size:12px;color:var(--texto);">Última actualización: marzo de 2025 · FleteCOL S.A.S. · Colombia</div>
+    </div>
+    <div class="politicas-section"><h2>1. Responsable del tratamiento</h2><p>FleteCOL S.A.S., empresa constituida bajo las leyes colombianas, es responsable del tratamiento de los datos personales recolectados a través de esta plataforma.</p></div>
+    <div class="politicas-section"><h2>2. Datos que recopilamos</h2><ul><li><strong>Identificación:</strong> nombre, cédula, foto de perfil y selfie.</li><li><strong>Contacto:</strong> correo electrónico y teléfono.</li><li><strong>Vehículo (conductores):</strong> placa, SOAT, tipo y fotos.</li><li><strong>Ubicación:</strong> ciudad y GPS si lo autorizas.</li><li><strong>Uso:</strong> rutas, chats, transacciones y calificaciones.</li></ul></div>
+    <div class="politicas-section"><h2>3. Finalidad del tratamiento</h2><ul><li>Verificar tu identidad y aprobar tu cuenta.</li><li>Conectar clientes con conductores.</li><li>Procesar pagos vía Wompi.</li><li>Enviarte notificaciones de tus servicios.</li><li>Mejorar la experiencia y detectar fraudes.</li><li>Cumplir obligaciones legales en Colombia.</li></ul></div>
+    <div class="politicas-section"><h2>4. Base legal</h2><p>El tratamiento se rige por la <strong>Ley 1581 de 2012</strong> y el <strong>Decreto 1377 de 2013</strong>. Al registrarte otorgas tu consentimiento expreso.</p></div>
+    <div class="politicas-section"><h2>5. Compartición de datos</h2><ul><li>Con la contraparte del servicio, solo los datos necesarios.</li><li>Con Supabase y Wompi bajo contratos de confidencialidad.</li><li>Con autoridades ante orden judicial.</li></ul></div>
+    <div class="politicas-section"><h2>6. Almacenamiento y seguridad</h2><p>Datos cifrados en tránsito (TLS) y en reposo en servidores Supabase con medidas técnicas y organizativas de protección.</p></div>
+    <div class="politicas-section"><h2>7. Tus derechos</h2><ul><li><strong>Conocer</strong> los datos que tenemos.</li><li><strong>Actualizar o corregir</strong> tu información.</li><li><strong>Solicitar la supresión</strong> cuando no sean necesarios.</li><li><strong>Revocar</strong> el consentimiento.</li><li><strong>Quejarte</strong> ante la SIC.</li></ul><p>Escríbenos a: <strong style="color:var(--amarillo);">privacidad@fletecol.com</strong></p></div>
+    <div class="politicas-section"><h2>8. Retención de datos</h2><p>Conservamos tus datos mientras tu cuenta esté activa. Al eliminarla, suprimimos o anonimizamos tu información en máximo <strong>30 días hábiles</strong>.</p></div>
+    <div class="politicas-section"><h2>9. Cookies</h2><p>Usamos almacenamiento local solo para mantener tu sesión activa. No usamos cookies de rastreo publicitario.</p></div>
+    <div class="politicas-section"><h2>10. Cambios a esta política</h2><p>Notificaremos cambios significativos por correo o aviso en la plataforma. El uso continuado implica aceptación.</p></div>
+    <div style="background:var(--gris2);border:1px solid rgba(0,0,0,0.05);border-radius:8px;padding:18px 20px;margin-top:8px;margin-bottom:40px;">
+      <div style="font-size:12px;color:var(--texto);line-height:1.8;">📧 <strong style="color:var(--amarillo);">privacidad@fletecol.com</strong><br>🏢 FleteCOL S.A.S. · Colombia<br>⚖️ <strong>Superintendencia de Industria y Comercio</strong> · www.sic.gov.co</div>
+    </div>
+    <button class="btn-full" onclick="ir('s-landing')" style="max-width:340px;margin:0 auto 48px;display:block;">← Volver al inicio</button>
+  </div>
+</div>
 
-
-
-<script>
-// ══ AUTOCOMPLETE BARRIOS POR CIUDAD ══
-const BARRIOS_CO = {
-  'medellín':    ['El Poblado','Laureles','Envigado','Belén','Castilla','Aranjuez','Manrique','Popular','Santa Cruz','Robledo','La América','San Javier','Buenos Aires','La Candelaria','Guayabal','Itagüí','Bello','Sabaneta','La Estrella','Caldas','Copacabana','Girardota','Barbosa'],
-  'bogotá':      ['Chapinero','Usaquén','Suba','Kennedy','Bosa','Engativá','Fontibón','Rafael Uribe','Ciudad Bolívar','Teusaquillo','Barrios Unidos','Mártires','Antonio Nariño','Puente Aranda','Candelaria','San Cristóbal','Usme','Tunjuelito','Santa Fe','Sumapaz','Bello Horizonte','Modelia','Tintal','Venecia'],
-  'cali':        ['El Poblado','San Antonio','Aguablanca','El Salado','Terrón Colorado','Siloé','Buenaventura','Palmira','Jamundí','Yumbo','Candelaria','Florida','Pradera','El Cerrito','Guacarí','Tuluá','Buga','Cartago','Roldanillo','Zarzal','La Unión','Riofrío','Trujillo','Bolívar'],
-  'barranquilla':['El Prado','Manga','El Recreo','Riomar','Ciudad Jardín','Las Delicias','La Paz','Sur Occidente','Suroriental','Metropolitana','Soledad','Malambo','Galapa','Baranoa','Sabanalarga','Puerto Colombia','Tubará','Juan de Acosta','Piojó','Luruaco'],
-  'cartagena':   ['Bocagrande','El Centro','Manga','Pie de la Popa','La Boquilla','Turbaco','Arjona','El Carmen de Bolívar','San Jacinto','San Juan','Mompox','Magangué','Córdoba','Montería','Lorica'],
-  'bucaramanga': ['Cabecera del Llano','La Ciudadela','El Rincón','Girón','Floridablanca','Piedecuesta','San Gil','Barbosa','Vélez','Barichara','Aratoca','Curití'],
-  'cúcuta':      ['El Centro','La Libertad','Atalaya','Comuneros','Ocaña','Pamplona','Villa del Rosario','Los Patios','El Zulia','San Cayetano','Sardinata','Tibú'],
-  'pereira':     ['El Centro','Cuba','Dosquebradas','Santa Rosa de Cabal','La Virginia','Marsella','Quinchía','Belén de Umbría','Mistrató','Pueblo Rico','Guática','Santuario'],
-  'manizales':   ['El Centro','La Enea','Chipre','Milán','Villamaría','Neira','Salamina','Aguadas','Pácora','La Dorada','Victoria','Marquetalia'],
-  'ibagué':      ['El Centro','Calambeo','Picaleña','Ambala','Espinal','Honda','Mariquita','Fresno','Líbano','Nevado del Tolima','Melgar','Chaparral'],
-  'santa marta': ['El Rodadero','Taganga','Bello Horizonte','Ciénaga','Fundación','Aracataca','El Banco','Plato','Mompox'],
-  'villavicencio':['El Centro','Restrepo','Cumaral','Acacías','Granada','San Martín','Puerto López','Puerto Gaitán'],
-  'pasto':       ['El Centro','Jongovito','Nariño','Túquerres','La Cruz','El Tambo','Samaniego','Tumaco','Ipiales','Barbacoas'],
-  'montería':    ['El Centro','Cereté','Lorica','Sahagún','Montelíbano','Puerto Libertador','Tierralta','Valencia'],
-  'valledupar':  ['El Centro','Aguachica','La Paz','San Juan','El Copey','Bosconia','Chiriguaná','La Jagua de Ibirico'],
-};
-
-// Ciudad actual del usuario (se actualiza con GPS)
-let _ciudadAutoComplete = null;
-
-// Interceptar setDepto para guardar la ciudad
-const _origSetDepto = typeof window.setDepto === 'function' ? window.setDepto : null;
-
-function getCiudadNormalizada(str) {
-  if(!str) return null;
-  return str.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/bogota.*|santa fe.*bogota.*/,'bogotá')
-    .replace(/medellin.*/,'medellín')
-    .trim();
-}
-
-function getBarriosCiudad(ciudad) {
-  if(!ciudad) return [];
-  const key = getCiudadNormalizada(ciudad);
-  // Buscar coincidencia exacta o parcial
-  for(const k of Object.keys(BARRIOS_CO)) {
-    const kNorm = getCiudadNormalizada(k);
-    if(key === kNorm || key.includes(kNorm) || kNorm.includes(key)) {
-      return BARRIOS_CO[k];
-    }
-  }
-  return [];
-}
-
-let _acTimers = {};
-
-function iniciarAutocompleteCiudad(inputId) {
-  const input = document.getElementById(inputId);
-  if(!input || input.dataset.ac) return;
-  input.dataset.ac = '1';
-
-  const parent = input.parentElement;
-  const wrap = document.createElement('div');
-  wrap.className = 'autocomplete-wrap';
-  wrap.style.cssText = 'position:relative;';
-  parent.insertBefore(wrap, input);
-  wrap.appendChild(input);
-
-  const list = document.createElement('div');
-  list.className = 'autocomplete-list';
-  list.style.display = 'none';
-  wrap.appendChild(list);
-
-  let selIdx = -1;
-
-  input.addEventListener('input', () => {
-    clearTimeout(_acTimers[inputId]);
-    _acTimers[inputId] = setTimeout(() => mostrarBarrios(input, list), 150);
-    selIdx = -1;
-  });
-
-  input.addEventListener('focus', () => {
-    if(input.value.length >= 0) mostrarBarrios(input, list);
-  });
-
-  input.addEventListener('keydown', (e) => {
-    const items = list.querySelectorAll('.autocomplete-item');
-    if(e.key === 'ArrowDown') { selIdx = Math.min(selIdx+1, items.length-1); actualizarSelAC(items, selIdx); e.preventDefault(); }
-    else if(e.key === 'ArrowUp') { selIdx = Math.max(selIdx-1, 0); actualizarSelAC(items, selIdx); e.preventDefault(); }
-    else if(e.key === 'Enter' && selIdx >= 0) { items[selIdx]?.click(); e.preventDefault(); }
-    else if(e.key === 'Escape') { list.style.display = 'none'; }
-  });
-
-  document.addEventListener('click', (e) => {
-    if(!wrap.contains(e.target)) list.style.display = 'none';
-  });
-}
-
-function mostrarBarrios(input, list) {
-  // Obtener ciudad: preferir GPS, luego perfil, luego depto-sel
-  const ciudadGPS = _ciudadAutoComplete
-    || document.getElementById('depto-sel')?.value
-    || perfilActual?.ciudad
-    || null;
-
-  const barrios = getBarriosCiudad(ciudadGPS);
-  const q = input.value.toLowerCase().trim();
-
-  let matches = barrios.length
-    ? barrios.filter(b => b.toLowerCase().includes(q))
-    : [];
-
-  if(!matches.length) { list.style.display = 'none'; return; }
-  matches = matches.slice(0, 10);
-
-  const ciudad = ciudadGPS || '';
-  list.innerHTML = matches.map((b,i) => `
-    <div class="autocomplete-item" data-val="${b}, ${ciudad}" data-idx="${i}">
-      <span>📍</span>
-      <span class="city-name">${b}</span>
-      <span class="city-dep">${ciudad}</span>
-    </div>`).join('');
-
-  list.querySelectorAll('.autocomplete-item').forEach(item => {
-    item.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      input.value = item.dataset.val;
-      list.style.display = 'none';
-      input.dispatchEvent(new Event('change'));
-    });
-  });
-  list.style.display = 'block';
-}
-
-function actualizarSelAC(items, idx) {
-  items.forEach((it,i) => it.classList.toggle('sel', i===idx));
-  items[idx]?.scrollIntoView({ block:'nearest' });
-}
-
-// Hook en setDepto para capturar ciudad del GPS
-const _setDeptoOriginal = window.setDepto;
-window.setDepto = function(ciudad) {
-  _ciudadAutoComplete = ciudad;
-  if(typeof _setDeptoOriginal === 'function') _setDeptoOriginal(ciudad);
-};
-
-// Inicializar campos al cargar
-document.addEventListener('DOMContentLoaded', () => {
-  ['r-origen','r-destino','c-origen','c-destino'].forEach(id => {
-    iniciarAutocompleteCiudad(id);
-  });
-  // Si ya hay ciudad en depto-sel, capturarla
-  const d = document.getElementById('depto-sel');
-  if(d?.value) _ciudadAutoComplete = d.value;
-});
-</script>
+<!-- ══════════ SCREEN: CHAT DE SOPORTE ══════════ -->
+<div class="screen" id="s-soporte" style="background:#FFFFFF;">
+  <nav class="topnav">
+    <div class="logo" onclick="ir('s-landing')" style="cursor:pointer;">Flete<span>COL</span></div>
+    <button class="btn-secondary" style="padding:8px 16px;font-size:12px;" onclick="ir('s-landing')">← Volver</button>
+  </nav>
+  <div class="soporte-ticket-badge" id="soporte-ticket-badge">💬 Escríbenos y un agente te responderá pronto · Soporte FleteCOL</div>
+  <div class="soporte-wrap">
+    <div class="soporte-msgs" id="soporte-msgs">
+      <div class="soporte-empty" id="soporte-empty">
+        <div class="soporte-empty-icon">💬</div>
+        <div style="font-weight:700;font-size:15px;color:var(--blanco);margin-bottom:6px;">¿Necesitas ayuda?</div>
+        <div style="font-size:13px;color:var(--texto);max-width:260px;line-height:1.6;margin:0 auto;">Cuéntanos tu duda y nuestro equipo te responderá pronto.</div>
+      </div>
+    </div>
+    <div class="soporte-input-area">
+      <textarea class="soporte-textarea" id="soporte-input" placeholder="Escribe tu mensaje aquí..." rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarMensajeSoporte();}"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
+      <button class="soporte-send" id="soporte-send-btn" onclick="enviarMensajeSoporte()" title="Enviar">➤</button>
+    </div>
+  </div>
+</div>
 
 <script>
-async function subirFotoEvidencia(input) {
-  const file = input.files[0];
-  if(!file) return;
-  if(!convActual?.id) { toast('Abre una conversación primero', 'error'); return; }
-  if(!perfilActual?.id) { toast('Debes iniciar sesión', 'error'); return; }
+// ══════════════════════════════════════════════
+//  AUDIO — Web Audio API (sin archivos externos)
+// ══════════════════════════════════════════════
+let _audioCtx = null;
+function getAudioCtx() {
+  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return _audioCtx;
+}
 
-  // Validar tamaño (max 5MB)
-  if(file.size > 5 * 1024 * 1024) { toast('La foto no puede superar 5MB', 'error'); return; }
-
-  toast('📤 Subiendo foto...', 'info');
-
+// Sonido de mensaje entrante (admin responde al usuario)
+// Tono suave doble-bip estilo chat
+function sonarMensajeEntrante() {
   try {
-    const ext = file.name.split('.').pop() || 'jpg';
-    const path = `evidencias/${convActual.id}/${Date.now()}-${perfilActual.id.slice(0,8)}.${ext}`;
-
-    const { error: uploadError } = await sb.storage
-      .from('documentos')
-      .upload(path, file, { upsert: false, contentType: file.type });
-
-    if(uploadError) throw uploadError;
-
-    const { data: urlData } = sb.storage.from('documentos').getPublicUrl(path);
-    const url = urlData?.publicUrl;
-    if(!url) throw new Error('No se pudo obtener la URL de la foto');
-
-    const label = perfilActual.rol === 'conductor' ? '📷 Foto del conductor' : '📷 Foto del cliente';
-
-    const { error: msgError } = await sb.from('mensajes').insert({
-      conversacion_id: convActual.id,
-      emisor_id: perfilActual.id,
-      tipo: 'texto',
-      contenido: '__foto__' + JSON.stringify({ url, label }),
-      leido: false
+    const ctx = getAudioCtx();
+    const notas = [880, 1100];
+    notas.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
+      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12);
+      gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + i * 0.12 + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.18);
+      osc.start(ctx.currentTime + i * 0.12);
+      osc.stop(ctx.currentTime + i * 0.12 + 0.2);
     });
-
-    if(msgError) throw msgError;
-
-    // Mostrar localmente sin esperar el realtime
-    const msg = {
-      id: 'foto-' + Date.now(),
-      conversacion_id: convActual.id,
-      emisor_id: perfilActual.id,
-      tipo: 'texto',
-      contenido: '__foto__' + JSON.stringify({ url, label }),
-      created_at: new Date().toISOString()
-    };
-    renderMensaje(msg);
-    document.getElementById('msgs-wrap').scrollTop = 99999;
-    toast('✅ Foto enviada', 'success');
-  } catch(e) {
-    console.error('[foto evidencia]', e);
-    toast('Error subiendo la foto: ' + e.message, 'error');
-  }
-
-  // Limpiar input para permitir subir la misma foto dos veces
-  input.value = '';
+  } catch(e) {}
 }
+
+// Sonido de envío (usuario envía mensaje) — tick suave
+function sonarEnvio() {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.06);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.12);
+  } catch(e) {}
+}
+
+// Sonido de notificación de ticket nuevo (admin)
+function sonarTicketNuevo() {
+  try {
+    const ctx = getAudioCtx();
+    const notas = [660, 830, 990];
+    notas.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.1);
+      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.1);
+      gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + i * 0.1 + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.22);
+      osc.start(ctx.currentTime + i * 0.1);
+      osc.stop(ctx.currentTime + i * 0.1 + 0.25);
+    });
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════
+//  MENÚ DESPLEGABLE LANDING
+// ══════════════════════════════════════════════
+function toggleNavMenu(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('nav-dropdown');
+  const icon = document.getElementById('nav-menu-icon');
+  const abierto = !dd.classList.contains('hidden');
+  dd.classList.toggle('hidden', abierto);
+  icon.textContent = abierto ? '☰' : '✕';
+}
+function cerrarNavMenu() {
+  const dd = document.getElementById('nav-dropdown');
+  const icon = document.getElementById('nav-menu-icon');
+  if (dd) dd.classList.add('hidden');
+  if (icon) icon.textContent = '☰';
+}
+document.addEventListener('click', function(e) {
+  const btn = document.querySelector('.nav-menu-btn');
+  if (btn && !btn.contains(e.target)) cerrarNavMenu();
+});
+
+// ══════════════════════════════════════════════
+//  CHAT DE SOPORTE — USUARIO
+// ══════════════════════════════════════════════
+let soporteTicketId = null;
+let soporteRealtimeSub = null;
+
+function formatHoraS(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+}
+
+function renderMsgSoporte(msg) {
+  const esUser = msg.origen === 'usuario';
+  const div = document.createElement('div');
+  div.className = 'smsg ' + (esUser ? 'user' : 'admin-reply');
+  div.dataset.msgId = msg.id;
+  if (!esUser) div.innerHTML = `<div class="smsg-name">⚡ Soporte FleteCOL</div>`;
+  div.innerHTML += `<div>${msg.mensaje}</div><div class="smsg-time">${formatHoraS(msg.created_at)}</div>`;
+  return div;
+}
+
+function scrollSoporteAbajo() {
+  const c = document.getElementById('soporte-msgs');
+  setTimeout(() => { if (c) c.scrollTop = c.scrollHeight; }, 50);
+}
+
+async function cargarMensajesSoporte() {
+  if (!soporteTicketId) return;
+  const { data } = await sb.from('soporte_mensajes')
+    .select('*').eq('ticket_id', soporteTicketId)
+    .order('created_at', { ascending: true });
+  const cont = document.getElementById('soporte-msgs');
+  const empty = document.getElementById('soporte-empty');
+  if (!data || data.length === 0) { if (empty) empty.style.display = 'block'; return; }
+  if (empty) empty.style.display = 'none';
+  data.forEach(msg => {
+    if (!cont.querySelector(`[data-msg-id="${msg.id}"]`)) cont.appendChild(renderMsgSoporte(msg));
+  });
+  scrollSoporteAbajo();
+}
+
+async function obtenerOCrearTicket() {
+  const { data: { session } } = await sb.auth.getSession();
+  const userId = session?.user?.id || null;
+  const ticketKey = userId ? 'soporte_ticket_' + userId : 'soporte_ticket_anon';
+  let tid = localStorage.getItem(ticketKey);
+  if (tid) { soporteTicketId = tid; return; }
+  const { data } = await sb.from('soporte_tickets').insert({ estado: 'abierto', usuario_id: userId }).select().single();
+  if (data) {
+    soporteTicketId = data.id;
+    localStorage.setItem(ticketKey, data.id);
+    document.getElementById('soporte-ticket-badge').textContent = `🎫 Ticket #${data.id.slice(0,8).toUpperCase()} · Soporte FleteCOL`;
+  }
+}
+
+async function iniciarSoporte() {
+  await obtenerOCrearTicket();
+  await cargarMensajesSoporte();
+  if (soporteRealtimeSub) sb.removeChannel(soporteRealtimeSub);
+  soporteRealtimeSub = sb.channel('soporte-' + soporteTicketId)
+    .on('postgres_changes', {
+      event: 'INSERT', schema: 'public', table: 'soporte_mensajes',
+      filter: `ticket_id=eq.${soporteTicketId}`
+    }, payload => {
+      const cont = document.getElementById('soporte-msgs');
+      const empty = document.getElementById('soporte-empty');
+      if (empty) empty.style.display = 'none';
+      if (!cont.querySelector(`[data-msg-id="${payload.new.id}"]`)) {
+        cont.appendChild(renderMsgSoporte(payload.new));
+        scrollSoporteAbajo();
+        // 🔔 Sonido solo cuando llega respuesta del admin
+        if (payload.new.origen === 'admin') sonarMensajeEntrante();
+      }
+    }).subscribe();
+}
+
+async function enviarMensajeSoporte() {
+  const inp = document.getElementById('soporte-input');
+  const texto = inp.value.trim();
+  if (!texto) return;
+  const btn = document.getElementById('soporte-send-btn');
+  btn.disabled = true;
+  inp.value = ''; inp.style.height = 'auto';
+  if (!soporteTicketId) await obtenerOCrearTicket();
+  // 🔔 Sonido de envío
+  sonarEnvio();
+  await sb.from('soporte_mensajes').insert({ ticket_id: soporteTicketId, mensaje: texto, origen: 'usuario' });
+  btn.disabled = false;
+  inp.focus();
+}
+
+// Interceptar ir() para iniciar soporte al entrar
+const _irOriginal = window.ir;
+window.ir = function(screen) {
+  _irOriginal(screen);
+  if (screen === 's-soporte') iniciarSoporte();
+};
 </script>
+
 </body>
 </html>
