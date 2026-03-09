@@ -3430,7 +3430,7 @@ async function cargarResenas(conductorId) {
   const lista = document.getElementById('cp-resenas-lista');
   lista.innerHTML = '<div style="font-size:12px;color:var(--texto);">Cargando reseñas…</div>';
   try {
-    const { data, error } = await _supabase
+    const { data, error } = await sb
       .from('resenas')
       .select('estrellas, comentario, created_at')
       .eq('conductor_id', conductorId)
@@ -3458,36 +3458,32 @@ async function enviarResena() {
   if (!conductorActualId) { toast('No se identificó el conductor'); return; }
   const comentario = document.getElementById('cp-comentario').value.trim();
   try {
-    const { data: { user } } = await _supabase.auth.getUser();
-    if (!user) { toast('Debes iniciar sesión'); return; }
+    if (!perfilActual?.id) { toast('Debes iniciar sesión'); return; }
     // Insertar reseña
-    const { error: insErr } = await _supabase.from('resenas').insert({
+    const { error: insErr } = await sb.from('resenas').insert({
       conductor_id: conductorActualId,
-      cliente_id: user.id,
+      cliente_id: perfilActual.id,
       estrellas,
       comentario: comentario || null
     });
     if (insErr) throw insErr;
-    // Recalcular promedio y num_reviews del conductor
-    const { data: todas, error: selErr } = await _supabase
-      .from('resenas').select('estrellas').eq('conductor_id', conductorActualId);
-    if (!selErr && todas && todas.length > 0) {
-      const prom = todas.reduce((s, r) => s + r.estrellas, 0) / todas.length;
-      await _supabase.from('usuarios').update({
-        estrellas: Math.round(prom * 10) / 10,
-        num_reviews: todas.length
-      }).eq('id', conductorActualId);
-      // Actualizar UI del panel
-      document.getElementById('cp-stars2').textContent = '★'.repeat(Math.floor(prom));
-      document.getElementById('cp-rev2').textContent = `${todas.length} reseñas`;
-      document.getElementById('cp-cal2').textContent = (Math.round(prom * 10) / 10).toFixed(1);
-    }
-    toast('✅ Reseña enviada, ¡gracias!');
+    // El trigger en Supabase recalcula estrellas y num_reviews automáticamente.
+    // Recargar las reseñas y actualizar la UI desde la BD para tener datos frescos.
+    toast('✅ ¡Reseña enviada, gracias!', 'success');
     seleccionarEstrellaResena(0);
     document.getElementById('cp-comentario').value = '';
-    cargarResenas(conductorActualId);
+    await cargarResenas(conductorActualId);
+    // Refrescar contadores del panel lateral
+    const { data: cond } = await sb.from('usuarios')
+      .select('estrellas, num_reviews').eq('id', conductorActualId).single();
+    if (cond) {
+      document.getElementById('cp-stars2').textContent = '★'.repeat(Math.floor(cond.estrellas||5));
+      document.getElementById('cp-rev2').textContent = `${cond.num_reviews||0} reseñas`;
+      document.getElementById('cp-cal2').textContent = (cond.estrellas||5).toFixed(1);
+    }
   } catch(e) {
-    toast('Error al enviar reseña. Verifica que la tabla exista en Supabase.');
+    console.error('enviarResena:', e);
+    toast('Error al enviar reseña: ' + (e.message || 'tabla no encontrada'), 'error');
   }
 }
 
