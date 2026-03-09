@@ -2043,6 +2043,7 @@ async function init() {
               estado: 'incompleto',
               foto_perfil: session.user.user_metadata?.avatar_url || null
             });
+            sessionStorage.setItem('nuevo_google', '1');
             await cargarPerfil();
           }
           await redirigirSegunEstado();
@@ -2083,7 +2084,10 @@ async function init() {
           estado: 'incompleto',
           foto_perfil: session.user.user_metadata?.avatar_url || null
         });
-        if(!error) await cargarPerfil();
+        if(!error) {
+          sessionStorage.setItem('nuevo_google', '1');
+          await cargarPerfil();
+        }
       }
       const vieneDePago = await verificarRetornoWompi();
       if(!vieneDePago) await redirigirSegunEstado();
@@ -2338,9 +2342,11 @@ async function redirigirSegunEstado() {
     await irApp('s-rutas');
   } else if(estado === 'incompleto') {
     await irApp('s-rutas');
-    // Solo mostrar selector si aún no tiene rol (primera vez)
-    if(!perfilActual.rol) {
-      setTimeout(() => mostrarSelectorRolGoogle(), 400);
+    // Mostrar selector si no tiene rol (primera vez con Google)
+    const esNuevo = sessionStorage.getItem('nuevo_google');
+    if(!perfilActual.rol || esNuevo) {
+      sessionStorage.removeItem('nuevo_google');
+      setTimeout(() => mostrarSelectorRolGoogle(), 1200);
     }
   } else if(estado === 'pendiente') {
     // Conductor que ya envió docs → puede explorar pero no actuar
