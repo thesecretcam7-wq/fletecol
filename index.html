@@ -2067,7 +2067,7 @@ async function manejarSesion(session) {
     });
     if(error) { console.error('Error creando perfil Google:', error); }
     else {
-      sessionStorage.setItem('nuevo_google', '1');
+      localStorage.setItem('nuevo_google', '1');
       await cargarPerfil();
     }
   }
@@ -2306,9 +2306,9 @@ async function redirigirSegunEstado() {
   } else if(estado === 'incompleto') {
     await irApp('s-rutas');
     // Mostrar selector de rol siempre que sea usuario nuevo de Google
-    const esNuevo = sessionStorage.getItem('nuevo_google') || !perfilActual.rol;
+    const esNuevo = localStorage.getItem('nuevo_google') === '1';
     if(esNuevo) {
-      sessionStorage.removeItem('nuevo_google');
+      localStorage.removeItem('nuevo_google');
       setTimeout(() => mostrarSelectorRolGoogle(), 1200);
     }
   } else if(estado === 'pendiente') {
