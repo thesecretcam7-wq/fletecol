@@ -5194,4 +5194,19 @@ async function enviarMensajeSoporte() {
   if (!soporteTicketId) await obtenerOCrearTicket();
   // 🔔 Sonido de envío
   sonarEnvio();
-  await
+  try {
+    await sb.from('soporte_mensajes').insert({
+      ticket_id: soporteTicketId,
+      mensaje: texto,
+      origen: 'usuario'
+    });
+    await cargarMensajesSoporte();
+  } catch(e) {
+    console.warn('Error al enviar mensaje soporte:', e);
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
