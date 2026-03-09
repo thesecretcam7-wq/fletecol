@@ -498,11 +498,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
         </div>
         <div id="login-error" class="form-error" style="margin-bottom:10px;display:none;"></div>
         <button class="btn-full" id="btn-login" onclick="login()" style="background:var(--gris3);color:var(--blanco);">Iniciar sesión</button>
-        <div id="btn-biometric-wrap" style="display:none;margin-top:10px;">
-          <button class="btn-full" id="btn-biometric" onclick="loginBiometrico()" style="background:var(--gris3);border:1px solid var(--gris4);color:var(--blanco);display:flex;align-items:center;justify-content:center;gap:8px;">
-            <span id="bio-icon">🔒</span> <span id="bio-txt">Usar Face ID / Huella</span>
-          </button>
-        </div>
+
         <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--texto);">¿Olvidaste tu contraseña? <span style="color:var(--amarillo);cursor:pointer;" onclick="resetPassword()">Recuperar</span></div>
       </div>
 
@@ -2017,21 +2013,7 @@ async function init() {
     if(pendSaved) mensajesPendientes = JSON.parse(pendSaved);
   } catch(e) {}
   try {
-    const { data: { session } } = await sb.auth.getSession();
-    document.getElementById('loading').style.display = 'none';
-
-    if(session) {
-      usuarioActual = session.user;
-      await cargarPerfil();
-      const vieneDePago = await verificarRetornoWompi(); // DESPUÉS de cargarPerfil — necesita perfilActual
-      if(!vieneDePago) await redirigirSegunEstado(); // no redirigir si venimos de Wompi
-      suscribirEstado(); // escuchar cambios en tiempo real
-      suscribirBadge();  // actualizar badge de chat en tiempo real
-    } else {
-      ir('s-landing');
-    }
-
-    // CRÍTICO: NO usar async/await dentro de onAuthStateChange — causa deadlock
+    // CRÍTICO: Registrar onAuthStateChange ANTES de getSession para no perder eventos OAuth
     sb.auth.onAuthStateChange((event, session) => {
       if(event === 'TOKEN_REFRESHED' && session) {
         usuarioActual = session.user;
@@ -2040,33 +2022,30 @@ async function init() {
       if(event === 'SIGNED_IN' && session) {
         usuarioActual = session.user;
         if(enRegistro) return;
-        // Si ya hay perfil cargado, es un re-login por token refresh — no redirigir
+        // Si ya hay perfil cargado es re-login por token — no redirigir
         if(perfilActual) return;
-        // Usar setTimeout para romper el contexto síncrono y evitar deadlock
+        // Nuevo login (email/pass o Google en segunda pestaña)
         setTimeout(async () => {
           await cargarPerfil();
-          if(!perfilActual) {
-            // Usuario nuevo con Google → crear perfil mínimo con estado 'incompleto'
-            if(session.user.email) {
-              const nombreCompleto = session.user.user_metadata?.full_name || '';
-              const partes = nombreCompleto.split(' ');
-              const nombre = partes[0] || 'Usuario';
-              const apellido = partes.slice(1).join(' ') || '';
-              const { error } = await sb.from('usuarios').insert({
-                auth_id: session.user.id,
-                nombre, apellido,
-                email: session.user.email,
-                rol: null,
-                estado: 'incompleto',
-                foto_perfil: session.user.user_metadata?.avatar_url || null
-              });
-              if(!error) {
-                await cargarPerfil();
-              }
-            }
+          if(!perfilActual && session.user.email) {
+            // Crear perfil si no existe (Google sin perfil aún)
+            const nombreCompleto = session.user.user_metadata?.full_name || '';
+            const partes = nombreCompleto.split(' ');
+            const nombre = partes[0] || 'Usuario';
+            const apellido = partes.slice(1).join(' ') || '';
+            await sb.from('usuarios').insert({
+              auth_id: session.user.id,
+              nombre, apellido,
+              email: session.user.email,
+              rol: null,
+              estado: 'incompleto',
+              foto_perfil: session.user.user_metadata?.avatar_url || null
+            });
+            await cargarPerfil();
           }
           await redirigirSegunEstado();
           suscribirEstado();
+          suscribirBadge();
         }, 0);
       }
       if(event === 'SIGNED_OUT') {
@@ -2081,6 +2060,37 @@ async function init() {
         }, 0);
       }
     });
+
+    const { data: { session } } = await sb.auth.getSession();
+    document.getElementById('loading').style.display = 'none';
+
+    if(session) {
+      usuarioActual = session.user;
+      await cargarPerfil();
+      if(!perfilActual && session.user.email) {
+        // Usuario nuevo de Google — crear perfil mínimo
+        const nombreCompleto = session.user.user_metadata?.full_name || '';
+        const partes = nombreCompleto.split(' ');
+        const nombre = partes[0] || 'Usuario';
+        const apellido = partes.slice(1).join(' ') || '';
+        const { error } = await sb.from('usuarios').insert({
+          auth_id: session.user.id,
+          nombre, apellido,
+          email: session.user.email,
+          rol: null,
+          estado: 'incompleto',
+          foto_perfil: session.user.user_metadata?.avatar_url || null
+        });
+        if(!error) await cargarPerfil();
+      }
+      const vieneDePago = await verificarRetornoWompi();
+      if(!vieneDePago) await redirigirSegunEstado();
+      suscribirEstado();
+      suscribirBadge();
+    } else {
+      ir('s-landing');
+    }
+
   } catch(e) {
     console.error('Error en init:', e);
     document.getElementById('loading').style.display = 'none';
@@ -2455,7 +2465,6 @@ function ir(screenId) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('activa'));
   document.getElementById(screenId).classList.add('activa');
   document.getElementById('bottom-nav').classList.remove('visible');
-  if(screenId === 's-auth') setTimeout(iniciarBiometrico, 300);
 }
 
 function verificarBannerDocs() {
@@ -2512,7 +2521,6 @@ function showAuthTab(tab, btn) {
   document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('auth-'+tab).classList.add('active');
-  if(tab === 'login') iniciarBiometrico();
 }
 
 async function login() {
@@ -2552,9 +2560,6 @@ async function login() {
       }
       await redirigirSegunEstado();
       // Ofrecer activar biométrico si no está activado
-      if(!localStorage.getItem('bio_cred_id')) {
-        setTimeout(() => activarBiometrico(email, pass), 1000);
-      }
     }
 
     btn.disabled = false; btn.textContent = 'Iniciar sesión';
@@ -2567,126 +2572,6 @@ async function login() {
   }
 }
 
-// ══ BIOMÉTRICO (WebAuthn) ══
-function bioDisponible() {
-  return window.PublicKeyCredential !== undefined;
-}
-
-async function iniciarBiometrico() {
-  if(!bioDisponible()) return;
-  const wrap = document.getElementById('btn-biometric-wrap');
-  if(!wrap) return;
-  // Verificar si ya hay credencial guardada
-  const credId = localStorage.getItem('bio_cred_id');
-  if(credId) {
-    wrap.style.display = 'block';
-    // Detectar tipo de biométrico disponible
-    try {
-      const disponible = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-      if(disponible) {
-        document.getElementById('bio-icon').textContent = '👆';
-        document.getElementById('bio-txt').textContent = 'Usar Face ID / Huella dactilar';
-      }
-    } catch(e) {}
-  }
-}
-
-async function loginBiometrico() {
-  const btn = document.getElementById('btn-biometric');
-  const credId = localStorage.getItem('bio_cred_id');
-  const email  = localStorage.getItem('bio_email');
-  const passEnc = localStorage.getItem('bio_pass');
-  if(!credId || !email || !passEnc) {
-    toast('No hay biométrico configurado','error');
-    return;
-  }
-  btn.textContent = '⏳ Verificando...';
-  btn.disabled = true;
-  try {
-    // Desafío aleatorio
-    const challenge = new Uint8Array(32);
-    crypto.getRandomValues(challenge);
-    const credIdArr = Uint8Array.from(atob(credId), c => c.charCodeAt(0));
-    const assertion = await navigator.credentials.get({
-      publicKey: {
-        challenge,
-        allowCredentials: [{ type: 'public-key', id: credIdArr }],
-        userVerification: 'required',
-        timeout: 60000
-      }
-    });
-    if(assertion) {
-      // Biométrico verificado — hacer login con credenciales guardadas
-      const pass = atob(passEnc);
-      const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
-      if(error) throw error;
-      usuarioActual = data.user;
-      await cargarPerfil();
-      await redirigirSegunEstado();
-    }
-  } catch(e) {
-    if(e.name === 'NotAllowedError') {
-      toast('Biométrico cancelado','error');
-    } else {
-      console.error('Bio error:', e);
-      toast('Error biométrico — usa email y contraseña','error');
-    }
-  } finally {
-    btn.textContent = '👆 Usar Face ID / Huella dactilar';
-    btn.disabled = false;
-  }
-}
-
-async function activarBiometrico(email, pass) {
-  if(!bioDisponible()) return;
-  try {
-    const disponible = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-    if(!disponible) return;
-  } catch(e) { return; }
-
-  // Preguntar al usuario
-  const confirmar = confirm('¿Activar Face ID / Huella para entrar más rápido?');
-  if(!confirmar) return;
-
-  try {
-    const userId = new Uint8Array(16);
-    crypto.getRandomValues(userId);
-    const challenge = new Uint8Array(32);
-    crypto.getRandomValues(challenge);
-
-    const cred = await navigator.credentials.create({
-      publicKey: {
-        challenge,
-        rp: { name: 'FleteCOL', id: window.location.hostname },
-        user: {
-          id: userId,
-          name: email,
-          displayName: email
-        },
-        pubKeyCredParams: [
-          { type: 'public-key', alg: -7 },
-          { type: 'public-key', alg: -257 }
-        ],
-        authenticatorSelection: {
-          authenticatorAttachment: 'platform',
-          userVerification: 'required'
-        },
-        timeout: 60000
-      }
-    });
-
-    if(cred) {
-      // Guardar credencial y email/pass encriptados localmente
-      const credIdB64 = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
-      localStorage.setItem('bio_cred_id', credIdB64);
-      localStorage.setItem('bio_email', email);
-      localStorage.setItem('bio_pass', btoa(pass)); // ofuscado, no encriptado fuerte
-      toast('✅ Face ID / Huella activado','success');
-    }
-  } catch(e) {
-    console.log('Bio activación cancelada:', e.message);
-  }
-}
 
 // ── Login Google directo sin pedir rol ──────────────────────────────────────
 async function loginGoogle() {
