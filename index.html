@@ -488,7 +488,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
           </button>
         </div>
         <div class="divider">o</div>
-        <button class="social-btn" onclick="mostrarModalRolGoogle()">🇬 Continuar con Google</button>
+        <button class="social-btn" onclick="loginGoogle()">🇬 Continuar con Google</button>
         <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--texto);">¿Olvidaste tu contraseña? <span style="color:var(--amarillo);cursor:pointer;" onclick="resetPassword()">Recuperar</span></div>
       </div>
 
@@ -1389,7 +1389,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
 
 <nav class="bottom-nav" id="bottom-nav">
   <button class="bnav-item" onclick="irApp('s-rutas')"><span class="bi-icon">🔍</span><span class="bi-label">Buscar</span></button>
-  <button class="bnav-item" onclick="irApp('s-publicar')"><span class="bi-icon">➕</span><span class="bi-label">Publicar</span></button>
+  <button class="bnav-item" onclick="if(!verificarRegistroParaAccion('publicar')) return; irApp('s-publicar')"><span class="bi-icon">➕</span><span class="bi-label">Publicar</span></button>
   <button class="bnav-item" onclick="irApp('s-chat')"><span class="bnav-rel"><span class="bi-icon">💬</span><span class="bnav-badge" id="chat-badge" style="display:none;">0</span></span><span class="bi-label">Chat</span></button>
   <button class="bnav-item" onclick="irApp('s-pagos')"><span class="bi-icon">💰</span><span class="bi-label">Pagos</span></button>
   <button class="bnav-item" onclick="irApp('s-perfil')"><span class="bi-icon" id="bnav-perfil-icon">🧑</span><span class="bi-label">Perfil</span></button>
@@ -1431,6 +1431,7 @@ async function generarIntegridad(referencia, montoCentavos) {
 
 async function prepararWompi() {
   if(!perfilActual) { toast('Debes iniciar sesión', 'error'); return; }
+  if(!verificarRegistroParaAccion('realizar el pago')) return;
 
   const monto = montoAcordado || calcularMontoPago();
   if(!monto || monto < 1000) { toast('Monto inválido', 'error'); return; }
@@ -2022,8 +2023,8 @@ async function init() {
         setTimeout(async () => {
           await cargarPerfil();
           if(!perfilActual) {
-            const rolPendiente = localStorage.getItem('google_rol_pendiente');
-            if(rolPendiente && session.user.email) {
+            // Usuario nuevo con Google → crear perfil mínimo con estado 'incompleto'
+            if(session.user.email) {
               const nombreCompleto = session.user.user_metadata?.full_name || '';
               const partes = nombreCompleto.split(' ');
               const nombre = partes[0] || 'Usuario';
@@ -2032,12 +2033,11 @@ async function init() {
                 auth_id: session.user.id,
                 nombre, apellido,
                 email: session.user.email,
-                rol: rolPendiente,
-                estado: 'pendiente',
+                rol: null,
+                estado: 'incompleto',
                 foto_perfil: session.user.user_metadata?.avatar_url || null
               });
               if(!error) {
-                localStorage.removeItem('google_rol_pendiente');
                 await cargarPerfil();
               }
             }
@@ -2291,12 +2291,20 @@ async function redirigirSegunEstado() {
   const estado = perfilActual.estado;
   if(estado === 'aprobado') {
     await irApp('s-rutas');
+  } else if(estado === 'incompleto') {
+    await irApp('s-rutas');
+    // Solo mostrar selector si aún no tiene rol (primera vez)
+    if(!perfilActual.rol) {
+      setTimeout(() => mostrarSelectorRolGoogle(), 400);
+    }
+  } else if(estado === 'pendiente') {
+    // Conductor que ya envió docs → puede explorar pero no actuar
+    await irApp('s-rutas');
   } else {
-    // pendiente, rechazado, baneado → pantalla de espera con mensaje según estado
+    // rechazado, baneado → pantalla de espera con mensaje según estado
     actualizarPantallaPendiente(estado, perfilActual.motivo_rechazo, perfilActual.rol);
     ir('s-pendiente');
-    if(estado === 'pendiente') iniciarPolling();
-    else detenerPolling();
+    detenerPolling();
   }
 }
 
@@ -2657,54 +2665,153 @@ async function activarBiometrico(email, pass) {
   }
 }
 
-function mostrarModalRolGoogle() {
+// ── Login Google directo sin pedir rol ──────────────────────────────────────
+async function loginGoogle() {
+  await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin }
+  });
+}
+
+// ── Selector de rol para nuevos usuarios Google (primera vez en la app) ──────
+function mostrarSelectorRolGoogle() {
+  if(document.getElementById('modal-rol-inicial')) return;
   const modal = document.createElement('div');
-  modal.id = 'modal-rol-google';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.id = 'modal-rol-inicial';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
   modal.innerHTML = `
-    <div style="background:var(--gris1);border-radius:8px;padding:28px 24px;max-width:340px;width:100%;border:1px solid var(--gris3);">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;margin-bottom:6px;text-align:center;">¿Cómo usarás FleteCOL?</div>
-      <div style="font-size:13px;color:var(--texto);text-align:center;margin-bottom:24px;">Selecciona tu rol antes de continuar</div>
+    <div style="background:var(--gris1);border-radius:10px;padding:28px 24px;max-width:340px;width:100%;border:1px solid var(--gris3);">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;margin-bottom:6px;text-align:center;color:var(--blanco);">¡Bienvenido a FleteCOL!</div>
+      <div style="font-size:13px;color:var(--texto);text-align:center;margin-bottom:24px;">¿Cómo usarás la plataforma?</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
-        <div id="grole-cliente" onclick="selRolGoogle('cliente')" style="border:2px solid var(--gris3);border-radius:6px;padding:20px 12px;text-align:center;cursor:pointer;transition:all 0.2s;">
+        <div id="grole-i-cliente" onclick="selRolInicial('cliente')" style="border:2px solid var(--gris3);border-radius:8px;padding:20px 12px;text-align:center;cursor:pointer;transition:all 0.2s;">
           <div style="font-size:36px;margin-bottom:8px;">📦</div>
-          <div style="font-weight:700;font-size:14px;">Soy cliente</div>
+          <div style="font-weight:700;font-size:14px;color:var(--blanco);">Soy cliente</div>
           <div style="font-size:11px;color:var(--texto);margin-top:4px;">Necesito transportar carga</div>
         </div>
-        <div id="grole-conductor" onclick="selRolGoogle('conductor')" style="border:2px solid var(--gris3);border-radius:6px;padding:20px 12px;text-align:center;cursor:pointer;transition:all 0.2s;">
+        <div id="grole-i-conductor" onclick="selRolInicial('conductor')" style="border:2px solid var(--gris3);border-radius:8px;padding:20px 12px;text-align:center;cursor:pointer;transition:all 0.2s;">
           <div style="font-size:36px;margin-bottom:8px;">🚛</div>
-          <div style="font-weight:700;font-size:14px;">Soy conductor</div>
+          <div style="font-weight:700;font-size:14px;color:var(--blanco);">Soy conductor</div>
           <div style="font-size:11px;color:var(--texto);margin-top:4px;">Tengo vehículo disponible</div>
         </div>
       </div>
-      <button id="btn-continuar-google" onclick="loginGoogle()" disabled style="width:100%;padding:14px;background:var(--gris3);color:var(--texto);border:none;border-radius:12px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;cursor:not-allowed;transition:all 0.2s;">Continuar con Google →</button>
-      <button onclick="document.getElementById('modal-rol-google').remove()" style="width:100%;padding:10px;background:transparent;color:var(--texto);border:none;font-size:13px;cursor:pointer;margin-top:8px;">Cancelar</button>
+      <button id="btn-confirmar-rol" onclick="confirmarRolInicial()" disabled
+        style="width:100%;padding:14px;background:var(--gris3);color:var(--texto);border:none;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;cursor:not-allowed;transition:all 0.2s;">
+        Continuar →
+      </button>
     </div>
   `;
   document.body.appendChild(modal);
 }
 
-let rolGoogle = '';
-function selRolGoogle(rol) {
-  rolGoogle = rol;
-  document.getElementById('grole-cliente').style.border = rol === 'cliente' ? '2px solid var(--amarillo)' : '2px solid var(--gris3)';
-  document.getElementById('grole-conductor').style.border = rol === 'conductor' ? '2px solid var(--amarillo)' : '2px solid var(--gris3)';
-  const btn = document.getElementById('btn-continuar-google');
+let _rolInicialSeleccionado = '';
+function selRolInicial(rol) {
+  _rolInicialSeleccionado = rol;
+  document.getElementById('grole-i-cliente').style.border = rol === 'cliente' ? '2px solid var(--amarillo)' : '2px solid var(--gris3)';
+  document.getElementById('grole-i-conductor').style.border = rol === 'conductor' ? '2px solid var(--amarillo)' : '2px solid var(--gris3)';
+  const btn = document.getElementById('btn-confirmar-rol');
   btn.disabled = false;
   btn.style.background = 'var(--amarillo)';
   btn.style.color = 'var(--negro)';
   btn.style.cursor = 'pointer';
 }
 
-async function loginGoogle() {
-  const modal = document.getElementById('modal-rol-google');
-  if(modal && !rolGoogle) { toast('Selecciona tu rol primero','error'); return; }
-  if(rolGoogle) localStorage.setItem('google_rol_pendiente', rolGoogle);
+async function confirmarRolInicial() {
+  if(!_rolInicialSeleccionado) return;
+  const modal = document.getElementById('modal-rol-inicial');
   if(modal) modal.remove();
-  await sb.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: window.location.origin }
+
+  if(_rolInicialSeleccionado === 'cliente') {
+    // Cliente → aprobar automáticamente, sin documentos
+    const { error } = await sb.from('usuarios')
+      .update({ rol: 'cliente', estado: 'aprobado' })
+      .eq('auth_id', usuarioActual.id);
+    if(!error) {
+      await cargarPerfil();
+      toast('✅ ¡Bienvenido! Ya puedes usar FleteCOL', 'success');
+    }
+  } else {
+    // Conductor → queda incompleto, entra a explorar la app
+    const { error } = await sb.from('usuarios')
+      .update({ rol: 'conductor', estado: 'incompleto' })
+      .eq('auth_id', usuarioActual.id);
+    if(!error) {
+      await cargarPerfil();
+      toast('🚛 Bienvenido conductor. Completa tu registro para empezar a publicar rutas.', 'info');
+    }
+  }
+}
+
+// ── Llevar al conductor al flujo de registro (paso 1: elegir rol) ─────────────
+function irRegistroIncompleto() {
+  // Para conductores Google: ir directo al paso 3 (documentos)
+  // authIdTemporal lo tomamos de la sesión activa
+  sb.auth.getSession().then(({ data:{ session } }) => {
+    if(session?.user?.id) authIdTemporal = session.user.id;
   });
+  showAuthTab('registro', document.querySelector('.auth-tab:nth-child(2)'));
+  // Ocultar todos los pasos y mostrar solo el paso 3
+  [1,2,3,4].forEach(n => {
+    const el = document.getElementById('reg-step' + n);
+    if(el) el.style.display = 'none';
+  });
+  const step3 = document.getElementById('reg-step3');
+  if(step3) step3.style.display = 'block';
+  // Mostrar sección documentos de vehículo (es conductor)
+  const docsVeh = document.getElementById('docs-vehiculo');
+  if(docsVeh) docsVeh.style.display = 'block';
+  ir('s-auth');
+}
+
+// ── Modal "Completa tu registro" — solo para conductores ─────────────────────
+function mostrarModalRegistroIncompleto(accion) {
+  if(document.getElementById('modal-registro-incompleto')) return;
+  const modal = document.createElement('div');
+  modal.id = 'modal-registro-incompleto';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML = `
+    <div style="background:var(--gris1);border-radius:10px;padding:30px 24px;max-width:340px;width:100%;border:1px solid var(--gris3);text-align:center;">
+      <div style="font-size:52px;margin-bottom:14px;">🚛</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:21px;margin-bottom:8px;color:var(--blanco);">¿Eres conductor?</div>
+      <div style="font-size:13px;color:var(--texto);line-height:1.7;margin-bottom:24px;">
+        Para <strong style="color:var(--amarillo);">${accion}</strong> necesitas completar tu registro como conductor y subir tus documentos.<br><br>
+        Solo toma <strong style="color:var(--blanco);">2 minutos</strong> ✅
+      </div>
+      <button onclick="cerrarModalRegistro();irRegistroIncompleto()" style="width:100%;padding:14px;background:var(--amarillo);color:var(--negro);border:none;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;cursor:pointer;margin-bottom:10px;">
+        Completar registro →
+      </button>
+      <button onclick="cerrarModalRegistro()" style="width:100%;padding:10px;background:transparent;color:var(--texto);border:none;font-size:13px;cursor:pointer;">
+        Ahora no
+      </button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function cerrarModalRegistro() {
+  const m = document.getElementById('modal-registro-incompleto');
+  if(m) m.remove();
+}
+
+// Verifica si el usuario puede realizar una acción
+// - Clientes aprobados: sin restricción
+// - Conductores pendientes: pueden explorar pero no actuar
+// - Incompleto sin rol: pide elegir rol
+function verificarRegistroParaAccion(accion) {
+  if(!perfilActual) return false;
+  // Cliente aprobado → sin restricción
+  if(perfilActual.rol === 'cliente' && perfilActual.estado === 'aprobado') return true;
+  // Incompleto → conductor que aún no subió docs
+  if(perfilActual.estado === 'incompleto') {
+    mostrarModalRegistroIncompleto(accion);
+    return false;
+  }
+  // Pendiente → conductor que ya envió docs, espera aprobación del admin
+  if(perfilActual.estado === 'pendiente') {
+    toast('⏳ Tu cuenta está en revisión. Podrás ' + accion + ' cuando el admin la apruebe.', 'info');
+    return false;
+  }
+  return true;
 }
 
 async function resetPassword() {
@@ -2906,7 +3013,8 @@ async function enviarDocumentos() {
   if(!docsSubidos.selfie_cedula)    faltantes.push('Selfie con cédula');
 
   // Validar documentos de vehículo si es conductor
-  if(rolSeleccionado === 'conductor') {
+  const esCondutorActivo = rolSeleccionado === 'conductor' || perfilActual?.rol === 'conductor';
+  if(esCondutorActivo) {
     if(!docsSubidos.foto_vehiculo)  faltantes.push('Foto del vehículo');
     if(!docsSubidos.foto_vehiculo2) faltantes.push('Segunda foto del vehículo');
     if(!docsSubidos.soat)           faltantes.push('SOAT');
@@ -2922,14 +3030,16 @@ async function enviarDocumentos() {
   btn.textContent = 'Guardando...';
 
   try {
-    if(authIdTemporal) {
-      // Leer si ya tiene foto de perfil propia (subida voluntariamente en el paso 2)
-      const { data: usuarioActual } = await sb.from('usuarios')
-        .select('foto_perfil').eq('auth_id', authIdTemporal).single();
+    // Usar sesión activa (conductor Google incompleto) o authIdTemporal (registro normal)
+    const { data:{ session } } = await sb.auth.getSession();
+    const targetAuthId = authIdTemporal || session?.user?.id;
 
-      // Si NO subió foto de perfil, usar la selfie como foto de perfil
-      const fotoPerfilFinal = (usuarioActual?.foto_perfil)
-        ? usuarioActual.foto_perfil
+    if(targetAuthId) {
+      const { data: usuarioExistente } = await sb.from('usuarios')
+        .select('foto_perfil').eq('auth_id', targetAuthId).single();
+
+      const fotoPerfilFinal = (usuarioExistente?.foto_perfil)
+        ? usuarioExistente.foto_perfil
         : docsSubidos.selfie_cedula;
 
       await sb.from('usuarios').update({
@@ -2941,16 +3051,25 @@ async function enviarDocumentos() {
         doc_soat:             docsSubidos.soat,
         foto_perfil:          fotoPerfilFinal,
         estado:               'pendiente'
-      }).eq('auth_id', authIdTemporal);
+      }).eq('auth_id', targetAuthId);
     }
 
     btn.disabled = false;
     btn.textContent = 'Enviar →';
     enRegistro = false;
-    // Mostrar pantalla de solicitud en revisión
-    actualizarPantallaPendiente('pendiente', null, rolSeleccionado);
-    ir('s-pendiente');
-    toast('📄 Solicitud enviada. Te avisaremos cuando sea aprobada.', 'success');
+
+    // Si es conductor Google (sesión activa), recargar perfil y volver a la app
+    if(!authIdTemporal && session?.user?.id) {
+      await cargarPerfil();
+      toast('📄 Documentos enviados. Te avisaremos cuando tu cuenta sea aprobada.', 'success');
+      await irApp('s-rutas');
+    } else {
+      // Flujo de registro normal → pantalla de espera
+      const rolFinal = rolSeleccionado || perfilActual?.rol;
+      actualizarPantallaPendiente('pendiente', null, rolFinal);
+      ir('s-pendiente');
+      toast('📄 Solicitud enviada. Te avisaremos cuando sea aprobada.', 'success');
+    }
 
   } catch(err) {
     btn.disabled = false;
@@ -3777,6 +3896,7 @@ async function enviarCambioVehiculo() {
 }
 
 async function publicarRuta() {
+  if(!verificarRegistroParaAccion('publicar rutas')) return;
   if(!usuarioActual) { toast('Debes iniciar sesión para publicar', 'error'); return; }
   const btn = document.getElementById('btn-pub-ruta');
   btn.disabled = true; btn.textContent = 'Publicando...';
@@ -3856,6 +3976,7 @@ document.addEventListener('click', e => {
 // ─────────────────────────────────────────────────────────────
 
 async function publicarCarga() {
+  if(!verificarRegistroParaAccion('publicar carga')) return;
   if(perfilActual?.estado === 'pendiente') {
     toast('⚠️ Debes completar tu perfil para publicar','error');
     setTimeout(() => irApp('s-perfil'), 1000);
@@ -4060,6 +4181,7 @@ function enterSend2(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();envia
 // ══ CHAT CON SUPABASE ══
 async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, destino, desdeCarga=false) {
   if(!usuarioActual || !perfilActual) { toast('Debes iniciar sesión','error'); return; }
+  if(!verificarRegistroParaAccion('chatear con el conductor')) return;
   if(perfilActual.estado === 'pendiente') {
     toast('⚠️ Debes completar tu perfil para chatear','error');
     setTimeout(() => irApp('s-perfil'), 1000);
@@ -4721,6 +4843,7 @@ async function aceptarOfertaReal(monto) {
 
 async function prepararWompiConMonto(monto) {
   if(!perfilActual) { toast('Debes iniciar sesion', 'error'); return; }
+  if(!verificarRegistroParaAccion('realizar el pago')) return;
   if(!monto || monto < 1000) { toast('Monto invalido', 'error'); return; }
   toast('⏳ Preparando pago...', 'info');
   try {
