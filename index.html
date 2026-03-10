@@ -1603,12 +1603,16 @@ async function pagoWompiExitoso(txData, convIdParam) {
       else console.log('✅ Ruta del conductor marcada como en_curso');
     }
 
-    // Quitar carga publicada por el cliente de búsquedas
+       // Quitar carga publicada por el cliente de búsquedas
     if(perfilActual?.id) {
-      const { error: eCarga } = await sb.from('cargas')
-        .update({ estado: 'en_curso' })
-        .eq('cliente_id', perfilActual.id)
-        .eq('estado', 'activa');
+      const cargaIdConv = convActual?.carga_id || null;
+      let cargaQuery = sb.from('cargas').update({ estado: 'en_curso' }).eq('estado', 'activa');
+      if(cargaIdConv) {
+        cargaQuery = cargaQuery.eq('id', cargaIdConv);
+      } else {
+        cargaQuery = cargaQuery.eq('cliente_id', perfilActual.id);
+      }
+      const { error: eCarga } = await cargaQuery;
       if(eCarga) console.warn('carga en_curso:', eCarga.message);
       else console.log('✅ Carga del cliente marcada como en_curso');
     }
@@ -3568,7 +3572,7 @@ async function cargarRutas() {
            <button onclick="eliminarCargaBuscar('${c.id}',this)" style="background:rgba(255,69,69,0.12);border:1px solid rgba(255,69,69,0.25);color:var(--rojo);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Eliminar</button>
          </div>`
       : `<button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;cursor:pointer;"
-           onclick="abrirChatConConductor('${c.cliente_id||''}','${(c.cliente?.nombre||'Cliente')+' '+(c.cliente?.apellido||'')}',0,'${c.origen||''}','${c.destino||''}',true)">
+           onclick="abrirChatConConductor('${c.cliente_id||''}','${(c.cliente?.nombre||'Cliente')+' '+(c.cliente?.apellido||'')}',0,'${c.origen||''}','${c.destino||''}',true,'${c.id||''}')">
            Ofrecer precio →
          </button>`;
     return `
@@ -4377,7 +4381,7 @@ function enterSend2(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();envia
 
 
 // ══ CHAT CON SUPABASE ══
-async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, destino, desdeCarga=false) {
+async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, destino, desdeCarga=false, cargaId=null) {
   if(!usuarioActual || !perfilActual) { toast('Debes iniciar sesión','error'); return; }
   if(!verificarRegistroParaAccion('chatear con el conductor')) return;
   if(perfilActual.estado === 'pendiente') {
@@ -4407,13 +4411,14 @@ async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, des
         usuario1_id: miId,
         usuario2_id: otroUserId,
         precio_acordado: precio||0,
-        estado: 'negociando'
+        estado: 'negociando',
+        carga_id: cargaId || null
       }).select().single();
       if(error) { console.error('Error creando conv:', error); toast('Error al abrir chat: '+error.message, 'error'); return; }
       conv = nueva;
     }
 
-    convActual = { ...conv, desdeCarga };
+    convActual = { ...conv, desdeCarga, carga_id: conv.carga_id || cargaId };
     sessionStorage.setItem('convActual', JSON.stringify(convActual));
     mostrarHeaderChat(otroNombre, origen, destino, conv.precio_acordado||precio);
     abrirChatMobile();
@@ -4762,10 +4767,14 @@ async function cargarConversaciones(convActivaId) {
   }
 
   // Contar mensajes no leídos en todas las conversaciones
+  const chatEnPantalla = document.getElementById('s-chat')?.classList.contains('activa') && !document.hidden;
   let totalNoLeidos = 0;
   convs.forEach(c => {
     const msgs = c.mensajes || [];
-    totalNoLeidos += msgs.filter(m => !m.leido && m.emisor_id !== perfilActual.id).length;
+    const esConvViendo = c.id === convActivaId && chatEnPantalla;
+    if(!esConvViendo) {
+      totalNoLeidos += msgs.filter(m => !m.leido && m.emisor_id !== perfilActual.id).length;
+    }
   });
   const badge = document.getElementById('chat-badge');
   if(badge) {
@@ -4781,7 +4790,8 @@ async function cargarConversaciones(convActivaId) {
     const soyUno = c.usuario1_id === perfilActual.id;
     const otroId = soyUno ? c.usuario2_id : c.usuario1_id;
     const nombreOtro = nombresMap[otroId] || 'Usuario';
-    const noLeidos = (c.mensajes||[]).filter(m => !m.leido && m.emisor_id !== perfilActual.id).length;
+    const esConvActiva = c.id === convActivaId && chatEnPantalla;
+    const noLeidos = esConvActiva ? 0 : (c.mensajes||[]).filter(m => !m.leido && m.emisor_id !== perfilActual.id).length;
     const msgs = c.mensajes || [];
     const ultimo = msgs.sort((a,b) => new Date(b.created_at)-new Date(a.created_at))[0];
     const ultimoTxt = ultimo ? (ultimo.tipo==='oferta' ? '💰 Oferta enviada' : ultimo.contenido) : `${c.origen} → ${c.destino}`;
