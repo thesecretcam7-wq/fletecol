@@ -1144,8 +1144,8 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
         <div style="display:flex;gap:6px;justify-content:center;margin-bottom:12px;" id="stars-r">
           <span style="font-size:26px;cursor:pointer;" onclick="calificar2(1)">☆</span><span style="font-size:26px;cursor:pointer;" onclick="calificar2(2)">☆</span><span style="font-size:26px;cursor:pointer;" onclick="calificar2(3)">☆</span><span style="font-size:26px;cursor:pointer;" onclick="calificar2(4)">☆</span><span style="font-size:26px;cursor:pointer;" onclick="calificar2(5)">☆</span>
         </div>
-        <textarea style="width:100%;background:var(--gris3);border:1.5px solid var(--gris4);border-radius:9px;padding:9px;color:var(--blanco);font-size:12px;font-family:'Inter',sans-serif;outline:none;resize:none;" rows="2" placeholder="¿Cómo fue el servicio?"></textarea>
-        <button class="btn-full" style="margin-top:8px;" onclick="toast('⭐ Reseña enviada. ¡Gracias!','success')">Enviar reseña</button>
+        <textarea id="review-comment2" style="width:100%;background:var(--gris3);border:1.5px solid var(--gris4);border-radius:9px;padding:9px;color:var(--blanco);font-size:12px;font-family:'Inter',sans-serif;outline:none;resize:none;" rows="2" placeholder="¿Cómo fue el servicio?"></textarea>
+        <button class="btn-full" style="margin-top:8px;" onclick="guardarResenaDesdeEntrega()">Enviar reseña</button>
       </div>
     </div>
   </div>
@@ -1800,9 +1800,7 @@ function toggleChatMenu() {
 
 async function eliminarChat() {
   document.getElementById('chat-menu-dropdown').style.display = 'none';
-  // Guardar el ID exacto antes de cualquier operación
   const convIdAEliminar = convActual?.id;
-  // Verificación estricta: debe ser un UUID válido
   if(!convIdAEliminar || typeof convIdAEliminar !== 'string' || convIdAEliminar.length < 10) {
     toast('Error: no hay conversación seleccionada', 'error');
     return;
@@ -1812,42 +1810,52 @@ async function eliminarChat() {
     .select('estado').eq('conversacion_id', convIdAEliminar)
     .in('estado', ['APPROVED', 'pendiente']).limit(1);
   if(pagosActivos?.length) {
-    toast('⚠️ No puedes eliminar esta conversación hasta confirmar la entrega', 'error');
+    toast('\u26a0\ufe0f No puedes eliminar esta conversación hasta confirmar la entrega', 'error');
     return;
   }
-  const ok = confirm('¿Eliminar esta conversación? Se borrarán todos los mensajes.');
+  const ok = confirm('�Eliminar esta conversación? No aparecerá en tu lista.');
   if(!ok) return;
   try {
-    console.log('🗑️ Eliminando conversación:', convIdAEliminar);
-    // 1. Eliminar pagos asociados
-    const { error: e0 } = await sb.from('pagos').delete().eq('conversacion_id', convIdAEliminar);
-    if(e0) throw new Error('pagos: ' + e0.message);
-    // 2. Eliminar mensajes
-    const { error: e1 } = await sb.from('mensajes').delete().eq('conversacion_id', convIdAEliminar);
-    if(e1) throw new Error('mensajes: ' + e1.message);
-    // 3. Eliminar conversación
-    const { error: e2 } = await sb.from('conversaciones').delete().eq('id', convIdAEliminar);
-    if(e2) throw new Error('conversacion: ' + e2.message);
-    // Quitar el item de la lista inmediatamente
+    // Obtener la conversación para saber si soy usuario1 o usuario2
+    const { data: conv } = await sb.from('conversaciones')
+      .select('usuario1_id, usuario2_id, oculta_usuario1, oculta_usuario2')
+      .eq('id', convIdAEliminar).single();
+    if(!conv) throw new Error('Conversación no encontrada');
+
+    const soyUno = conv.usuario1_id === perfilActual?.id;
+    const campoOcultar = soyUno ? 'oculta_usuario1' : 'oculta_usuario2';
+
+    // Marcar como oculta solo para este usuario
+    const { error: eOcultar } = await sb.from('conversaciones')
+      .update({ [campoOcultar]: true })
+      .eq('id', convIdAEliminar);
+    if(eOcultar) throw new Error('ocultar: ' + eOcultar.message);
+
+    // Si AMBOS la han ocultado, borrar físicamente
+    const otraOculta = soyUno ? conv.oculta_usuario2 : conv.oculta_usuario1;
+    if(otraOculta) {
+      await sb.from('pagos').delete().eq('conversacion_id', convIdAEliminar);
+      await sb.from('mensajes').delete().eq('conversacion_id', convIdAEliminar);
+      await sb.from('conversaciones').delete().eq('id', convIdAEliminar);
+    }
+
+    // Quitar de la lista local
     const itemEliminar = document.querySelector(`.conv-item[data-conv-id="${convIdAEliminar}"]`);
     if(itemEliminar) itemEliminar.remove();
-
     convActual = null;
-    // Volver a lista de chats
     if(esMobile()) volverListaChat();
     document.getElementById('chat-nombre').textContent = 'Selecciona una conversación';
-    document.getElementById('chat-sub').textContent = '—';
+    document.getElementById('chat-sub').textContent = '\u2014';
     document.getElementById('msgs-wrap').innerHTML = '';
     document.getElementById('chat-acciones').style.display = 'none';
     const menuBtn = document.getElementById('chat-menu-btn');
     if(menuBtn) menuBtn.style.display = 'none';
     await cargarConversaciones();
-    toast('🗑️ Conversación eliminada', 'info');
+    toast('🗑\ufe0f Conversación eliminada', 'info');
   } catch(e) {
     toast('Error al eliminar: ' + e.message, 'error');
   }
 }
-
 function compartirRecibo() {
   const tx = window._reciboData || {};
   const monto = tx.amount_in_cents ? (tx.amount_in_cents/100).toLocaleString('es-CO') : (montoAcordado||0).toLocaleString('es-CO');
@@ -3557,7 +3565,7 @@ async function cargarRutas() {
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="rc-av">🚛</div>
           <div>
-            <div style="font-weight:700;font-size:13px;">${r.conductor?.nombre||'Conductor'} ${r.conductor?.apellido||''}</div>
+            <div style="font-weight:700;font-size:13px;cursor:pointer;color:var(--blanco);text-decoration:underline;text-underline-offset:2px;" onclick="event.stopPropagation();abrirModalConductor('${r.conductor_id||''}','${(r.conductor?.nombre||'Conductor')+' '+(r.conductor?.apellido||'')}',${r.conductor?.estrellas||5},${r.conductor?.num_reviews||0})">${r.conductor?.nombre||'Conductor'} ${r.conductor?.apellido||''}</div>
             <div style="font-size:11px;color:var(--texto);">${'★'.repeat(Math.floor(r.conductor?.estrellas||5))} ${r.conductor?.estrellas||5} · ${r.conductor?.num_reviews||0} reseñas</div>
             <div style="font-size:11px;color:var(--texto);">🛣️ ${r.conductor?.viajes_completados||0} rutas realizadas</div>
           </div>
@@ -4768,8 +4776,15 @@ async function cargarConversaciones(convActivaId) {
 
     if(error) { console.error('[cargarConversaciones]', error.message); return; }
 
+  // Filtrar conversaciones ocultas para este usuario
+  const convsVisibles = (convs || []).filter(c => {
+    if(c.usuario1_id === perfilActual.id) return !c.oculta_usuario1;
+    if(c.usuario2_id === perfilActual.id) return !c.oculta_usuario2;
+    return true;
+  });
+
   // Obtener IDs de los otros usuarios para buscar sus nombres
-  const otrosIds = convs.map(c => c.usuario1_id === perfilActual.id ? c.usuario2_id : c.usuario1_id).filter(Boolean);
+  const otrosIds = convsVisibles.map(c => c.usuario1_id === perfilActual.id ? c.usuario2_id : c.usuario1_id).filter(Boolean);
   let nombresMap = {};
   if(otrosIds.length > 0) {
     const { data: perfiles } = await sb.from('usuarios').select('id, nombre, apellido').in('id', otrosIds);
@@ -4777,7 +4792,7 @@ async function cargarConversaciones(convActivaId) {
   }
 
   const list = document.getElementById('conv-list');
-  if(!convs || convs.length === 0) {
+  if(!convsVisibles || convsVisibles.length === 0) {
     list.innerHTML = `<div class="empty" style="padding:24px 16px;"><div class="empty-icon" style="font-size:32px;">💬</div><div class="empty-title" style="font-size:14px;">Sin conversaciones</div><div class="empty-sub" style="font-size:12px;">Negocia desde la sección de rutas.</div></div>`;
     return;
   }
@@ -4785,7 +4800,7 @@ async function cargarConversaciones(convActivaId) {
   // Contar mensajes no leídos en todas las conversaciones
   const chatEnPantalla = document.getElementById('s-chat')?.classList.contains('activa') && !document.hidden;
   let totalNoLeidos = 0;
-  convs.forEach(c => {
+  convsVisibles.forEach(c => {
     const msgs = c.mensajes || [];
     const esConvViendo = c.id === convActivaId && chatEnPantalla;
     if(!esConvViendo) {
@@ -4802,7 +4817,7 @@ async function cargarConversaciones(convActivaId) {
     }
   }
 
-  list.innerHTML = convs.map(c => {
+  list.innerHTML = convsVisibles.map(c => {
     const soyUno = c.usuario1_id === perfilActual.id;
     const otroId = soyUno ? c.usuario2_id : c.usuario1_id;
     const nombreOtro = nombresMap[otroId] || 'Usuario';
@@ -5264,6 +5279,72 @@ function pedirConfEntrega() {
 }
 function calificar2(n){document.querySelectorAll('#stars-r span').forEach((s,i)=>{s.textContent=i<n?'★':'☆';s.style.color=i<n?'var(--amarillo)':'var(--texto)';});}
 
+async function guardarResenaDesdeEntrega() {
+  const conductorId = convActual?.otro_id;
+  if(!conductorId) { toast('No se identificó el conductor', 'error'); return; }
+  if(!perfilActual?.id) { toast('Debes iniciar sesión', 'error'); return; }
+  // Contar estrellas marcadas
+  const spans = document.querySelectorAll('#stars-r span');
+  const estrellas = [...spans].filter(s => s.textContent === '★').length;
+  if(estrellas < 1) { toast('⭐ Selecciona al menos 1 estrella', 'info'); return; }
+  const comentario = document.getElementById('review-comment2')?.value.trim() || null;
+  try {
+    const { error } = await sb.from('resenas').insert({
+      conductor_id: conductorId,
+      cliente_id: perfilActual.id,
+      estrellas,
+      comentario
+    });
+    if(error) throw error;
+    toast('✅ ¡Reseña enviada, gracias!', 'success');
+    // Resetear formulario
+    calificar2(0);
+    const ta = document.getElementById('review-comment2');
+    if(ta) ta.value = '';
+  } catch(e) {
+    toast('Error al guardar reseña: ' + e.message, 'error');
+  }
+}
+
+async function abrirModalConductor(conductorId, nombre, estrellas, numReviews) {
+  const modal = document.getElementById('modal-conductor');
+  if(!modal) return;
+  document.getElementById('mcond-nombre').textContent = nombre;
+  document.getElementById('mcond-stars').textContent = '★'.repeat(Math.floor(estrellas)) + '☆'.repeat(5 - Math.floor(estrellas));
+  document.getElementById('mcond-cal').textContent = parseFloat(estrellas).toFixed(1);
+  document.getElementById('mcond-rev').textContent = numReviews + ' reseñas';
+  modal.style.display = 'flex';
+  // Cargar reseñas
+  const lista = document.getElementById('mcond-lista');
+  lista.innerHTML = '<div style="text-align:center;color:var(--texto);font-size:13px;padding:20px 0;">Cargando reseñas…</div>';
+  try {
+    const { data, error } = await sb.from('resenas')
+      .select('estrellas, comentario, created_at')
+      .eq('conductor_id', conductorId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if(error) throw error;
+    if(!data || data.length === 0) {
+      lista.innerHTML = '<div style="text-align:center;color:var(--texto);font-size:13px;padding:20px 0;font-style:italic;">Sin reseñas aún.</div>';
+      return;
+    }
+    lista.innerHTML = data.map(rv => `
+      <div style="background:var(--gris2);border-radius:10px;padding:12px 14px;">
+        <div style="color:var(--amarillo);font-size:16px;margin-bottom:4px;">${'★'.repeat(rv.estrellas)}${'☆'.repeat(5-rv.estrellas)}</div>
+        ${rv.comentario ? `<div style="font-size:13px;color:var(--blanco);margin-bottom:4px;">${rv.comentario}</div>` : ''}
+        <div style="font-size:11px;color:var(--texto);">${new Date(rv.created_at).toLocaleDateString('es-CO')}</div>
+      </div>`).join('');
+  } catch(e) {
+    lista.innerHTML = '<div style="color:var(--rojo);font-size:13px;padding:12px;">Error cargando reseñas.</div>';
+  }
+}
+
+function cerrarModalConductor() {
+  const modal = document.getElementById('modal-conductor');
+  if(modal) modal.style.display = 'none';
+}
+
+
 // ══ TOAST ══
 function toast(msg,tipo='info'){
   const t=document.createElement('div');
@@ -5390,20 +5471,24 @@ function getAudioCtx() {
 function sonarMensajeEntrante() {
   try {
     const ctx = getAudioCtx();
-    const notas = [880, 1100];
-    notas.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
-      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12);
-      gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + i * 0.12 + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.18);
-      osc.start(ctx.currentTime + i * 0.12);
-      osc.stop(ctx.currentTime + i * 0.12 + 0.2);
-    });
+    const play = () => {
+      const notas = [880, 1100];
+      notas.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
+        gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12);
+        gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + i * 0.12 + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.18);
+        osc.start(ctx.currentTime + i * 0.12);
+        osc.stop(ctx.currentTime + i * 0.12 + 0.2);
+      });
+    };
+    if(ctx.state === 'suspended') ctx.resume().then(play);
+    else play();
   } catch(e) {}
 }
 
@@ -5568,5 +5653,25 @@ async function enviarMensajeSoporte() {
   }
 }
 </script>
+
+<!-- MODAL PERFIL CONDUCTOR -->
+<div id="modal-conductor" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.6);align-items:flex-end;justify-content:center;" onclick="if(event.target===this)cerrarModalConductor()">
+  <div style="background:var(--gris1);width:100%;max-width:480px;max-height:85vh;border-radius:20px 20px 0 0;overflow-y:auto;padding:20px 18px 32px;box-sizing:border-box;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div id="mcond-nombre" style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;"></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+          <span id="mcond-stars" style="color:var(--amarillo);font-size:16px;"></span>
+          <span id="mcond-cal" style="font-weight:700;font-size:14px;color:var(--amarillo);"></span>
+          <span id="mcond-rev" style="font-size:12px;color:var(--texto);"></span>
+        </div>
+      </div>
+      <button onclick="cerrarModalConductor()" style="background:var(--gris3);border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;color:var(--blanco);display:flex;align-items:center;justify-content:center;">×</button>
+    </div>
+    <div id="mcond-lista" style="display:flex;flex-direction:column;gap:10px;">
+      <div style="text-align:center;color:var(--texto);font-size:13px;padding:20px 0;">Cargando reseñas…</div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
