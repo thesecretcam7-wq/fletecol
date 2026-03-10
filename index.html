@@ -2676,6 +2676,25 @@ function irRegistroIncompleto() {
         ${_docItem('m2-selfie','Selfie con tu cédula','Tómate una foto sujetando la cédula','🤳','image/*')}
       </div>
 
+      <!-- Tipo de vehículo -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <div style="width:3px;height:16px;background:#F5C400;border-radius:2px;"></div>
+        <span style="font-size:10px;color:#F5C400;text-transform:uppercase;letter-spacing:1.2px;font-weight:700;">Tipo de vehículo</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px;">
+        ${['moto','camioneta','camion','mula'].map((v,i) => {
+          const icons  = ['🏍️','🚐','🚚','🚛'];
+          const labels = ['Moto','Camioneta','Camión','Tractomula'];
+          const subs   = ['Hasta 30 kg','Hasta 1.5 ton','Hasta 10 ton','Hasta 35 ton'];
+          return `<div id="m2-veh-${v}" onclick="_selVehModal('${v}')"
+            style="background:#161d27;border:1.5px solid #2a3340;border-radius:12px;padding:14px 10px;text-align:center;cursor:pointer;transition:all 0.18s;">
+            <div style="font-size:26px;margin-bottom:5px;">${icons[i]}</div>
+            <div style="font-size:13px;font-weight:700;color:#e8edf5;">${labels[i]}</div>
+            <div style="font-size:10px;color:#6B7A99;margin-top:2px;">${subs[i]}</div>
+          </div>`;
+        }).join('')}
+      </div>
+
       <!-- Sección vehículo -->
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
         <div style="width:3px;height:16px;background:#F5C400;border-radius:2px;"></div>
@@ -2786,12 +2805,25 @@ function irRegistroIncompleto() {
     });
   });
 
+  // Selección de tipo de vehículo
+  let vehModal = '';
+  window._selVehModal = function(v) {
+    vehModal = v;
+    ['moto','camioneta','camion','mula'].forEach(x => {
+      const el = document.getElementById('m2-veh-' + x);
+      if(!el) return;
+      el.style.borderColor  = x === v ? '#F5C400' : '#2a3340';
+      el.style.background   = x === v ? 'rgba(245,196,0,0.08)' : '#161d27';
+    });
+  };
+
   // Botón enviar
   document.getElementById('m2-btn-enviar').addEventListener('click', async function() {
     const errEl = document.getElementById('m2-error');
     errEl.style.display = 'none';
 
     const faltantes = [];
+    if(!vehModal)                   faltantes.push('Tipo de vehículo');
     if(!docsModal.cedula_frontal)   faltantes.push('Cédula frontal');
     if(!docsModal.cedula_posterior) faltantes.push('Cédula posterior');
     if(!docsModal.selfie_cedula)    faltantes.push('Selfie con cédula');
@@ -2813,6 +2845,7 @@ function irRegistroIncompleto() {
       const fotoFinal = existente?.foto_perfil || docsModal.selfie_cedula;
 
       const { error } = await sb.from('usuarios').update({
+        vehiculo:             vehModal,
         doc_cedula_frontal:   docsModal.cedula_frontal,
         doc_cedula_posterior: docsModal.cedula_posterior,
         doc_selfie:           docsModal.selfie_cedula,
