@@ -1986,7 +1986,6 @@ if ('locks' in navigator) {
 let usuarioActual = null;
 let enRegistro = false; // true mientras el usuario está completando el registro
 let perfilActual = null;
-let _sesionManejada = false; // bandera anti-doble disparo (Google OAuth)
 let vehSeleccionado = 'moto';
 let filtroVehActual = 'todos';
 let misRutas = [];
@@ -1997,18 +1996,15 @@ let chatSub = null;
 
 // ══ INIT ══
 let estadoSub = null; // suscripción realtime al estado del usuario
+let _manejandoSesion = false; // mutex: evita que manejarSesion corra dos veces en paralelo
 
 async function init() {
   try {
     const pendSaved = sessionStorage.getItem('mensajesPendientes');
     if(pendSaved) try { mensajesPendientes = JSON.parse(pendSaved); } catch(e) {}
 
-    // Detectar si venimos de un redirect de Google OAuth
-    // Supabase pone el token en el hash (#access_token=...) o como query param
-    const urlHash = window.location.hash;
-    const urlSearch = window.location.search;
-    const esCallbackGoogle = urlHash.includes('access_token') || urlHash.includes('error_description') || urlSearch.includes('code=');
-
+    // onAuthStateChange solo maneja SIGNED_OUT y TOKEN_REFRESHED.
+    // El SIGNED_IN inicial lo maneja getSession() más abajo para evitar doble ejecución.
     sb.auth.onAuthStateChange((event, session) => {
       if(event === 'TOKEN_REFRESHED' && session) {
         usuarioActual = session.user;
@@ -2017,7 +2013,7 @@ async function init() {
         usuarioActual = null;
         perfilActual = null;
         enRegistro = false;
-        _sesionManejada = false;
+        _manejandoSesion = false;
         setTimeout(() => {
           detenerPolling();
           if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e){} estadoSub = null; }
@@ -2025,48 +2021,22 @@ async function init() {
           ir('s-landing');
         }, 0);
       }
-      // SIGNED_IN se dispara tanto en el callback de Google como al refrescar la página.
-      // Solo actuar si aún no hemos manejado la sesión para evitar el doble disparo.
-      if(event === 'SIGNED_IN' && session && !enRegistro && !_sesionManejada) {
-        _sesionManejada = true;
-        usuarioActual = session.user;
-        // Limpiar hash de la URL para que no quede visible ni cause problemas
-        if(urlHash.includes('access_token')) {
+      // SIGNED_IN: solo actuar si getSession() no lo manejó ya (p.ej. callback de Google OAuth)
+      if(event === 'SIGNED_IN' && session && !enRegistro && !_manejandoSesion) {
+        // Limpiar hash de OAuth de la URL para no contaminarlo
+        if(window.location.hash.includes('access_token')) {
           window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
         }
         setTimeout(async () => { await manejarSesion(session); }, 0);
       }
     });
 
-    // Si venimos del redirect de Google, dejar que onAuthStateChange maneje la sesión
-    // (Supabase procesará el hash y disparará SIGNED_IN automáticamente)
-    if(esCallbackGoogle) {
-      // Dar tiempo a Supabase para procesar el hash/code antes de mostrar loading
-      // El onAuthStateChange anterior se encargará del resto
-      setTimeout(() => {
-        if(!_sesionManejada) {
-          // Si después de 3 segundos Supabase no disparó SIGNED_IN, verificar manualmente
-          sb.auth.getSession().then(({ data: { session } }) => {
-            if(session && !_sesionManejada) {
-              _sesionManejada = true;
-              document.getElementById('loading').style.display = 'none';
-              manejarSesion(session);
-            } else if(!session) {
-              document.getElementById('loading').style.display = 'none';
-              ir('s-landing');
-            }
-          });
-        }
-      }, 3000);
-      return; // No llamar getSession() todavía — esperar al callback
-    }
-
+    // getSession() resuelve la sesión persistida en localStorage (recarga de página)
     const { data: { session } } = await sb.auth.getSession();
     document.getElementById('loading').style.display = 'none';
 
     if(session) {
-      _sesionManejada = true;
-      await manejarSesion(session);
+      await manejarSesion(session); // marca _manejandoSesion = true antes de cualquier await
     } else {
       ir('s-landing');
     }
@@ -2079,7 +2049,9 @@ async function init() {
 }
 
 async function manejarSesion(session) {
-  if(usuarioActual?.id === session.user.id && perfilActual) return;
+  // Mutex: si ya estamos manejando esta sesión exacta, ignorar
+  if(_manejandoSesion && usuarioActual?.id === session.user.id) return;
+  _manejandoSesion = true;
   usuarioActual = session.user;
   document.getElementById('loading').style.display = 'none';
   await cargarPerfil();
@@ -2336,12 +2308,8 @@ async function redirigirSegunEstado() {
     await irApp('s-rutas');
   } else if(estado === 'incompleto') {
     await irApp('s-rutas');
-    // Mostrar selector de rol siempre que sea usuario nuevo de Google
-    const esNuevo = localStorage.getItem('nuevo_google') === '1';
-    if(esNuevo) {
-      localStorage.removeItem('nuevo_google');
-      setTimeout(() => mostrarSelectorRolGoogle(), 1200);
-    }
+    // Mostrar selector de rol siempre que el perfil esté incompleto (sin importar si es nuevo o recarga)
+    setTimeout(() => mostrarSelectorRolGoogle(), 800);
   } else if(estado === 'pendiente') {
     // Conductor que ya envió docs → puede explorar pero no actuar
     await irApp('s-rutas');
@@ -2894,7 +2862,7 @@ async function registrar() {
 }
 
 async function logout() {
-  _sesionManejada = false;
+  _manejandoSesion = false;
   await sb.auth.signOut();
   toast('Sesión cerrada', 'info');
 }
