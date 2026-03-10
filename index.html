@@ -4037,6 +4037,38 @@ async function enviarCambioVehiculo() {
 async function publicarRuta() {
   if(!verificarRegistroParaAccion('publicar rutas')) return;
   if(!usuarioActual) { toast('Debes iniciar sesión para publicar', 'error'); return; }
+
+  // ── VALIDACIÓN ──────────────────────────────────────────────
+  const campos = [
+    { id: 'r-origen',   label: 'Origen' },
+    { id: 'r-destino',  label: 'Destino' },
+    { id: 'r-fecha',    label: 'Fecha' },
+    { id: 'r-hora',     label: 'Hora' },
+    { id: 'r-capacidad',label: 'Capacidad' },
+  ];
+  let errores = [];
+  campos.forEach(c => {
+    const el = document.getElementById(c.id);
+    if(el) {
+      const val = el.value.trim();
+      if(!val) {
+        errores.push(c.label);
+        el.style.borderColor = 'var(--rojo, #e74c3c)';
+        el.style.boxShadow = '0 0 0 2px rgba(231,76,60,0.25)';
+      } else {
+        el.style.borderColor = '';
+        el.style.boxShadow = '';
+      }
+    }
+  });
+  if(!vehSeleccionado) errores.push('Vehículo');
+
+  if(errores.length > 0) {
+    toast('⚠️ Completa: ' + errores.join(', '), 'error');
+    return;
+  }
+  // ────────────────────────────────────────────────────────────
+
   const btn = document.getElementById('btn-pub-ruta');
   btn.disabled = true; btn.textContent = 'Publicando...';
 
@@ -4050,7 +4082,7 @@ async function publicarRuta() {
     hora:      document.getElementById('r-hora').value,
     vehiculo:  vehSeleccionado,
     capacidad: document.getElementById('r-capacidad').value,
-    precio:    parseInt(document.getElementById('r-precio').value) || 0,
+    precio:    0,
     descripcion: document.getElementById('r-desc').value,
     estado:    'activa'
   });
@@ -4061,7 +4093,7 @@ async function publicarRuta() {
   if(error) { toast('Error al publicar: '+error.message, 'error'); return; }
   toast('✅ Ruta publicada exitosamente', 'success');
   // Limpiar formulario
-  ['r-origen','r-destino','r-fecha','r-hora','r-capacidad','r-precio','r-desc'].forEach(id => {
+  ['r-origen','r-destino','r-fecha','r-hora','r-capacidad','r-desc'].forEach(id => {
     const el = document.getElementById(id); if(el) el.value = '';
   });
   // Ir al buscador para que vea su ruta publicada
@@ -4142,13 +4174,33 @@ async function publicarCarga() {
   }
 
   const errEl = document.getElementById('carga-error');
-  const tipo  = document.getElementById('c-tipo').value;
+  const tipo    = document.getElementById('c-tipo').value;
   const origen  = document.getElementById('c-origen').value.trim();
   const destino = document.getElementById('c-destino').value.trim();
+  const fecha   = document.getElementById('c-fecha').value.trim();
 
-  if(!tipo)   { errEl.textContent='Selecciona el tipo de carga'; errEl.style.display='block'; return; }
-  if(!origen) { errEl.textContent='Ingresa el origen'; errEl.style.display='block'; return; }
-  if(!destino){ errEl.textContent='Ingresa el destino'; errEl.style.display='block'; return; }
+  // Marcar campos vacíos visualmente
+  [
+    { id: 'c-origen',  val: origen },
+    { id: 'c-destino', val: destino },
+    { id: 'c-fecha',   val: fecha },
+  ].forEach(({ id, val }) => {
+    const el = document.getElementById(id);
+    if(el) {
+      if(!val) {
+        el.style.borderColor = 'var(--rojo, #e74c3c)';
+        el.style.boxShadow = '0 0 0 2px rgba(231,76,60,0.25)';
+      } else {
+        el.style.borderColor = '';
+        el.style.boxShadow = '';
+      }
+    }
+  });
+
+  if(!tipo)   { errEl.textContent='⚠️ Selecciona el tipo de carga'; errEl.style.display='block'; return; }
+  if(!origen) { errEl.textContent='⚠️ Ingresa el origen'; errEl.style.display='block'; return; }
+  if(!destino){ errEl.textContent='⚠️ Ingresa el destino'; errEl.style.display='block'; return; }
+  if(!fecha)  { errEl.textContent='⚠️ Ingresa la fecha'; errEl.style.display='block'; return; }
   errEl.style.display = 'none';
 
   const btn = document.getElementById('btn-pub-carga');
