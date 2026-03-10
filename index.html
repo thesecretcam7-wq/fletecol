@@ -1996,41 +1996,19 @@ let chatSub = null;
 
 // ══ INIT ══
 let estadoSub = null;
-let _authListo = false; // true luego de que onAuthStateChange emite el primer evento
+let _authListo = false; // lock síncrono — se activa ANTES de cualquier await
 
 async function init() {
   try {
     const pendSaved = sessionStorage.getItem('mensajesPendientes');
     if(pendSaved) try { mensajesPendientes = JSON.parse(pendSaved); } catch(e) {}
 
-    // ─── ÚNICA fuente de verdad: onAuthStateChange ──────────────────────────
-    // Supabase siempre emite INITIAL_SESSION (o SIGNED_IN) al iniciar,
-    // ya sea desde localStorage (recarga) o desde el hash de Google OAuth.
-    // NO llamamos getSession() por separado para evitar doble ejecución.
-    sb.auth.onAuthStateChange(async (event, session) => {
+    sb.auth.onAuthStateChange((event, session) => {
       console.log('[auth]', event, session?.user?.email || 'sin sesión');
-
-      if(event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-        if(_authListo) return; // solo procesar la primera vez
-        _authListo = true;
-
-        document.getElementById('loading').style.display = 'none';
-
-        // Limpiar hash OAuth de la URL
-        if(window.location.hash.includes('access_token')) {
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }
-
-        if(session && !enRegistro) {
-          usuarioActual = session.user;
-          await manejarSesion(session);
-        } else {
-          ir('s-landing');
-        }
-      }
 
       if(event === 'TOKEN_REFRESHED' && session) {
         usuarioActual = session.user;
+        return;
       }
 
       if(event === 'SIGNED_OUT') {
@@ -2043,6 +2021,29 @@ async function init() {
         if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e){} estadoSub = null; }
         if(chatSub)   { try { sb.removeChannel(chatSub);   } catch(e){} chatSub = null; }
         ir('s-landing');
+        return;
+      }
+
+      // INITIAL_SESSION y SIGNED_IN: procesar solo una vez
+      // El lock se activa SÍNCRONAMENTE aquí, antes de cualquier await,
+      // así el segundo evento (SIGNED_IN que llega ms después) ya lo ve activo.
+      if((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && !enRegistro) {
+        if(_authListo) return; // ya estamos procesando — ignorar
+        _authListo = true;     // ← síncrono, bloquea el siguiente evento YA
+
+        document.getElementById('loading').style.display = 'none';
+
+        if(window.location.hash.includes('access_token')) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        if(session) {
+          usuarioActual = session.user;
+          // Lanzar async sin bloquear el callback
+          manejarSesion(session).catch(e => console.error('[manejarSesion]', e));
+        } else {
+          ir('s-landing');
+        }
       }
     });
 
@@ -2515,7 +2516,7 @@ async function login() {
   btn.disabled = true; btn.textContent = 'Iniciando sesión...';
 
   try {
-    _authListo = false; // permitir que onAuthStateChange procese el SIGNED_IN de este login
+    _authListo = false;
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
 
     if(error) {
