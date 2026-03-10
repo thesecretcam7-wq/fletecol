@@ -5,32 +5,33 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FleteCOL — Panel Admin</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --amarillo: #F5C400;
-  --negro: #080A0F;
-  --gris1: #0F1117;
-  --gris2: #161B24;
-  --gris3: #1E2433;
-  --gris4: #2A3142;
-  --gris5: #3A4255;
-  --blanco: #E8ECF4;
-  --texto: #7A8499;
-  --verde: #00D46A;
-  --rojo: #FF4545;
-  --azul: #4A9EFF;
-  --naranja: #FF8C00;
+  --amarillo: #C41E2A;
+  --negro: #FFFFFF;
+  --gris1: #F8F8F8;
+  --gris2: #F1F1F1;
+  --gris3: #E4E4E7;
+  --gris4: #D4D4D8;
+  --gris5: #71717A;
+  --blanco: #111113;
+  --texto: #52525B;
+  --verde: #16A34A;
+  --rojo: #DC2626;
+  --azul: #2563EB;
+  --naranja: #C41E2A;
 }
 
 * { margin:0; padding:0; box-sizing:border-box; }
-body { background:var(--negro); color:var(--blanco); font-family:'DM Sans',sans-serif; min-height:100vh; display:flex; }
+html { color-scheme: light; }
+body { background:var(--negro); color:var(--blanco); font-family:'Inter',sans-serif; min-height:100vh; display:flex; }
 
 /* ═══ SIDEBAR ═══ */
 .sidebar {
   width:240px; min-height:100vh;
   background:var(--gris1);
-  border-right:1px solid rgba(255,255,255,0.05);
+  border-right:1px solid rgba(0,0,0,0.08);
   display:flex; flex-direction:column;
   position:fixed; top:0; left:0; bottom:0;
   z-index:100; transition:transform 0.3s;
@@ -38,11 +39,11 @@ body { background:var(--negro); color:var(--blanco); font-family:'DM Sans',sans-
 
 .sidebar-logo {
   padding:24px 20px 20px;
-  border-bottom:1px solid rgba(255,255,255,0.05);
+  border-bottom:1px solid rgba(0,0,0,0.08);
 }
 
 .logo-txt {
-  font-family:'Syne',sans-serif; font-weight:800;
+  font-family:'Barlow Condensed',sans-serif; font-weight:800;
   font-size:22px; letter-spacing:-0.5px;
 }
 .logo-txt span { color:var(--amarillo); }
@@ -71,7 +72,7 @@ body { background:var(--negro); color:var(--blanco); font-family:'DM Sans',sans-
 
 .nav-icon { font-size:16px; width:20px; text-align:center; }
 .nav-badge {
-  margin-left:auto; background:var(--rojo); color:#fff;
+  margin-left:auto; background:var(--rojo); color:#111113;
   font-size:10px; font-weight:700; padding:2px 7px;
   border-radius:10px; min-width:20px; text-align:center;
 }
@@ -80,7 +81,7 @@ body { background:var(--negro); color:var(--blanco); font-family:'DM Sans',sans-
 
 .sidebar-footer {
   padding:16px 10px;
-  border-top:1px solid rgba(255,255,255,0.05);
+  border-top:1px solid rgba(0,0,0,0.08);
 }
 
 .admin-profile {
@@ -92,7 +93,7 @@ body { background:var(--negro); color:var(--blanco); font-family:'DM Sans',sans-
   width:34px; height:34px; border-radius:50%;
   background:var(--amarillo); color:var(--negro);
   display:flex; align-items:center; justify-content:center;
-  font-size:16px; font-weight:700; font-family:'Syne',sans-serif;
+  font-size:16px; font-weight:700; font-family:'Barlow Condensed',sans-serif;
   flex-shrink:0;
 }
 .admin-name { font-size:13px; font-weight:600; }
@@ -106,7 +107,7 @@ body { background:var(--negro); color:var(--blanco); font-family:'DM Sans',sans-
 
 /* ═══ TOPBAR ═══ */
 .topbar {
-  background:var(--gris1); border-bottom:1px solid rgba(255,255,255,0.05);
+  background:var(--gris1); border-bottom:1px solid rgba(0,0,0,0.08);
   padding:0 28px; height:60px;
   display:flex; align-items:center; justify-content:space-between;
   position:sticky; top:0; z-index:50;
@@ -120,7 +121,7 @@ body { background:var(--negro); color:var(--blanco); font-family:'DM Sans',sans-
   padding:6px;
 }
 
-.page-title { font-family:'Syne',sans-serif; font-weight:700; font-size:17px; }
+.page-title { font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:17px; }
 .page-breadcrumb { font-size:12px; color:var(--texto); }
 
 .topbar-right { display:flex; align-items:center; gap:12px; }
@@ -156,7 +157,7 @@ body { background:var(--negro); color:var(--blanco); font-family:'DM Sans',sans-
 }
 
 .stat-card {
-  background:var(--gris2); border:1px solid rgba(255,255,255,0.05);
+  background:var(--gris2); border:1px solid rgba(0,0,0,0.06);
   border-radius:16px; padding:20px;
   transition:border-color 0.2s;
 }
@@ -180,7 +181,7 @@ body { background:var(--negro); color:var(--blanco); font-family:'DM Sans',sans-
 .stat-change.neutral { background:rgba(122,132,153,0.1); color:var(--texto); }
 
 .stat-val {
-  font-family:'Syne',sans-serif; font-size:28px; font-weight:800;
+  font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:800;
   margin-bottom:4px; line-height:1;
 }
 .stat-val.yellow { color:var(--amarillo); }
@@ -195,17 +196,17 @@ body { background:var(--negro); color:var(--blanco); font-family:'DM Sans',sans-
   display:flex; align-items:center; justify-content:space-between;
   margin-bottom:16px;
 }
-.section-title { font-family:'Syne',sans-serif; font-weight:700; font-size:16px; }
+.section-title { font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:16px; }
 .section-sub { font-size:12px; color:var(--texto); margin-top:2px; }
 
 /* ═══ TABLA / CARDS ═══ */
 .table-card {
-  background:var(--gris2); border:1px solid rgba(255,255,255,0.05);
+  background:var(--gris2); border:1px solid rgba(0,0,0,0.06);
   border-radius:16px; overflow:hidden; margin-bottom:20px;
 }
 
 .table-toolbar {
-  padding:16px 20px; border-bottom:1px solid rgba(255,255,255,0.05);
+  padding:16px 20px; border-bottom:1px solid rgba(0,0,0,0.08);
   display:flex; align-items:center; gap:10px; flex-wrap:wrap;
 }
 
@@ -216,7 +217,7 @@ body { background:var(--negro); color:var(--blanco); font-family:'DM Sans',sans-
 }
 .search-box input {
   background:none; border:none; outline:none;
-  color:var(--blanco); font-size:13px; font-family:'DM Sans',sans-serif;
+  color:var(--blanco); font-size:13px; font-family:'Inter',sans-serif;
   width:100%;
 }
 .search-box input::placeholder { color:var(--gris5); }
@@ -225,7 +226,7 @@ body { background:var(--negro); color:var(--blanco); font-family:'DM Sans',sans-
 .ftab {
   padding:7px 14px; border-radius:8px; font-size:12px; font-weight:600;
   cursor:pointer; border:1px solid var(--gris4); background:transparent;
-  color:var(--texto); font-family:'DM Sans',sans-serif; transition:all 0.15s;
+  color:var(--texto); font-family:'Inter',sans-serif; transition:all 0.15s;
 }
 .ftab:hover { color:var(--blanco); border-color:var(--gris5); }
 .ftab.active { background:var(--amarillo); color:var(--negro); border-color:var(--amarillo); }
@@ -242,7 +243,7 @@ th {
 td { padding:14px 16px; font-size:13px; border-bottom:1px solid rgba(255,255,255,0.04); }
 tr:last-child td { border-bottom:none; }
 tbody tr { transition:background 0.15s; }
-tbody tr:hover { background:rgba(255,255,255,0.02); }
+tbody tr:hover { background:rgba(0,0,0,0.02); }
 
 /* ═══ USER CELL ═══ */
 .user-cell { display:flex; align-items:center; gap:10px; }
@@ -282,11 +283,11 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
 .btn-icon.green  { background:rgba(0,212,106,0.1);  color:var(--verde); }
 .btn-icon.green:hover  { background:var(--verde); color:var(--negro); }
 .btn-icon.red    { background:rgba(255,69,69,0.1);  color:var(--rojo); }
-.btn-icon.red:hover    { background:var(--rojo); color:#fff; }
+.btn-icon.red:hover    { background:var(--rojo); color:#111113; }
 .btn-icon.orange { background:rgba(255,140,0,0.1);  color:var(--naranja); }
-.btn-icon.orange:hover { background:var(--naranja); color:#fff; }
+.btn-icon.orange:hover { background:var(--naranja); color:#111113; }
 .btn-icon.blue   { background:rgba(74,158,255,0.1); color:var(--azul); }
-.btn-icon.blue:hover   { background:var(--azul); color:#fff; }
+.btn-icon.blue:hover   { background:var(--azul); color:#111113; }
 .btn-icon.gray   { background:var(--gris3); color:var(--texto); }
 .btn-icon.gray:hover   { background:var(--gris4); color:var(--blanco); }
 
@@ -307,13 +308,13 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
 .modal-overlay.open { display:flex; }
 
 .modal {
-  background:var(--gris2); border:1px solid rgba(255,255,255,0.08);
+  background:var(--gris2); border:1px solid rgba(0,0,0,0.08);
   border-radius:20px; padding:28px; width:100%; max-width:460px;
   animation:slideUp 0.3s cubic-bezier(0.16,1,0.3,1);
 }
 @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
 
-.modal-title { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; margin-bottom:6px; }
+.modal-title { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:800; margin-bottom:6px; }
 .modal-sub { font-size:13px; color:var(--texto); margin-bottom:20px; }
 
 .modal-user {
@@ -326,7 +327,7 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
 .form-input {
   width:100%; background:var(--gris3); border:1.5px solid var(--gris4);
   border-radius:10px; padding:11px 14px; color:var(--blanco);
-  font-size:13px; font-family:'DM Sans',sans-serif; outline:none;
+  font-size:13px; font-family:'Inter',sans-serif; outline:none;
   transition:border-color 0.2s;
 }
 .form-input:focus { border-color:var(--amarillo); }
@@ -335,27 +336,27 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
 .btn-modal-cancel {
   flex:1; padding:12px; background:var(--gris3); color:var(--texto);
   border:1px solid var(--gris4); border-radius:10px; cursor:pointer;
-  font-family:'DM Sans',sans-serif; font-size:13px; transition:all 0.15s;
+  font-family:'Inter',sans-serif; font-size:13px; transition:all 0.15s;
 }
 .btn-modal-cancel:hover { color:var(--blanco); border-color:var(--gris5); }
 .btn-modal-confirm {
   flex:1; padding:12px; border:none; border-radius:10px; cursor:pointer;
-  font-family:'Syne',sans-serif; font-size:13px; font-weight:700;
+  font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700;
   transition:all 0.15s;
 }
 .btn-modal-confirm.green { background:var(--verde); color:var(--negro); }
-.btn-modal-confirm.red   { background:var(--rojo); color:#fff; }
-.btn-modal-confirm.orange{ background:var(--naranja); color:#fff; }
+.btn-modal-confirm.red   { background:var(--rojo); color:#111113; }
+.btn-modal-confirm.orange{ background:var(--naranja); color:#111113; }
 
 /* ═══ TOAST ═══ */
 .toast-container { position:fixed; bottom:24px; right:24px; z-index:300; display:flex; flex-direction:column; gap:8px; }
 .toast {
-  background:var(--gris2); border:1px solid rgba(255,255,255,0.1);
+  background:var(--gris2); border:1px solid rgba(0,0,0,0.08);
   border-radius:12px; padding:12px 16px;
   display:flex; align-items:center; gap:10px;
   font-size:13px; font-weight:500; min-width:260px;
   animation:toastIn 0.3s ease;
-  box-shadow:0 8px 24px rgba(0,0,0,0.4);
+  box-shadow:0 8px 24px rgba(0,0,0,0.12);
 }
 @keyframes toastIn { from{transform:translateX(40px);opacity:0} to{transform:translateX(0);opacity:1} }
 .toast.success { border-left:3px solid var(--verde); }
@@ -367,11 +368,11 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
   display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:20px;
 }
 .comm-card {
-  background:var(--gris2); border:1px solid rgba(255,255,255,0.05);
+  background:var(--gris2); border:1px solid rgba(0,0,0,0.06);
   border-radius:16px; padding:20px;
 }
 .comm-label { font-size:11px; color:var(--texto); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:8px; }
-.comm-val { font-family:'Syne',sans-serif; font-size:24px; font-weight:800; color:var(--amarillo); }
+.comm-val { font-family:'Barlow Condensed',sans-serif; font-size:24px; font-weight:800; color:var(--amarillo); }
 .comm-sub { font-size:11px; color:var(--texto); margin-top:4px; }
 
 /* ═══ EMPTY STATE ═══ */
@@ -385,7 +386,7 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
 /* ═══ RESPONSIVE ═══ */
 @media(max-width:900px) {
   .sidebar { transform:translateX(-100%); }
-  .sidebar.open { transform:translateX(0); box-shadow:8px 0 40px rgba(0,0,0,0.5); }
+  .sidebar.open { transform:translateX(0); box-shadow:8px 0 40px rgba(0,0,0,0.15); }
   .main { margin-left:0; }
   .menu-btn { display:flex; }
   .stats-grid { grid-template-columns:1fr 1fr; }
@@ -396,11 +397,6 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
   .content { padding:16px; }
   .topbar { padding:0 16px; }
   .topbar-date { display:none; }
-  /* ── Anti-zoom móvil ── */
-  input, textarea, select,
-  .form-input, .soporte-reply-input, .search-box input {
-    font-size: 16px !important;
-  }
 }
 
 /* ═══ OVERLAY MÓVIL ═══ */
@@ -409,36 +405,6 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
   background:rgba(0,0,0,0.5); z-index:99;
 }
 .sidebar-overlay.open { display:block; }
-
-/* ═══ SOPORTE ADMIN ═══ */
-.soporte-admin-grid{display:grid;grid-template-columns:290px 1fr;height:calc(100vh - 60px - 96px);border:1px solid rgba(255,255,255,0.05);border-radius:16px;overflow:hidden;background:var(--gris2);}
-.soporte-tickets-list{border-right:1px solid rgba(255,255,255,0.05);overflow-y:auto;display:flex;flex-direction:column;}
-.soporte-list-header{padding:12px 16px;font-size:11px;font-weight:700;color:var(--texto);text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid rgba(255,255,255,0.05);background:var(--gris3);}
-.soporte-ticket-item{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:background 0.15s;}
-.soporte-ticket-item:hover{background:var(--gris3);}
-.soporte-ticket-item.active{background:rgba(245,196,0,0.08);border-right:3px solid var(--amarillo);}
-.soporte-ticket-id{font-size:11px;font-weight:700;color:var(--amarillo);margin-bottom:3px;}
-.soporte-ticket-preview{font-size:12px;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;}
-.soporte-ticket-meta{font-size:10px;color:var(--gris5);margin-top:5px;display:flex;gap:8px;align-items:center;}
-.stbadge{padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;}
-.stbadge.abierto{background:rgba(0,212,106,0.12);color:var(--verde);}
-.stbadge.cerrado{background:rgba(122,132,153,0.12);color:var(--texto);}
-.soporte-chat-panel{display:flex;flex-direction:column;background:var(--negro);}
-.soporte-chat-header{padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:space-between;background:var(--gris1);flex-shrink:0;}
-.soporte-chat-msgs{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:10px;}
-.s-amsg{max-width:75%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.6;word-break:break-word;}
-.s-amsg.user-msg{background:var(--gris3);color:var(--blanco);align-self:flex-start;border-bottom-left-radius:4px;}
-.s-amsg.admin-msg{background:var(--amarillo);color:#111;align-self:flex-end;border-bottom-right-radius:4px;}
-.s-amsg .msg-time{font-size:10px;margin-top:4px;opacity:0.55;}
-.s-amsg.user-msg .msg-time{text-align:left;}
-.s-amsg.admin-msg .msg-time{text-align:right;}
-.soporte-reply-area{padding:12px 16px;border-top:1px solid rgba(255,255,255,0.05);background:var(--gris1);display:flex;gap:10px;align-items:flex-end;flex-shrink:0;}
-.soporte-reply-input{flex:1;background:var(--gris3);border:1px solid var(--gris4);border-radius:10px;padding:10px 13px;color:var(--blanco);font-size:13px;font-family:'DM Sans',sans-serif;resize:none;outline:none;min-height:42px;max-height:100px;transition:border-color 0.2s;}
-.soporte-reply-input:focus{border-color:var(--amarillo);}
-.soporte-reply-btn{background:var(--amarillo);color:var(--negro);border:none;border-radius:10px;width:42px;height:42px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;font-weight:700;}
-.soporte-reply-btn:hover{transform:scale(1.05);}
-.soporte-reply-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
-.soporte-no-sel{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--texto);font-size:13px;}
 </style>
 </head>
 <body>
@@ -492,11 +458,6 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
     <div class="nav-section-label" style="margin-top:12px;">Finanzas</div>
     <div class="nav-item" onclick="irA('p-pagos', this)">
       <span class="nav-icon">💰</span> Pagos y comisiones
-    </div>
-    <div class="nav-section-label" style="margin-top:12px;">Soporte</div>
-    <div class="nav-item" onclick="irA('p-soporte', this)">
-      <span class="nav-icon">💬</span> Chat de soporte
-      <span class="nav-badge green" id="badge-soporte">0</span>
     </div>
   </nav>
 
@@ -579,7 +540,7 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
       </div>
 
       <div class="table-card" style="margin-bottom:20px;">
-        <div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.05);">
+        <div style="padding:16px 20px;border-bottom:1px solid rgba(0,0,0,0.08);">
           <div style="font-weight:700;font-size:14px;">⏳ Usuarios pendientes de aprobación</div>
         </div>
         <div id="quick-pendientes"></div>
@@ -792,25 +753,31 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
         <button class="btn-action btn-approve" onclick="abrirModalBanner()">+ Nuevo banner</button>
       </div>
       <div id="banners-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;padding:4px 0;">
-        <div style="text-align:center;color:#888;padding:40px;">Cargando banners...</div>
+        <div style="text-align:center;color:#52525B;padding:40px;">Cargando banners...</div>
       </div>
     </div>
 
-    <div id="modal-banner" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center;padding:20px;">
-      <div style="background:#1a1d23;border-radius:16px;padding:24px;max-width:460px;width:100%;border:1px solid #2a2d35;">
+    <div id="modal-banner" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+      <div style="background:#FFFFFF;border-radius:16px;padding:24px;max-width:460px;width:100%;border:1px solid #D4D4D8;">
         <div style="font-weight:800;font-size:18px;margin-bottom:20px;" id="modal-banner-title">Nuevo banner</div>
         <input type="hidden" id="banner-edit-id">
         <div style="margin-bottom:14px;">
-          <label style="font-size:12px;color:#888;display:block;margin-bottom:6px;">URL de la imagen *</label>
-          <input id="banner-imagen" type="text" placeholder="https://ejemplo.com/imagen.jpg" oninput="previewBanner(this.value)" style="width:100%;padding:10px 14px;background:#0d0f14;border:1px solid #2a2d35;border-radius:8px;color:#fff;font-size:13px;box-sizing:border-box;">
+          <label style="font-size:12px;color:#52525B;display:block;margin-bottom:8px;">Imagen del banner *</label>
+          <!-- Botón subir desde dispositivo -->
+          <input type="file" id="banner-file-input" accept="image/*" style="display:none;" onchange="subirImagenBanner(this)">
+          <button type="button" onclick="document.getElementById('banner-file-input').click()" id="btn-subir-banner" style="width:100%;padding:11px;background:#F1F1F1;border:1.5px dashed #D4D4D8;border-radius:8px;color:#52525B;font-size:13px;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <span id="btn-subir-banner-txt">📁 Seleccionar imagen del dispositivo</span>
+          </button>
+          <div style="text-align:center;font-size:11px;color:#555;margin-bottom:8px;">— o pega una URL —</div>
+          <input id="banner-imagen" type="text" placeholder="https://ejemplo.com/imagen.jpg" oninput="previewBanner(this.value)" style="width:100%;padding:10px 14px;background:#F8F8F8;border:1px solid #D4D4D8;border-radius:8px;color:#111113;font-size:13px;box-sizing:border-box;">
         </div>
         <div style="margin-bottom:14px;">
-          <label style="font-size:12px;color:#888;display:block;margin-bottom:6px;">URL del link (al hacer clic)</label>
-          <input id="banner-link" type="text" placeholder="https://empresa.com" style="width:100%;padding:10px 14px;background:#0d0f14;border:1px solid #2a2d35;border-radius:8px;color:#fff;font-size:13px;box-sizing:border-box;">
+          <label style="font-size:12px;color:#52525B;display:block;margin-bottom:6px;">URL del link (al hacer clic)</label>
+          <input id="banner-link" type="text" placeholder="https://empresa.com" style="width:100%;padding:10px 14px;background:#F8F8F8;border:1px solid #D4D4D8;border-radius:8px;color:#111113;font-size:13px;box-sizing:border-box;">
         </div>
         <div style="margin-bottom:14px;">
-          <label style="font-size:12px;color:#888;display:block;margin-bottom:6px;">Segmentación por ciudad</label>
-          <select id="banner-ciudad" onchange="toggleCiudadCustom(this.value)" style="width:100%;padding:10px 14px;background:#0d0f14;border:1px solid #2a2d35;border-radius:8px;color:#fff;font-size:13px;box-sizing:border-box;">
+          <label style="font-size:12px;color:#52525B;display:block;margin-bottom:6px;">Segmentación por ciudad</label>
+          <select id="banner-ciudad" onchange="toggleCiudadCustom(this.value)" style="width:100%;padding:10px 14px;background:#F8F8F8;border:1px solid #D4D4D8;border-radius:8px;color:#111113;font-size:13px;box-sizing:border-box;">
             <option value="todas">🌎 Todas las ciudades</option>
             <option value="Bogotá">Bogotá</option>
             <option value="Medellín">Medellín</option>
@@ -823,25 +790,25 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
             <option value="Cúcuta">Cúcuta</option>
             <option value="otra">✏️ Otra ciudad...</option>
           </select>
-          <input id="banner-ciudad-custom" type="text" placeholder="Escribe la ciudad" style="display:none;width:100%;margin-top:8px;padding:10px 14px;background:#0d0f14;border:1px solid #2a2d35;border-radius:8px;color:#fff;font-size:13px;box-sizing:border-box;">
+          <input id="banner-ciudad-custom" type="text" placeholder="Escribe la ciudad" style="display:none;width:100%;margin-top:8px;padding:10px 14px;background:#F8F8F8;border:1px solid #D4D4D8;border-radius:8px;color:#111113;font-size:13px;box-sizing:border-box;">
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
           <div>
-            <label style="font-size:12px;color:#888;display:block;margin-bottom:6px;">Orden</label>
-            <input id="banner-orden" type="number" value="1" min="1" style="width:100%;padding:10px 14px;background:#0d0f14;border:1px solid #2a2d35;border-radius:8px;color:#fff;font-size:13px;box-sizing:border-box;">
+            <label style="font-size:12px;color:#52525B;display:block;margin-bottom:6px;">Orden</label>
+            <input id="banner-orden" type="number" value="1" min="1" style="width:100%;padding:10px 14px;background:#F8F8F8;border:1px solid #D4D4D8;border-radius:8px;color:#111113;font-size:13px;box-sizing:border-box;">
           </div>
           <div>
-            <label style="font-size:12px;color:#888;display:block;margin-bottom:6px;">Estado</label>
-            <select id="banner-activo" style="width:100%;padding:10px 14px;background:#0d0f14;border:1px solid #2a2d35;border-radius:8px;color:#fff;font-size:13px;box-sizing:border-box;">
+            <label style="font-size:12px;color:#52525B;display:block;margin-bottom:6px;">Estado</label>
+            <select id="banner-activo" style="width:100%;padding:10px 14px;background:#F8F8F8;border:1px solid #D4D4D8;border-radius:8px;color:#111113;font-size:13px;box-sizing:border-box;">
               <option value="true">Activo</option>
               <option value="false">Inactivo</option>
             </select>
           </div>
         </div>
-        <div id="banner-preview" style="display:none;margin-bottom:14px;border-radius:10px;height:100px;background-size:cover;background-position:center;border:1px solid #2a2d35;"></div>
+        <div id="banner-preview" style="display:none;margin-bottom:14px;border-radius:10px;height:100px;background-size:cover;background-position:center;border:1px solid #D4D4D8;"></div>
         <div style="display:flex;gap:10px;">
-          <button onclick="cerrarModalBanner()" style="flex:1;padding:11px;background:#2a2d35;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Cancelar</button>
-          <button onclick="guardarBanner()" style="flex:2;padding:11px;background:#F5C400;color:#080A0F;border:none;border-radius:8px;cursor:pointer;font-weight:700;">Guardar</button>
+          <button onclick="cerrarModalBanner()" style="flex:1;padding:11px;background:#E4E4E7;color:#111113;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Cancelar</button>
+          <button onclick="guardarBanner()" style="flex:2;padding:11px;background:#C41E2A;color:#FFFFFF;border:none;border-radius:8px;cursor:pointer;font-weight:700;">Guardar</button>
         </div>
       </div>
     </div>
@@ -883,52 +850,9 @@ tbody tr:hover { background:rgba(255,255,255,0.02); }
               <th>Referencia</th><th>Cliente</th><th>Monto</th><th>Estado</th><th>Fecha</th><th>Acción</th>
             </tr></thead>
             <tbody id="tbody-pagos">
-              <tr><td colspan="6" style="text-align:center;padding:30px;color:#888;">Cargando pagos...</td></tr>
+              <tr><td colspan="6" style="text-align:center;padding:30px;color:#52525B;">Cargando pagos...</td></tr>
             </tbody>
           </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══════════════ SOPORTE ══════════════ -->
-    <div class="pantalla" id="p-soporte">
-      <div class="section-header">
-        <div>
-          <div class="section-title">💬 Chat de soporte</div>
-          <div class="section-sub">Conversaciones con usuarios que necesitan ayuda</div>
-        </div>
-        <button onclick="cargarTicketsSoporte()" style="background:var(--gris3);border:1px solid var(--gris4);color:var(--texto);border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">🔄 Actualizar</button>
-      </div>
-      <div class="soporte-admin-grid">
-        <!-- Lista tickets -->
-        <div class="soporte-tickets-list" id="soporte-tickets-list">
-          <div class="soporte-list-header">Tickets</div>
-          <div style="padding:20px;font-size:12px;color:var(--texto);text-align:center;">Cargando...</div>
-        </div>
-        <!-- Panel chat -->
-        <div class="soporte-chat-panel" id="soporte-chat-panel">
-          <div class="soporte-no-sel" id="soporte-no-sel">
-            <div style="font-size:44px;">💬</div>
-            <div style="font-weight:700;font-size:15px;color:var(--blanco);">Selecciona un ticket</div>
-            <div>Elige una conversación para responder</div>
-          </div>
-          <div class="soporte-chat-header" id="soporte-chat-header" style="display:none;">
-            <div>
-              <div style="font-size:13px;font-weight:700;" id="soporte-chat-title">Ticket</div>
-              <div style="font-size:11px;color:var(--texto);" id="soporte-chat-sub"></div>
-            </div>
-            <button onclick="cerrarTicketAdmin()" id="btn-cerrar-ticket"
-              style="background:rgba(255,69,69,0.1);color:var(--rojo);border:1px solid rgba(255,69,69,0.2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">
-              ✕ Cerrar ticket
-            </button>
-          </div>
-          <div class="soporte-chat-msgs" id="soporte-admin-msgs" style="display:none;flex-direction:column;"></div>
-          <div class="soporte-reply-area" id="soporte-reply-area" style="display:none;">
-            <textarea class="soporte-reply-input" id="soporte-admin-input" placeholder="Escribe tu respuesta..." rows="1"
-              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarRespuestaAdmin();}"
-              oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
-            <button class="soporte-reply-btn" onclick="enviarRespuestaAdmin()" id="soporte-reply-btn">➤</button>
-          </div>
         </div>
       </div>
     </div>
@@ -1282,7 +1206,7 @@ function eliminarRuta(btn) {
 const pageTitles = {
   'p-dashboard':'Dashboard','p-pendientes':'Pendientes',
   'p-usuarios':'Todos los usuarios','p-baneados':'Usuarios baneados','p-banners':'Banners publicitarios','p-cuentas':'Cuentas bancarias',
-  'p-rutas':'Rutas publicadas','p-cargas':'Cargas publicadas','p-pagos':'Pagos y comisiones','p-soporte':'Chat de soporte'
+  'p-rutas':'Rutas publicadas','p-cargas':'Cargas publicadas','p-pagos':'Pagos y comisiones'
 };
 
 function irA(id, navEl) {
@@ -1298,7 +1222,6 @@ function irA(id, navEl) {
   if(id === 'p-banners') cargarBanners();
   if(id === 'p-cuentas') cargarCuentas();
   if(id === 'p-pagos') cargarPagos();
-  if(id === 'p-soporte') cargarTicketsSoporte();
 }
 
 // ══ FILTROS ══
@@ -1485,7 +1408,7 @@ async function cargarPagos() {
     .limit(100);
 
   if(!data || data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:30px;">No hay pagos registrados aún</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#52525B;padding:30px;">No hay pagos registrados aún</td></tr>';
     return;
   }
 
@@ -1511,10 +1434,10 @@ async function cargarPagos() {
       : (p.wompi_id ? `<span style="font-size:10px;color:#555;">${p.wompi_id.slice(0,12)}...</span>` : '—');
     return `<tr>
       <td style="font-family:monospace;font-size:11px;">${p.referencia||'—'}</td>
-      <td><div style="font-weight:600;font-size:12px;">${nombre}</div><div style="font-size:10px;color:#888;">${u.email||''}</div></td>
+      <td><div style="font-weight:600;font-size:12px;">${nombre}</div><div style="font-size:10px;color:#52525B;">${u.email||''}</div></td>
       <td style="font-weight:700;">${monto}</td>
       <td><span style="color:${color};font-weight:700;font-size:12px;">${label}</span></td>
-      <td style="font-size:12px;color:#888;">${fecha}</td>
+      <td style="font-size:12px;color:#52525B;">${fecha}</td>
       <td>${accion}</td>
     </tr>`;
   }).join('');
@@ -1565,7 +1488,7 @@ async function cargarCuentas() {
     .order('updated_at', { ascending: false });
 
   if(!data || data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:30px;">No hay cuentas registradas</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#52525B;padding:30px;">No hay cuentas registradas</td></tr>';
     return;
   }
 
@@ -1575,12 +1498,12 @@ async function cargarCuentas() {
     const tipo = TIPOS_CUENTA_ADMIN[c.tipo] || c.tipo;
     const fecha = c.updated_at ? new Date(c.updated_at).toLocaleDateString('es-CO') : '—';
     return `<tr>
-      <td><div style="font-weight:600;">${nombre}</div><div style="font-size:11px;color:#888;">${u.email||''}</div></td>
+      <td><div style="font-weight:600;">${nombre}</div><div style="font-size:11px;color:#52525B;">${u.email||''}</div></td>
       <td>${tipo}</td>
       <td><strong>${c.numero}</strong></td>
       <td>${c.titular}</td>
       <td>${c.cedula}</td>
-      <td style="font-size:12px;color:#888;">${fecha}</td>
+      <td style="font-size:12px;color:#52525B;">${fecha}</td>
     </tr>`;
   }).join('');
 }
@@ -1591,21 +1514,21 @@ async function cargarBanners() {
   if(!grid) return;
   const { data: banners } = await sb.from('banners').select('*').order('orden');
   if(!banners || banners.length === 0) {
-    grid.innerHTML = '<div style="text-align:center;color:#888;padding:40px;grid-column:1/-1;">No hay banners. Crea el primero.</div>';
+    grid.innerHTML = '<div style="text-align:center;color:#52525B;padding:40px;grid-column:1/-1;">No hay banners. Crea el primero.</div>';
     return;
   }
   grid.innerHTML = banners.map(b => `
-    <div style="background:#1a1d23;border-radius:14px;overflow:hidden;border:1px solid #2a2d35;">
+    <div style="background:#FFFFFF;border-radius:14px;overflow:hidden;border:1px solid #D4D4D8;">
       <div style="height:120px;background-image:url('${b.imagen_url}');background-size:cover;background-position:center;background-color:#2a2d35;"></div>
       <div style="padding:14px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
           <span style="font-weight:700;font-size:13px;">Banner #${b.orden}</span>
           <span style="font-size:11px;padding:3px 10px;border-radius:20px;background:${b.activo?'rgba(34,197,94,0.15)':'rgba(239,68,68,0.15)'};color:${b.activo?'#22c55e':'#ef4444'};">${b.activo?'Activo':'Inactivo'}</span>
         </div>
-        <div style="font-size:11px;color:#888;margin-bottom:6px;">📍 ${b.ciudad === 'todas' || !b.ciudad ? 'Todas las ciudades' : b.ciudad}</div>
-        ${b.link_url?`<div style="font-size:11px;color:#888;margin-bottom:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🔗 ${b.link_url}</div>`:''}
+        <div style="font-size:11px;color:#52525B;margin-bottom:6px;">📍 ${b.ciudad === 'todas' || !b.ciudad ? 'Todas las ciudades' : b.ciudad}</div>
+        ${b.link_url?`<div style="font-size:11px;color:#52525B;margin-bottom:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🔗 ${b.link_url}</div>`:''}
         <div style="display:flex;gap:8px;">
-          <button onclick='editarBanner(${JSON.stringify(b)})' style="flex:1;padding:7px;background:#2a2d35;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;">✏️ Editar</button>
+          <button onclick='editarBanner(${JSON.stringify(b)})' style="flex:1;padding:7px;background:#E4E4E7;color:#111113;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;">✏️ Editar</button>
           <button onclick="eliminarBanner('${b.id}')" style="flex:1;padding:7px;background:rgba(239,68,68,0.15);color:#ef4444;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;">🗑️ Eliminar</button>
         </div>
       </div>
@@ -1627,6 +1550,11 @@ function abrirModalBanner() {
   document.getElementById('banner-ciudad').value = 'todas';
   document.getElementById('banner-ciudad-custom').style.display = 'none';
   document.getElementById('banner-preview').style.display = 'none';
+  document.getElementById('banner-file-input').value = '';
+  const btnTxt = document.getElementById('btn-subir-banner-txt');
+  const btn = document.getElementById('btn-subir-banner');
+  btnTxt.textContent = '📁 Seleccionar imagen del dispositivo';
+  btn.style.borderColor = '#3a3d45'; btn.style.color = '#aaa';
   document.getElementById('modal-banner').style.display = 'flex';
 }
 
@@ -1649,6 +1577,11 @@ function editarBanner(b) {
     document.getElementById('banner-ciudad-custom').style.display = 'block';
     document.getElementById('banner-ciudad-custom').value = b.ciudad;
   }
+  document.getElementById('banner-file-input').value = '';
+  const btnTxt = document.getElementById('btn-subir-banner-txt');
+  const btn = document.getElementById('btn-subir-banner');
+  btnTxt.textContent = '📁 Cambiar imagen desde dispositivo';
+  btn.style.borderColor = '#3a3d45'; btn.style.color = '#aaa';
   previewBanner(b.imagen_url);
   document.getElementById('modal-banner').style.display = 'flex';
 }
@@ -1663,6 +1596,34 @@ function previewBanner(url) {
   else { prev.style.display = 'none'; }
 }
 
+async function subirImagenBanner(input) {
+  const file = input.files[0];
+  if(!file) return;
+  const btnTxt = document.getElementById('btn-subir-banner-txt');
+  const btn = document.getElementById('btn-subir-banner');
+  btnTxt.textContent = '⏳ Subiendo...';
+  btn.disabled = true;
+  try {
+    const ext = file.name.split('.').pop();
+    const nombre = `banner_${Date.now()}.${ext}`;
+    const { data, error } = await sb.storage.from('banners').upload(nombre, file, { upsert: true, contentType: file.type });
+    if(error) throw error;
+    const { data: pub } = sb.storage.from('banners').getPublicUrl(nombre);
+    const url = pub.publicUrl;
+    document.getElementById('banner-imagen').value = url;
+    previewBanner(url);
+    btnTxt.textContent = '✅ ' + file.name;
+    btn.style.borderColor = '#22c55e';
+    btn.style.color = '#22c55e';
+  } catch(e) {
+    console.error('Error subiendo imagen:', e);
+    btnTxt.textContent = '❌ Error al subir. Intenta de nuevo.';
+    btn.style.borderColor = '#ef4444';
+    btn.style.color = '#ef4444';
+  }
+  btn.disabled = false;
+}
+
 async function guardarBanner() {
   const id = document.getElementById('banner-edit-id').value;
   const imagen_url = document.getElementById('banner-imagen').value.trim();
@@ -1671,7 +1632,7 @@ async function guardarBanner() {
   const activo = document.getElementById('banner-activo').value === 'true';
   let ciudad = document.getElementById('banner-ciudad').value;
   if(ciudad === 'otra') ciudad = document.getElementById('banner-ciudad-custom').value.trim() || 'todas';
-  if(!imagen_url) { alert('La URL de imagen es requerida'); return; }
+  if(!imagen_url) { alert('La imagen es requerida. Sube una desde tu dispositivo o pega una URL.'); return; }
   const datos = { imagen_url, link_url, orden, activo, ciudad };
   if(id) { await sb.from('banners').update(datos).eq('id', id); }
   else { await sb.from('banners').insert(datos); }
@@ -1684,228 +1645,16 @@ async function eliminarBanner(id) {
   await sb.from('banners').delete().eq('id', id);
   cargarBanners();
 }
-
-// ══════════════════════════════════════════════
-//  AUDIO — Web Audio API (sin archivos externos)
-// ══════════════════════════════════════════════
-let _audioCtxAdmin = null;
-function getAudioCtxAdmin() {
-  if (!_audioCtxAdmin) _audioCtxAdmin = new (window.AudioContext || window.webkitAudioContext)();
-  return _audioCtxAdmin;
-}
-
-// Bip al enviar respuesta (admin)
-function sonarEnvioAdmin() {
-  try {
-    const ctx = getAudioCtxAdmin();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(600, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.06);
-    gain.gain.setValueAtTime(0.12, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.12);
-  } catch(e) {}
-}
-
-// Triple bip ascendente cuando llega mensaje nuevo de usuario
-function sonarMensajeUsuario() {
-  try {
-    const ctx = getAudioCtxAdmin();
-    const notas = [660, 830, 990];
-    notas.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.1);
-      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.1);
-      gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + i * 0.1 + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.22);
-      osc.start(ctx.currentTime + i * 0.1);
-      osc.stop(ctx.currentTime + i * 0.1 + 0.25);
-    });
-  } catch(e) {}
-}
-
-// Sonido de ticket nuevo (diferente al de mensaje)
-function sonarTicketNuevo() {
-  try {
-    const ctx = getAudioCtxAdmin();
-    const notas = [440, 554, 659, 880];
-    notas.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.08);
-      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.08);
-      gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + i * 0.08 + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.08 + 0.2);
-      osc.start(ctx.currentTime + i * 0.08);
-      osc.stop(ctx.currentTime + i * 0.08 + 0.22);
-    });
-  } catch(e) {}
-}
-
-// ══════════════════════════════════════════════
-//  SOPORTE ADMIN
-// ══════════════════════════════════════════════
-let soporteTicketSeleccionado = null;
-let soporteAdminSub = null;
-let ticketsConocidos = new Set();
-
-function formatHoraAdmin(iso) {
-  if (!iso) return '';
-  return new Date(iso).toLocaleString('es-CO', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
-}
-
-async function cargarTicketsSoporte() {
-  const lista = document.getElementById('soporte-tickets-list');
-  if (!lista) return;
-
-  const { data: tickets } = await sb.from('soporte_tickets')
-    .select('*, soporte_mensajes(mensaje, created_at, origen)')
-    .order('created_at', { ascending: false });
-
-  if (!tickets || tickets.length === 0) {
-    lista.innerHTML = '<div class="soporte-list-header">Tickets</div><div style="padding:24px;font-size:12px;color:var(--texto);text-align:center;">No hay tickets aún.</div>';
-    document.getElementById('badge-soporte').textContent = '0';
-    return;
-  }
-
-  const abiertos = tickets.filter(t => t.estado === 'abierto').length;
-  document.getElementById('badge-soporte').textContent = abiertos;
-
-  // Detectar tickets nuevos y sonar
-  tickets.forEach(t => {
-    if (!ticketsConocidos.has(t.id) && ticketsConocidos.size > 0) sonarTicketNuevo();
-    ticketsConocidos.add(t.id);
-  });
-
-  lista.innerHTML = '<div class="soporte-list-header">Tickets (' + tickets.length + ')</div>' +
-    tickets.map(t => {
-      const msgs = (t.soporte_mensajes || []).sort((a,b) => new Date(b.created_at)-new Date(a.created_at));
-      const ultimo = msgs[0];
-      const preview = ultimo ? ultimo.mensaje.slice(0,42) + (ultimo.mensaje.length > 42 ? '…' : '') : 'Sin mensajes';
-      const activo = soporteTicketSeleccionado === t.id ? ' active' : '';
-      return `<div class="soporte-ticket-item${activo}" onclick="seleccionarTicketAdmin('${t.id}','${t.estado}',this)">
-        <div class="soporte-ticket-id">🎫 #${t.id.slice(0,8).toUpperCase()}</div>
-        <div class="soporte-ticket-preview">${preview}</div>
-        <div class="soporte-ticket-meta">
-          <span class="stbadge ${t.estado}">${t.estado === 'abierto' ? '● Abierto' : '✓ Cerrado'}</span>
-          <span>${formatHoraAdmin(t.created_at)}</span>
-        </div>
-      </div>`;
-    }).join('');
-
-  // Suscripción realtime a tickets nuevos
-  if (!window._soporteTicketsSub) {
-    window._soporteTicketsSub = sb.channel('admin-tickets-new')
-      .on('postgres_changes', { event:'INSERT', schema:'public', table:'soporte_tickets' }, () => {
-        cargarTicketsSoporte();
-      }).subscribe();
-  }
-}
-
-function renderMsgAdmin(msg) {
-  const esUser = msg.origen === 'usuario';
-  const div = document.createElement('div');
-  div.className = 's-amsg ' + (esUser ? 'user-msg' : 'admin-msg');
-  div.dataset.mid = msg.id;
-  div.innerHTML = `<div>${msg.mensaje}</div><div class="msg-time">${formatHoraAdmin(msg.created_at)}</div>`;
-  return div;
-}
-
-async function cargarMsgsAdmin(ticketId) {
-  const cont = document.getElementById('soporte-admin-msgs');
-  cont.innerHTML = '';
-  const { data } = await sb.from('soporte_mensajes')
-    .select('*').eq('ticket_id', ticketId).order('created_at', { ascending: true });
-  if (!data || data.length === 0) {
-    cont.innerHTML = '<div style="text-align:center;color:var(--texto);font-size:12px;padding:20px;">Sin mensajes aún.</div>';
-    return;
-  }
-  data.forEach(msg => cont.appendChild(renderMsgAdmin(msg)));
-  cont.scrollTop = cont.scrollHeight;
-}
-
-async function seleccionarTicketAdmin(ticketId, estado, el) {
-  soporteTicketSeleccionado = ticketId;
-  document.querySelectorAll('.soporte-ticket-item').forEach(i => i.classList.remove('active'));
-  el.classList.add('active');
-
-  document.getElementById('soporte-no-sel').style.display = 'none';
-  document.getElementById('soporte-chat-header').style.display = 'flex';
-  const msgsEl = document.getElementById('soporte-admin-msgs');
-  msgsEl.style.display = 'flex';
-  msgsEl.style.flexDirection = 'column';
-  document.getElementById('soporte-reply-area').style.display = estado === 'abierto' ? 'flex' : 'none';
-  document.getElementById('soporte-chat-title').textContent = '🎫 Ticket #' + ticketId.slice(0,8).toUpperCase();
-  document.getElementById('soporte-chat-sub').textContent = estado === 'abierto' ? '● Ticket abierto' : '✓ Ticket cerrado';
-  document.getElementById('btn-cerrar-ticket').style.display = estado === 'abierto' ? 'inline-flex' : 'none';
-
-  await cargarMsgsAdmin(ticketId);
-
-  // Realtime mensajes del ticket seleccionado
-  if (soporteAdminSub) sb.removeChannel(soporteAdminSub);
-  soporteAdminSub = sb.channel('admin-chat-' + ticketId)
-    .on('postgres_changes', {
-      event:'INSERT', schema:'public', table:'soporte_mensajes',
-      filter:`ticket_id=eq.${ticketId}`
-    }, payload => {
-      const cont = document.getElementById('soporte-admin-msgs');
-      if (!cont.querySelector(`[data-mid="${payload.new.id}"]`)) {
-        cont.appendChild(renderMsgAdmin(payload.new));
-        cont.scrollTop = cont.scrollHeight;
-        // 🔔 Sonar solo si el mensaje lo envió el usuario (no el propio admin)
-        if (payload.new.origen === 'usuario') sonarMensajeUsuario();
-      }
-    }).subscribe();
-}
-
-async function enviarRespuestaAdmin() {
-  const inp = document.getElementById('soporte-admin-input');
-  const texto = inp.value.trim();
-  if (!texto || !soporteTicketSeleccionado) return;
-  const btn = document.getElementById('soporte-reply-btn');
-  btn.disabled = true;
-  inp.value = ''; inp.style.height = 'auto';
-  // 🔔 Sonido de envío
-  sonarEnvioAdmin();
-  await sb.from('soporte_mensajes').insert({
-    ticket_id: soporteTicketSeleccionado,
-    mensaje: texto,
-    origen: 'admin'
-  });
-  btn.disabled = false;
-  inp.focus();
-}
-
-async function cerrarTicketAdmin() {
-  if (!soporteTicketSeleccionado) return;
-  if (!confirm('¿Marcar este ticket como cerrado?')) return;
-  await sb.from('soporte_tickets').update({ estado: 'cerrado' }).eq('id', soporteTicketSeleccionado);
-  toast('Ticket cerrado correctamente', 'success');
-  soporteTicketSeleccionado = null;
-  document.getElementById('soporte-no-sel').style.display = 'flex';
-  document.getElementById('soporte-chat-header').style.display = 'none';
-  document.getElementById('soporte-admin-msgs').style.display = 'none';
-  document.getElementById('soporte-reply-area').style.display = 'none';
-  cargarTicketsSoporte();
-}
 </script>
 
 </div>
-<div id="login-screen" style="display:none;position:fixed;inset:0;background:#080A0F;z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:24px;">
-  <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:28px;">Flete<span style="color:#F5C400">COL</span> <span style="font-size:14px;color:#7A8499;font-weight:400;">Admin</span></div>
-  <div style="background:#0F1117;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:32px;width:320px;display:flex;flex-direction:column;gap:16px;">
-    <input id="login-email" type="email" placeholder="Correo admin" style="background:#161B24;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;color:#E8ECF4;font-size:14px;outline:none;">
-    <input id="login-pass" type="password" placeholder="Contrasena" style="background:#161B24;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;color:#E8ECF4;font-size:14px;outline:none;" onkeydown="if(event.key==='Enter')adminLogin()">
-    <div id="login-error" style="color:#FF4545;font-size:12px;min-height:16px;"></div>
-    <button id="login-btn" onclick="adminLogin()" style="background:#F5C400;color:#080A0F;font-weight:700;border:none;border-radius:10px;padding:13px;font-size:15px;cursor:pointer;">Entrar</button>
+<div id="login-screen" style="display:none;position:fixed;inset:0;background:#FFFFFF;z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:24px;">
+  <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:28px;">Flete<span style="color:#F5C400">COL</span> <span style="font-size:14px;color:#52525B;font-weight:400;">Admin</span></div>
+  <div style="background:#F8F8F8;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:32px;width:320px;display:flex;flex-direction:column;gap:16px;">
+    <input id="login-email" type="email" placeholder="Correo admin" style="background:#F1F1F1;border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:12px 14px;color:#111113;font-size:14px;outline:none;">
+    <input id="login-pass" type="password" placeholder="Contrasena" style="background:#F1F1F1;border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:12px 14px;color:#111113;font-size:14px;outline:none;" onkeydown="if(event.key==='Enter')adminLogin()">
+    <div id="login-error" style="color:#DC2626;font-size:12px;min-height:16px;"></div>
+    <button id="login-btn" onclick="adminLogin()" style="background:#C41E2A;color:#FFFFFF;font-weight:700;border:none;border-radius:10px;padding:13px;font-size:15px;cursor:pointer;">Entrar</button>
   </div>
 </div>
 
