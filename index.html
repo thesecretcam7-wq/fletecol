@@ -3489,7 +3489,11 @@ async function cargarRutas() {
   let rutas = [], cargas = [];
   try {
     const [resRutas, resCargas] = await Promise.all([qRutas.limit(20), qCargas.limit(20)]);
-    rutas = resRutas.data || [];
+    console.log('[cargarRutas] rutas:', resRutas.data?.length, '| error:', resRutas.error?.message);
+    console.log('[cargarRutas] cargas:', resCargas.data?.length, '| error:', resCargas.error?.message);
+    if(resRutas.error)  console.error('[RLS rutas]',  resRutas.error);
+    if(resCargas.error) console.error('[RLS cargas]', resCargas.error);
+    rutas  = resRutas.data  || [];
     cargas = resCargas.data || [];
   } catch(e) {
     console.error('Error cargando rutas/cargas:', e);
@@ -3509,8 +3513,21 @@ async function cargarRutas() {
 
   document.getElementById('count-r').textContent = totalItems;
 
-  // Renderizar rutas de conductores
-  const htmlRutas = (rutas||[]).map(r => `
+  const tipoIcono = { mudanza:'🛋️', mercancia:'📦', industrial:'🏭', agricola:'🌾', construccion:'🚧' };
+
+  // ── Sección: Conductores disponibles (rutas) ──
+  const htmlRutas = (rutas||[]).map(r => {
+    const esMia = r.conductor_id === perfilActual?.id;
+    const accion = esMia
+      ? `<div style="display:flex;gap:8px;align-items:center;">
+           <span style="font-size:11px;color:var(--amarillo);font-weight:700;">Tu ruta</span>
+           <button onclick="eliminarRutaBuscar('${r.id}',this)" style="background:rgba(255,69,69,0.12);border:1px solid rgba(255,69,69,0.25);color:var(--rojo);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Eliminar</button>
+         </div>`
+      : `<button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;cursor:pointer;"
+           onclick="event.stopPropagation();abrirChatConConductor('${r.conductor_id||''}','${(r.conductor?.nombre||'Conductor')+' '+(r.conductor?.apellido||'')}',${r.precio||0},'${r.origen||''}','${r.destino||''}')">
+           Negociar →
+         </button>`;
+    return `
     <div class="ruta-card" onclick="selRuta(${JSON.stringify(r).replace(/"/g,'&quot;')})">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:10px;">
@@ -3532,18 +3549,26 @@ async function cargarRutas() {
         <div style="background:var(--gris3);padding:4px 10px;border-radius:8px;font-size:11px;color:var(--texto);">⚖️ ${r.capacidad||'—'}</div>
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:17px;color:var(--amarillo);">${r.precio>0?'$'+r.precio.toLocaleString('es-CO'):'Negociable'}</div>
-          ${perfilActual?.rol === 'cliente' ? `<button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;cursor:pointer;" onclick="event.stopPropagation();abrirChatConConductor('${r.conductor_id||''}','${(r.conductor?.nombre||'Conductor')+' '+(r.conductor?.apellido||'')}',${r.precio||0},'${r.origen||''}','${r.destino||''}')">Negociar →</button>` : `<div style="display:flex;gap:8px;align-items:center;">
-              <span style="font-size:11px;color:var(--texto);">Tu ruta</span>
-              <button onclick="eliminarRutaBuscar('${r.id}',this)" style="background:rgba(255,69,69,0.12);border:1px solid rgba(255,69,69,0.25);color:var(--rojo);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Eliminar</button>
-            </div>`}
+          ${accion}
         </div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
-  // Renderizar cargas publicadas por clientes
-  const tipoIcono = { mudanza:'🛋️', mercancia:'📦', industrial:'🏭', agricola:'🌾', construccion:'🚧' };
-  const htmlCargas = (cargas||[]).map(c => `
-    <div class="ruta-card" style="border-left:4px solid var(--amarillo);">
+  // ── Sección: Cargas buscando conductor ──
+  const htmlCargas = (cargas||[]).map(c => {
+    const esMia = c.cliente_id === perfilActual?.id;
+    const accion = esMia
+      ? `<div style="display:flex;gap:8px;align-items:center;">
+           <span style="font-size:11px;color:var(--amarillo);font-weight:700;">Tu publicación</span>
+           <button onclick="eliminarCargaBuscar('${c.id}',this)" style="background:rgba(255,69,69,0.12);border:1px solid rgba(255,69,69,0.25);color:var(--rojo);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Eliminar</button>
+         </div>`
+      : `<button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;cursor:pointer;"
+           onclick="abrirChatConConductor('${c.cliente_id||''}','${(c.cliente?.nombre||'Cliente')+' '+(c.cliente?.apellido||'')}',0,'${c.origen||''}','${c.destino||''}',true)">
+           Ofrecer precio →
+         </button>`;
+    return `
+    <div class="ruta-card" style="border-left:3px solid var(--amarillo);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:10px;">
           <div class="rc-av">${tipoIcono[c.tipo]||'📦'}</div>
@@ -3561,32 +3586,29 @@ async function cargarRutas() {
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <div style="font-size:12px;color:var(--texto);flex:1;">${c.descripcion?c.descripcion.substring(0,60)+'...':''}</div>
-        ${perfilActual?.rol === 'conductor'
-          ? `<button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;cursor:pointer;" onclick="abrirChatConConductor('${c.cliente_id||''}','${(c.cliente?.nombre||'Cliente')+' '+(c.cliente?.apellido||'')}',0,'${c.origen||''}','${c.destino||''}',true)">Ofrecer precio →</button>`
-          : c.cliente_id === perfilActual?.id
-            ? `<div style="display:flex;gap:8px;align-items:center;">
-                <span style="font-size:11px;color:var(--texto);">Tu publicación</span>
-                <button onclick="eliminarCargaBuscar('${c.id}',this)" style="background:rgba(255,69,69,0.12);border:1px solid rgba(255,69,69,0.25);color:var(--rojo);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Eliminar</button>
-              </div>`
-            : `<span style="font-size:11px;color:var(--texto);padding:8px;">Publicado por cliente</span>`
-        }
+        ${accion}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
-  // Mostrar sección de cargas si hay
-  const secCargas = cargas?.length > 0 ? `
-    <div style="padding:12px 0 6px;font-size:12px;font-weight:700;color:var(--texto);text-transform:uppercase;letter-spacing:1px;">
-      📦 Cargas buscando conductor (${cargas.length})
-    </div>
-    ${htmlCargas}` : '';
-
+  // Secciones con cabeceras separadas — todos ven todo
   const secRutas = rutas?.length > 0 ? `
-    <div style="padding:12px 0 6px;font-size:12px;font-weight:700;color:var(--texto);text-transform:uppercase;letter-spacing:1px;">
-      🚛 Conductores disponibles (${rutas.length})
+    <div style="padding:14px 0 8px;display:flex;align-items:center;gap:8px;">
+      <div style="width:3px;height:16px;background:var(--amarillo);border-radius:2px;flex-shrink:0;"></div>
+      <span style="font-size:12px;font-weight:700;color:var(--texto);text-transform:uppercase;letter-spacing:1px;">🚛 Conductores disponibles</span>
+      <span style="margin-left:auto;background:var(--gris3);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">${rutas.length}</span>
     </div>
     ${htmlRutas}` : '';
 
-  list.innerHTML = secCargas + secRutas || '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">Sin resultados</div></div>';
+  const secCargas = cargas?.length > 0 ? `
+    <div style="padding:14px 0 8px;display:flex;align-items:center;gap:8px;">
+      <div style="width:3px;height:16px;background:var(--amarillo);border-radius:2px;flex-shrink:0;"></div>
+      <span style="font-size:12px;font-weight:700;color:var(--texto);text-transform:uppercase;letter-spacing:1px;">📦 Cargas buscando conductor</span>
+      <span style="margin-left:auto;background:var(--gris3);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">${cargas.length}</span>
+    </div>
+    ${htmlCargas}` : '';
+
+  list.innerHTML = (secRutas + secCargas) || '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">Sin resultados</div></div>';
   cargandoRutas = false;
 }
 
@@ -4030,6 +4052,7 @@ async function publicarRuta() {
     descripcion: document.getElementById('r-desc').value,
     estado:    'activa'
   });
+  console.log('[publicarRuta] error:', error?.message, '| conductorData:', conductorData);
 
   btn.disabled = false; btn.textContent = '📢 Publicar ruta';
 
