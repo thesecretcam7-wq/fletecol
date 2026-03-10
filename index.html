@@ -1612,6 +1612,8 @@ async function pagoWompiExitoso(txData, convIdParam) {
       if(eCarga) console.warn('carga en_curso:', eCarga.message);
       else console.log('✅ Carga del cliente marcada como en_curso');
     }
+    setBotonesSegunEstadoPago('pagado');
+    actualizarEscrowBar('APPROVED');
     return;
   }
   console.warn('⚠️ Sin convId para guardar recibo. convId:', convId, 'perfilActual:', perfilActual?.id);
@@ -4709,6 +4711,11 @@ function suscribirMensajes(convId) {
               setBotonesSegunEstadoPago('oferta_aceptada');
               actualizarEscrowBar('sin_pagar');
             }
+          }
+          // Si el conductor recibe recibo → actualizar escrow bar y ocultar botones
+          if(msg.tipo === 'recibo' && perfilActual?.rol === 'conductor') {
+            actualizarEscrowBar('APPROVED');
+            document.querySelectorAll('.btn-accion-cliente').forEach(b => b.style.display = 'none');
           }
           // Solo marcar leído si el chat está visible en pantalla
           const pantallaActiva = document.getElementById('s-chat')?.classList.contains('activa');
