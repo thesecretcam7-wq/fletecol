@@ -2636,71 +2636,207 @@ async function confirmarRolInicial() {
 // ── Llevar al conductor al flujo de registro (paso 1: elegir rol) ─────────────
 function irRegistroIncompleto() {
   if(document.getElementById('modal-docs-conductor')) return;
-
-  // Asegurar que authIdTemporal esté seteado para que enviarDocumentos funcione
   if(usuarioActual?.id) authIdTemporal = usuarioActual.id;
+
+  // Estado local de uploads para este modal (IDs únicos con prefijo 'm2-')
+  const docsModal = { cedula_frontal: null, cedula_posterior: null, selfie_cedula: null, foto_vehiculo: null, foto_vehiculo2: null, soat: null };
 
   const modal = document.createElement('div');
   modal.id = 'modal-docs-conductor';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;overflow-y:auto;padding:20px;box-sizing:border-box;';
+  modal.style.cssText = `
+    position:fixed;inset:0;z-index:9999;overflow-y:auto;
+    background:linear-gradient(160deg,#0d1117 0%,#111820 100%);
+    padding:0;box-sizing:border-box;
+  `;
+
   modal.innerHTML = `
-    <div style="max-width:480px;margin:0 auto;padding-bottom:40px;">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;padding-top:8px;">
-        <div style="font-size:28px;">🚛</div>
-        <div>
-          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;color:var(--blanco);">Completa tu registro</div>
-          <div style="font-size:12px;color:var(--texto);">Sube tus documentos para ser aprobado</div>
+    <div style="max-width:480px;margin:0 auto;padding:24px 20px 60px;">
+
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;padding-top:8px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:42px;height:42px;background:linear-gradient(135deg,#F5C400,#e6a800);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🚛</div>
+          <div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;color:#fff;line-height:1.1;">Completa tu registro</div>
+            <div style="font-size:11px;color:#6B7A99;margin-top:2px;">Sube tus documentos para ser aprobado</div>
+          </div>
         </div>
+        <button onclick="document.getElementById('modal-docs-conductor').remove()"
+          style="width:32px;height:32px;background:#1e2530;border:1px solid #2a3340;border-radius:8px;color:#6B7A99;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;">✕</button>
       </div>
 
-      <div style="font-size:11px;color:var(--amarillo);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin-bottom:10px;">🪪 Documentos personales — Obligatorios</div>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">
-        <div class="upload-box" id="box-cedula-f" onclick="document.getElementById('file-cedula-f').click()">
-          <input type="file" id="file-cedula-f" accept="image/*,.pdf" style="display:none;" onchange="subirDocumento(this,'cedula_frontal','box-cedula-f','lbl-cedula-f')">
-          <div class="upload-default"><div style="font-size:26px;margin-bottom:6px;">🪪</div><div style="font-size:13px;font-weight:700;color:var(--blanco);">Cédula — Parte frontal</div><div style="font-size:11px;color:var(--texto);">Foto clara donde se lea tu nombre · <strong style="color:var(--amarillo)">Subir</strong></div></div>
-          <div class="upload-ok" id="lbl-cedula-f" style="display:none;">✅ Cédula frontal subida</div>
-        </div>
-        <div class="upload-box" id="box-cedula-p" onclick="document.getElementById('file-cedula-p').click()">
-          <input type="file" id="file-cedula-p" accept="image/*,.pdf" style="display:none;" onchange="subirDocumento(this,'cedula_posterior','box-cedula-p','lbl-cedula-p')">
-          <div class="upload-default"><div style="font-size:26px;margin-bottom:6px;">🪪</div><div style="font-size:13px;font-weight:700;color:var(--blanco);">Cédula — Parte posterior</div><div style="font-size:11px;color:var(--texto);">La parte de atrás · <strong style="color:var(--amarillo)">Subir</strong></div></div>
-          <div class="upload-ok" id="lbl-cedula-p" style="display:none;">✅ Cédula posterior subida</div>
-        </div>
-        <div class="upload-box" id="box-selfie" onclick="document.getElementById('file-selfie').click()">
-          <input type="file" id="file-selfie" accept="image/*" style="display:none;" onchange="subirDocumento(this,'selfie_cedula','box-selfie','lbl-selfie')">
-          <div class="upload-default"><div style="font-size:26px;margin-bottom:6px;">🤳</div><div style="font-size:13px;font-weight:700;color:var(--blanco);">Selfie sosteniendo tu cédula</div><div style="font-size:11px;color:var(--texto);">Tómate una foto sujetando la cédula visible · <strong style="color:var(--amarillo)">Subir</strong></div></div>
-          <div class="upload-ok" id="lbl-selfie" style="display:none;">✅ Selfie subida</div>
-        </div>
+      <!-- Sección personal -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <div style="width:3px;height:16px;background:#F5C400;border-radius:2px;"></div>
+        <span style="font-size:10px;color:#F5C400;text-transform:uppercase;letter-spacing:1.2px;font-weight:700;">Documentos personales</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px;">
+        ${_docItem('m2-cedula-f','Cédula · Parte frontal','Foto donde se lea tu nombre','🪪','image/*,.pdf')}
+        ${_docItem('m2-cedula-p','Cédula · Parte posterior','La parte de atrás de tu cédula','🪪','image/*,.pdf')}
+        ${_docItem('m2-selfie','Selfie con tu cédula','Tómate una foto sujetando la cédula','🤳','image/*')}
       </div>
 
-      <div style="font-size:11px;color:var(--amarillo);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin-bottom:10px;">🚛 Documentos del vehículo — Obligatorios</div>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">
-        <div class="upload-box" id="box-foto-veh" onclick="document.getElementById('file-foto-veh').click()">
-          <input type="file" id="file-foto-veh" accept="image/*" style="display:none;" onchange="subirDocumento(this,'foto_vehiculo','box-foto-veh','lbl-foto-veh')">
-          <div class="upload-default"><div style="font-size:26px;margin-bottom:6px;">📸</div><div style="font-size:13px;font-weight:700;color:var(--blanco);">Foto del vehículo — Frontal</div><div style="font-size:11px;color:var(--texto);">Donde se vea la placa · <strong style="color:var(--amarillo)">Subir</strong></div></div>
-          <div class="upload-ok" id="lbl-foto-veh" style="display:none;">✅ Foto frontal subida</div>
-        </div>
-        <div class="upload-box" id="box-foto-veh2" onclick="document.getElementById('file-foto-veh2').click()">
-          <input type="file" id="file-foto-veh2" accept="image/*" style="display:none;" onchange="subirDocumento(this,'foto_vehiculo2','box-foto-veh2','lbl-foto-veh2')">
-          <div class="upload-default"><div style="font-size:26px;margin-bottom:6px;">📸</div><div style="font-size:13px;font-weight:700;color:var(--blanco);">Foto del vehículo — Lateral o trasera</div><div style="font-size:11px;color:var(--texto);">Segunda foto · <strong style="color:var(--amarillo)">Subir</strong></div></div>
-          <div class="upload-ok" id="lbl-foto-veh2" style="display:none;">✅ Segunda foto subida</div>
-        </div>
-        <div class="upload-box" id="box-soat" onclick="document.getElementById('file-soat').click()">
-          <input type="file" id="file-soat" accept="image/*,.pdf" style="display:none;" onchange="subirDocumento(this,'soat','box-soat','lbl-soat')">
-          <div class="upload-default"><div style="font-size:26px;margin-bottom:6px;">📋</div><div style="font-size:13px;font-weight:700;color:var(--blanco);">SOAT vigente</div><div style="font-size:11px;color:var(--texto);">Seguro obligatorio vigente · <strong style="color:var(--amarillo)">Subir</strong></div></div>
-          <div class="upload-ok" id="lbl-soat" style="display:none;">✅ SOAT subido</div>
-        </div>
+      <!-- Sección vehículo -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <div style="width:3px;height:16px;background:#F5C400;border-radius:2px;"></div>
+        <span style="font-size:10px;color:#F5C400;text-transform:uppercase;letter-spacing:1.2px;font-weight:700;">Documentos del vehículo</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px;">
+        ${_docItem('m2-foto-veh','Foto del vehículo · Frontal','Donde se vea la placa claramente','📸','image/*')}
+        ${_docItem('m2-foto-veh2','Foto del vehículo · Lateral','Segunda foto del vehículo','📸','image/*')}
+        ${_docItem('m2-soat','SOAT vigente','Seguro obligatorio al día','📋','image/*,.pdf')}
       </div>
 
-      <div id="docs-error" style="font-size:12px;color:var(--rojo);display:none;background:rgba(255,69,69,0.06);border:1px solid rgba(255,69,69,0.15);border-radius:9px;padding:9px 12px;margin-bottom:12px;"></div>
-      <button id="btn-enviar-docs" onclick="enviarDocumentos()" style="width:100%;padding:14px;background:var(--amarillo);color:var(--negro);border:none;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;cursor:pointer;">
+      <!-- Error -->
+      <div id="m2-error" style="display:none;font-size:12px;color:#ff6b6b;background:rgba(255,69,69,0.08);border:1px solid rgba(255,69,69,0.2);border-radius:10px;padding:10px 14px;margin-bottom:14px;"></div>
+
+      <!-- Botón enviar -->
+      <button id="m2-btn-enviar"
+        style="width:100%;padding:15px;background:linear-gradient(135deg,#F5C400,#e6a800);color:#080A0F;border:none;border-radius:12px;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;cursor:pointer;letter-spacing:0.3px;">
         Enviar documentos →
       </button>
-      <button onclick="document.getElementById('modal-docs-conductor').remove()" style="width:100%;padding:10px;background:transparent;color:var(--texto);border:none;font-size:13px;cursor:pointer;margin-top:8px;">
+      <button onclick="document.getElementById('modal-docs-conductor').remove()"
+        style="width:100%;padding:11px;background:transparent;color:#6B7A99;border:none;font-size:13px;cursor:pointer;margin-top:6px;">
         Ahora no
       </button>
     </div>
   `;
+
   document.body.appendChild(modal);
+
+  // Función helper que genera el HTML de cada item
+  function _docItem(id, titulo, sub, icon, accept) {
+    return `
+      <div id="${id}-box" onclick="document.getElementById('${id}-input').click()"
+        style="background:#161d27;border:1.5px dashed #2a3340;border-radius:12px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:14px;transition:border-color 0.2s,background 0.2s;position:relative;">
+        <input type="file" id="${id}-input" accept="${accept}" style="display:none;">
+        <div id="${id}-icon" style="font-size:26px;flex-shrink:0;">${icon}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:#e8edf5;">${titulo}</div>
+          <div id="${id}-sub" style="font-size:11px;color:#6B7A99;margin-top:2px;">${sub}</div>
+        </div>
+        <div id="${id}-badge" style="display:none;background:#00D46A;color:#080A0F;font-size:10px;font-weight:800;padding:3px 8px;border-radius:20px;flex-shrink:0;">✓ OK</div>
+        <div id="${id}-loading" style="display:none;font-size:12px;color:#F5C400;">⏳</div>
+      </div>`;
+  }
+
+  // Bind file inputs después de insertar en DOM
+  const docMap = [
+    { id: 'm2-cedula-f',  tipo: 'cedula_frontal'   },
+    { id: 'm2-cedula-p',  tipo: 'cedula_posterior'  },
+    { id: 'm2-selfie',    tipo: 'selfie_cedula'      },
+    { id: 'm2-foto-veh',  tipo: 'foto_vehiculo'      },
+    { id: 'm2-foto-veh2', tipo: 'foto_vehiculo2'     },
+    { id: 'm2-soat',      tipo: 'soat'               },
+  ];
+
+  docMap.forEach(({ id, tipo }) => {
+    const input = document.getElementById(id + '-input');
+    input.addEventListener('change', async function() {
+      const file = this.files[0];
+      if(!file) return;
+
+      const errEl  = document.getElementById('m2-error');
+      const box    = document.getElementById(id + '-box');
+      const badge  = document.getElementById(id + '-badge');
+      const sub    = document.getElementById(id + '-sub');
+      const loader = document.getElementById(id + '-loading');
+
+      errEl.style.display = 'none';
+
+      if(file.size > 5 * 1024 * 1024) {
+        errEl.textContent = '❌ El archivo es muy grande. Máximo 5MB.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      // Estado: cargando
+      box.style.borderColor = '#F5C400';
+      box.style.borderStyle = 'solid';
+      loader.style.display = 'block';
+      badge.style.display  = 'none';
+      sub.textContent = 'Subiendo...';
+
+      try {
+        const userId = usuarioActual.id;
+        const ext  = file.name.split('.').pop();
+        const path = `${userId}/${tipo}.${ext}`;
+        const { error } = await sb.storage.from('documentos').upload(path, file, { upsert: true });
+        if(error) throw error;
+
+        docsModal[tipo] = path;
+
+        // Estado: OK
+        box.style.background    = 'rgba(0,212,106,0.06)';
+        box.style.borderColor   = '#00D46A';
+        box.style.borderStyle   = 'solid';
+        loader.style.display    = 'none';
+        badge.style.display     = 'block';
+        sub.style.color         = '#00D46A';
+        sub.textContent         = 'Subido correctamente';
+
+      } catch(err) {
+        box.style.borderColor = '#ff4545';
+        loader.style.display  = 'none';
+        sub.style.color       = '#ff6b6b';
+        sub.textContent       = 'Error al subir';
+        errEl.textContent     = '❌ ' + (err.message || 'Error al subir. Intenta de nuevo.');
+        errEl.style.display   = 'block';
+      }
+    });
+  });
+
+  // Botón enviar
+  document.getElementById('m2-btn-enviar').addEventListener('click', async function() {
+    const errEl = document.getElementById('m2-error');
+    errEl.style.display = 'none';
+
+    const faltantes = [];
+    if(!docsModal.cedula_frontal)   faltantes.push('Cédula frontal');
+    if(!docsModal.cedula_posterior) faltantes.push('Cédula posterior');
+    if(!docsModal.selfie_cedula)    faltantes.push('Selfie con cédula');
+    if(!docsModal.foto_vehiculo)    faltantes.push('Foto del vehículo');
+    if(!docsModal.foto_vehiculo2)   faltantes.push('Segunda foto del vehículo');
+    if(!docsModal.soat)             faltantes.push('SOAT');
+
+    if(faltantes.length > 0) {
+      errEl.textContent = '⚠️ Faltan: ' + faltantes.join(', ');
+      errEl.style.display = 'block';
+      return;
+    }
+
+    this.disabled = true;
+    this.textContent = 'Guardando...';
+
+    try {
+      const { data: existente } = await sb.from('usuarios').select('foto_perfil').eq('auth_id', usuarioActual.id).single();
+      const fotoFinal = existente?.foto_perfil || docsModal.selfie_cedula;
+
+      const { error } = await sb.from('usuarios').update({
+        doc_cedula_frontal:   docsModal.cedula_frontal,
+        doc_cedula_posterior: docsModal.cedula_posterior,
+        doc_selfie:           docsModal.selfie_cedula,
+        doc_foto_vehiculo:    docsModal.foto_vehiculo,
+        doc_foto_vehiculo2:   docsModal.foto_vehiculo2,
+        doc_soat:             docsModal.soat,
+        foto_perfil:          fotoFinal,
+        estado:               'pendiente'
+      }).eq('auth_id', usuarioActual.id);
+
+      if(error) throw error;
+
+      modal.remove();
+      await cargarPerfil();
+      toast('📄 Documentos enviados. Te avisaremos cuando tu cuenta sea aprobada.', 'success');
+      await irApp('s-rutas');
+
+    } catch(err) {
+      this.disabled = false;
+      this.textContent = 'Enviar documentos →';
+      errEl.textContent = '❌ Error al guardar: ' + (err.message || 'Intenta de nuevo');
+      errEl.style.display = 'block';
+    }
+  });
 }
 
 // ── Modal "Completa tu registro" — solo para conductores ─────────────────────
