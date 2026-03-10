@@ -1986,6 +1986,7 @@ if ('locks' in navigator) {
 let usuarioActual = null;
 let enRegistro = false; // true mientras el usuario está completando el registro
 let perfilActual = null;
+let _sesionManejada = false; // bandera anti-doble disparo de SIGNED_IN (Google OAuth)
 let vehSeleccionado = 'moto';
 let filtroVehActual = 'todos';
 let misRutas = [];
@@ -2010,6 +2011,7 @@ async function init() {
         usuarioActual = null;
         perfilActual = null;
         enRegistro = false;
+        _sesionManejada = false;
         setTimeout(() => {
           detenerPolling();
           if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e){} estadoSub = null; }
@@ -2017,7 +2019,10 @@ async function init() {
           ir('s-landing');
         }, 0);
       }
-      if(event === 'SIGNED_IN' && session && !perfilActual && !enRegistro) {
+      // SIGNED_IN se dispara tanto en el callback de Google como al refrescar la página.
+      // Solo actuar si aún no hemos manejado la sesión (evita el doble disparo).
+      if(event === 'SIGNED_IN' && session && !enRegistro && !_sesionManejada) {
+        _sesionManejada = true;
         usuarioActual = session.user;
         setTimeout(async () => { await manejarSesion(session); }, 0);
       }
@@ -2027,6 +2032,7 @@ async function init() {
     document.getElementById('loading').style.display = 'none';
 
     if(session) {
+      _sesionManejada = true; // marcar antes de manejarSesion para que onAuthStateChange no lo repita
       await manejarSesion(session);
     } else {
       ir('s-landing');
@@ -2854,6 +2860,7 @@ async function registrar() {
 }
 
 async function logout() {
+  _sesionManejada = false;
   await sb.auth.signOut();
   toast('Sesión cerrada', 'info');
 }
