@@ -988,24 +988,15 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
                 </div>
                 <div class="toggle" id="t-ayudantes" onclick="toggleAyudantes(this)"></div>
               </div>
-              <!-- Sección costo ayudantes — visible solo si activan toggle -->
+              <!-- Sección ayudantes — visible solo si activan toggle -->
               <div id="sec-ayudantes" style="display:none;margin-top:12px;border-top:1px solid rgba(0,0,0,0.05);padding-top:12px;">
-                <div class="form-row">
-                  <div class="form-group">
-                    <label class="form-label">Número de ayudantes</label>
-                    <select class="form-input" id="m-num-ayudantes">
-                      <option value="1">1 ayudante</option>
-                      <option value="2">2 ayudantes</option>
-                      <option value="3">3 ayudantes</option>
-                    </select>
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">💰 Costo por ayudante</label>
-                    <input class="form-input" type="number" id="m-costo-ayudante" placeholder="50000" oninput="calcTotalAyudantes()">
-                  </div>
-                </div>
-                <div id="total-ayudantes-banner" style="display:none;background:rgba(0,212,106,0.06);border:1px solid rgba(0,212,106,0.15);border-radius:9px;padding:10px 12px;font-size:12px;">
-                  💰 Total ayudantes: <strong id="total-ayudantes-val" style="color:var(--verde);">$0</strong> · Se suma al precio del flete
+                <div class="form-group">
+                  <label class="form-label">Número de ayudantes</label>
+                  <select class="form-input" id="m-num-ayudantes">
+                    <option value="1">1 ayudante</option>
+                    <option value="2">2 ayudantes</option>
+                    <option value="3">3 ayudantes</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -2011,35 +2002,6 @@ async function init() {
     const pendSaved = sessionStorage.getItem('mensajesPendientes');
     if(pendSaved) try { mensajesPendientes = JSON.parse(pendSaved); } catch(e) {}
 
-    // Detectar si venimos de un redirect OAuth de Google (hash con access_token o code en URL)
-    const tieneOAuthEnUrl = window.location.hash.includes('access_token') ||
-                            window.location.hash.includes('refresh_token') ||
-                            window.location.search.includes('code=');
-
-    let sessionInicial = null;
-
-    if(tieneOAuthEnUrl) {
-      // Venimos de Google OAuth — esperar a que Supabase procese el token del hash.
-      // onAuthStateChange dispara SIGNED_IN cuando termina; lo esperamos máx 8s.
-      sessionInicial = await new Promise(resolve => {
-        const timer = setTimeout(() => resolve(null), 8000);
-        const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
-          if(event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-            clearTimeout(timer);
-            subscription.unsubscribe();
-            resolve(session);
-          }
-        });
-      });
-      // Limpiar el hash de la URL para que no quede visible
-      if(window.location.hash) window.history.replaceState(null, '', window.location.pathname + window.location.search);
-    } else {
-      // Carga normal — getSession() es inmediato y confiable
-      const { data } = await sb.auth.getSession();
-      sessionInicial = data?.session || null;
-    }
-
-    // Registrar el listener permanente para eventos posteriores
     sb.auth.onAuthStateChange((event, session) => {
       if(event === 'TOKEN_REFRESHED' && session) {
         usuarioActual = session.user;
@@ -2061,10 +2023,11 @@ async function init() {
       }
     });
 
+    const { data: { session } } = await sb.auth.getSession();
     document.getElementById('loading').style.display = 'none';
 
-    if(sessionInicial) {
-      await manejarSesion(sessionInicial);
+    if(session) {
+      await manejarSesion(session);
     } else {
       ir('s-landing');
     }
@@ -3627,18 +3590,6 @@ function toggleAyudantes(el) {
   }
 }
 
-function calcTotalAyudantes() {
-  const num   = parseInt(document.getElementById('m-num-ayudantes')?.value) || 1;
-  const costo = parseInt(document.getElementById('m-costo-ayudante')?.value) || 0;
-  const total = num * costo;
-  const banner = document.getElementById('total-ayudantes-banner');
-  const val    = document.getElementById('total-ayudantes-val');
-  if(banner && val) {
-    banner.style.display = total > 0 ? 'block' : 'none';
-    val.textContent = '$' + total.toLocaleString('es-CO');
-  }
-}
-
 const vehInfo = {
   moto:      { emoji:'🏍️', nombre:'Moto',       cap:'30 kg' },
   camioneta: { emoji:'🚐', nombre:'Camioneta',   cap:'1.5 ton' },
@@ -3984,7 +3935,6 @@ async function publicarCarga() {
   const esMudanza = tipo === 'mudanza';
   const necesitaAyudantes = document.getElementById('t-ayudantes')?.classList.contains('on') && esMudanza;
   const numAyudantes  = esMudanza && necesitaAyudantes ? parseInt(document.getElementById('m-num-ayudantes')?.value)||1 : 0;
-  const costoAyudante = esMudanza && necesitaAyudantes ? parseInt(document.getElementById('m-costo-ayudante')?.value)||0 : 0;
 
   // Armar descripción automática para mudanza
   let descAuto = '';
@@ -4002,7 +3952,7 @@ async function publicarCarga() {
     if(inmueble)     descAuto += inmueble + '. ';
     if(pisoO)        descAuto += 'Piso origen: ' + pisoO + '. ';
     if(pisoD)        descAuto += 'Piso destino: ' + pisoD + '. ';
-    if(necesitaAyudantes) descAuto += `Necesita ${numAyudantes} ayudante(s) a $${costoAyudante.toLocaleString('es-CO')} c/u.`;
+    if(necesitaAyudantes) descAuto += `Necesita ${numAyudantes} ayudante(s).`;
   }
 
   const descripcionFinal = [descAuto, document.getElementById('c-desc').value].filter(Boolean).join(' ').trim();
@@ -4021,7 +3971,6 @@ async function publicarCarga() {
     precio_maximo:      0,
     necesita_ayudantes: necesitaAyudantes,
     num_ayudantes:      numAyudantes,
-    costo_ayudante:     costoAyudante,
     es_fragil:          document.getElementById('t-fragil').classList.contains('on'),
     es_urgente:         document.getElementById('t-urgente').classList.contains('on'),
     estado:             'activa'
