@@ -2865,8 +2865,21 @@ async function registrar() {
 
 async function logout() {
   _authListo = false;
-  await sb.auth.signOut();
+  usuarioActual = null;
+  perfilActual = null;
+  enRegistro = false;
+  detenerPolling();
+  if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e){} estadoSub = null; }
+  if(chatSub)   { try { sb.removeChannel(chatSub);   } catch(e){} chatSub = null; }
+  // Limpiar localStorage de estado de app
+  localStorage.removeItem('fl_pantalla');
+  localStorage.removeItem('fl_conv');
+  localStorage.removeItem('fl_monto');
+  // Navegar INMEDIATAMENTE sin esperar signOut (que puede tardar en mobile)
+  ir('s-landing');
   toast('Sesión cerrada', 'info');
+  // signOut en background
+  sb.auth.signOut().catch(e => console.warn('signOut error:', e));
 }
 
 // ══ DOCUMENTOS REALES — SUPABASE STORAGE ══
