@@ -20,8 +20,8 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
 /* ══ SCREENS ══ */
 .screen{display:none;height:100vh;height:100dvh;flex-direction:column;overflow:hidden;-webkit-overflow-scrolling:touch;}
 .screen.activa{display:flex;animation:fadeIn 0.3s ease;}
-/* Screens that need full scroll (auth, perfil, publicar, etc) */
-#s-auth,#s-landing,#s-perfil,#s-publicar,#s-pagos,#s-pendiente,#s-politicas,#s-soporte{overflow-y:auto;}
+/* Screens that scroll fully */
+#s-auth,#s-landing,#s-perfil,#s-publicar,#s-pagos,#s-pendiente,#s-politicas,#s-soporte,#s-rutas,#s-mis{overflow-y:auto;overflow-x:hidden;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 /* ══ NAV ══ */
@@ -194,7 +194,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
 .loc-banner{background:rgba(245,196,0,0.06);border-bottom:1px solid rgba(245,196,0,0.15);padding:10px 28px;display:flex;align-items:center;justify-content:space-between;font-size:12px;flex-wrap:wrap;gap:8px;}
 .loc-banner.gps{background:rgba(0,212,106,0.05);border-bottom-color:rgba(0,212,106,0.15);}
 .rutas-wrap{display:grid;grid-template-columns:1fr 340px;flex:1;min-height:0;overflow:hidden;}
-.rutas-list{padding:20px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
+.rutas-list{padding:0 24px 100px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;}
 .carrusel-slide{min-width:100%;height:110px;background-size:cover;background-position:center;cursor:pointer;border-radius:6px;}
 .carrusel-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.4);cursor:pointer;transition:all 0.2s;}
 .carrusel-dot.active{background:#fff;width:18px;border-radius:3px;}
@@ -338,7 +338,8 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
   .search-bar{grid-template-columns:1fr!important;}
   .filtros-bar{padding:8px 14px;gap:6px;}
   .loc-banner{padding:8px 14px;}
-  .rutas-wrap{grid-template-columns:1fr;padding:12px 10px;}
+  .rutas-wrap{grid-template-columns:1fr;padding:0 10px;overflow:visible;}
+  .rutas-list{overflow-y:visible;padding-bottom:120px;}
   .ruta-card{padding:14px 12px;}
 
   /* PUBLICAR */
@@ -801,7 +802,6 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
   </div>
 
   <div class="search-hero">
-    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;margin-bottom:16px;">🗺️ Rutas disponibles</div>
     <div class="search-bar">
       <div style="display:flex;flex-direction:column;gap:5px;"><span style="font-size:10px;color:var(--texto);text-transform:uppercase;letter-spacing:0.8px;font-weight:600;">📍 Origen</span><input class="sb-input" id="f-origen" placeholder="Bogotá"></div>
       <div style="display:flex;flex-direction:column;gap:5px;"><span style="font-size:10px;color:var(--texto);text-transform:uppercase;letter-spacing:0.8px;font-weight:600;">🏁 Destino</span><input class="sb-input" id="f-destino" placeholder="Medellín"></div>
@@ -831,7 +831,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
     </div>
   </div>
 
-  <div class="rutas-wrap" style="flex:1;overflow:hidden;">
+  <div class="rutas-wrap" style="flex:1;min-height:0;">
     <div class="rutas-list" id="rutas-list">
       <div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">Cargando...</div></div>
     </div>
