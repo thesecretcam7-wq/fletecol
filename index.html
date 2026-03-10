@@ -1986,7 +1986,7 @@ if ('locks' in navigator) {
 let usuarioActual = null;
 let enRegistro = false; // true mientras el usuario está completando el registro
 let perfilActual = null;
-let _sesionManejada = false; // bandera anti-doble disparo de SIGNED_IN (Google OAuth)
+let _sesionManejada = false; // bandera anti-doble disparo (Google OAuth)
 let vehSeleccionado = 'moto';
 let filtroVehActual = 'todos';
 let misRutas = [];
@@ -2002,6 +2002,12 @@ async function init() {
   try {
     const pendSaved = sessionStorage.getItem('mensajesPendientes');
     if(pendSaved) try { mensajesPendientes = JSON.parse(pendSaved); } catch(e) {}
+
+    // Detectar si venimos de un redirect de Google OAuth
+    // Supabase pone el token en el hash (#access_token=...) o como query param
+    const urlHash = window.location.hash;
+    const urlSearch = window.location.search;
+    const esCallbackGoogle = urlHash.includes('access_token') || urlHash.includes('error_description') || urlSearch.includes('code=');
 
     sb.auth.onAuthStateChange((event, session) => {
       if(event === 'TOKEN_REFRESHED' && session) {
@@ -2020,19 +2026,46 @@ async function init() {
         }, 0);
       }
       // SIGNED_IN se dispara tanto en el callback de Google como al refrescar la página.
-      // Solo actuar si aún no hemos manejado la sesión (evita el doble disparo).
+      // Solo actuar si aún no hemos manejado la sesión para evitar el doble disparo.
       if(event === 'SIGNED_IN' && session && !enRegistro && !_sesionManejada) {
         _sesionManejada = true;
         usuarioActual = session.user;
+        // Limpiar hash de la URL para que no quede visible ni cause problemas
+        if(urlHash.includes('access_token')) {
+          window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+        }
         setTimeout(async () => { await manejarSesion(session); }, 0);
       }
     });
+
+    // Si venimos del redirect de Google, dejar que onAuthStateChange maneje la sesión
+    // (Supabase procesará el hash y disparará SIGNED_IN automáticamente)
+    if(esCallbackGoogle) {
+      // Dar tiempo a Supabase para procesar el hash/code antes de mostrar loading
+      // El onAuthStateChange anterior se encargará del resto
+      setTimeout(() => {
+        if(!_sesionManejada) {
+          // Si después de 3 segundos Supabase no disparó SIGNED_IN, verificar manualmente
+          sb.auth.getSession().then(({ data: { session } }) => {
+            if(session && !_sesionManejada) {
+              _sesionManejada = true;
+              document.getElementById('loading').style.display = 'none';
+              manejarSesion(session);
+            } else if(!session) {
+              document.getElementById('loading').style.display = 'none';
+              ir('s-landing');
+            }
+          });
+        }
+      }, 3000);
+      return; // No llamar getSession() todavía — esperar al callback
+    }
 
     const { data: { session } } = await sb.auth.getSession();
     document.getElementById('loading').style.display = 'none';
 
     if(session) {
-      _sesionManejada = true; // marcar antes de manejarSesion para que onAuthStateChange no lo repita
+      _sesionManejada = true;
       await manejarSesion(session);
     } else {
       ir('s-landing');
@@ -2048,6 +2081,7 @@ async function init() {
 async function manejarSesion(session) {
   if(usuarioActual?.id === session.user.id && perfilActual) return;
   usuarioActual = session.user;
+  document.getElementById('loading').style.display = 'none';
   await cargarPerfil();
 
   if(!perfilActual && session.user.email) {
