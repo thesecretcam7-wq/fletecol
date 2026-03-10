@@ -799,7 +799,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
   </div>
 
   <div class="search-hero">
-    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;margin-bottom:16px;">🗺️ Rutas disponibles</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;margin-bottom:16px;" id="buscar-titulo">🗺️ Rutas disponibles</div>
     <div class="search-bar">
       <div style="display:flex;flex-direction:column;gap:5px;"><span style="font-size:10px;color:var(--texto);text-transform:uppercase;letter-spacing:0.8px;font-weight:600;">📍 Origen</span><input class="sb-input" id="f-origen" placeholder="Bogotá"></div>
       <div style="display:flex;flex-direction:column;gap:5px;"><span style="font-size:10px;color:var(--texto);text-transform:uppercase;letter-spacing:0.8px;font-weight:600;">🏁 Destino</span><input class="sb-input" id="f-destino" placeholder="Medellín"></div>
@@ -814,7 +814,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
     <button class="ftag" onclick="filtVeh('camioneta',this)">🚐 Camioneta</button>
     <button class="ftag" onclick="filtVeh('camion',this)">🚚 Camión</button>
     <button class="ftag" onclick="filtVeh('mula',this)">🚛 Mula</button>
-    <div style="margin-left:auto;font-size:12px;color:var(--texto);">Mostrando <strong id="count-r" style="color:var(--blanco)">0</strong> rutas</div>
+    <div style="margin-left:auto;font-size:12px;color:var(--texto);">Mostrando <strong id="count-r" style="color:var(--blanco)">0</strong> <span id="count-label">resultados</span></div>
   </div>
 
   <!-- CARRUSEL PUBLICITARIO -->
@@ -2011,50 +2011,28 @@ async function init() {
     const pendSaved = sessionStorage.getItem('mensajesPendientes');
     if(pendSaved) try { mensajesPendientes = JSON.parse(pendSaved); } catch(e) {}
 
-    // Usamos una Promise para esperar el primer evento de auth antes de continuar
-    let authResuelto = false;
-    const authListo = new Promise(resolve => {
-      sb.auth.onAuthStateChange((event, session) => {
-        if(event === 'TOKEN_REFRESHED' && session) {
-          usuarioActual = session.user;
-        }
-        if(event === 'SIGNED_OUT') {
-          usuarioActual = null;
-          perfilActual = null;
-          enRegistro = false;
-          setTimeout(() => {
-            detenerPolling();
-            if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e){} estadoSub = null; }
-            if(chatSub)   { try { sb.removeChannel(chatSub);   } catch(e){} chatSub = null; }
-            ir('s-landing');
-          }, 0);
-        }
-        // INITIAL_SESSION: primer chequeo al cargar — cubre el retorno del OAuth de Google
-        if((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && !authResuelto) {
-          authResuelto = true;
-          resolve(session);
-        }
-        // SIGNED_IN posterior (ej: login con email/pass luego del primer load)
-        if(event === 'SIGNED_IN' && authResuelto && session && !perfilActual && !enRegistro) {
-          usuarioActual = session.user;
-          setTimeout(async () => { await manejarSesion(session); }, 0);
-        }
-      });
+    sb.auth.onAuthStateChange((event, session) => {
+      if(event === 'TOKEN_REFRESHED' && session) {
+        usuarioActual = session.user;
+      }
+      if(event === 'SIGNED_OUT') {
+        usuarioActual = null;
+        perfilActual = null;
+        enRegistro = false;
+        setTimeout(() => {
+          detenerPolling();
+          if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e){} estadoSub = null; }
+          if(chatSub)   { try { sb.removeChannel(chatSub);   } catch(e){} chatSub = null; }
+          ir('s-landing');
+        }, 0);
+      }
+      if(event === 'SIGNED_IN' && session && !perfilActual && !enRegistro) {
+        usuarioActual = session.user;
+        setTimeout(async () => { await manejarSesion(session); }, 0);
+      }
     });
 
-    // Esperamos max 3s al evento de auth; si no llega, usamos getSession como fallback
-    const sessionDeEvento = await Promise.race([
-      authListo,
-      new Promise(r => setTimeout(() => r(null), 3000))
-    ]);
-
-    // Si el evento no trajo sesión, intentamos getSession como respaldo
-    let session = sessionDeEvento;
-    if(!session) {
-      const { data } = await sb.auth.getSession();
-      session = data?.session || null;
-    }
-
+    const { data: { session } } = await sb.auth.getSession();
     document.getElementById('loading').style.display = 'none';
 
     if(session) {
@@ -2495,7 +2473,21 @@ async function irApp(screenId) {
   document.getElementById('bottom-nav').classList.add('visible');
   const map = {'s-rutas':0,'s-publicar':1,'s-chat':2,'s-pagos':3,'s-perfil':4};
   document.querySelectorAll('.bnav-item').forEach((b,i) => b.classList.toggle('active', i === map[screenId]));
-  if(screenId === 's-rutas') cargarRutas();
+  if(screenId === 's-rutas') {
+    cargarRutas();
+    // Actualizar título según rol
+    const titulo = document.getElementById('buscar-titulo');
+    if(titulo) {
+      if(perfilActual?.rol === 'conductor') {
+        titulo.textContent = '📦 Cargas disponibles';
+      } else {
+        titulo.textContent = '🗺️ Rutas disponibles';
+      }
+    }
+    // Mostrar/ocultar filtros de vehículo (solo útiles para clientes buscando conductores)
+    const filtrosBar = document.querySelector('.filtros-bar');
+    if(filtrosBar) filtrosBar.style.display = perfilActual?.rol === 'conductor' ? 'none' : '';
+  }
   if(screenId === 's-chat') {
     cargarConversaciones();
     // Ocultar panel de pago hasta que se abra una conversación
@@ -3307,28 +3299,35 @@ async function cargarRutas() {
   const origen  = document.getElementById('f-origen')?.value.trim();
   const destino = document.getElementById('f-destino')?.value.trim();
 
-  // Cargar rutas de conductores
-  let qRutas = sb.from('rutas')
-    .select(`*, conductor:usuarios(nombre,apellido,estrellas,num_reviews,viajes_completados,vehiculo,ciudad)`)
-    .eq('estado','activa')
-    .order('created_at', { ascending: false });
-  if(filtroVehActual !== 'todos') qRutas = qRutas.eq('vehiculo', filtroVehActual);
-  if(origen)  qRutas = qRutas.ilike('origen',  `%${origen}%`);
-  if(destino) qRutas = qRutas.ilike('destino', `%${destino}%`);
+  const rolActual = perfilActual?.rol;
 
-  // Cargar cargas publicadas por clientes
-  let qCargas = sb.from('cargas')
-    .select(`*, cliente:usuarios(nombre,apellido,estrellas,num_reviews)`)
-    .eq('estado','activa')
-    .order('created_at', { ascending: false });
-  if(origen)  qCargas = qCargas.ilike('origen',  `%${origen}%`);
-  if(destino) qCargas = qCargas.ilike('destino', `%${destino}%`);
-
+  // Conductor solo ve cargas de clientes; cliente solo ve rutas de conductores
   let rutas = [], cargas = [];
   try {
-    const [resRutas, resCargas] = await Promise.all([qRutas.limit(20), qCargas.limit(20)]);
-    rutas = resRutas.data || [];
-    cargas = resCargas.data || [];
+    if(rolActual !== 'conductor') {
+      // Solo clientes (y usuarios sin rol definido) ven rutas de conductores
+      let qRutas = sb.from('rutas')
+        .select(`*, conductor:usuarios(nombre,apellido,estrellas,num_reviews,viajes_completados,vehiculo,ciudad)`)
+        .eq('estado','activa')
+        .order('created_at', { ascending: false });
+      if(filtroVehActual !== 'todos') qRutas = qRutas.eq('vehiculo', filtroVehActual);
+      if(origen)  qRutas = qRutas.ilike('origen',  `%${origen}%`);
+      if(destino) qRutas = qRutas.ilike('destino', `%${destino}%`);
+      const resRutas = await qRutas.limit(20);
+      rutas = resRutas.data || [];
+    }
+
+    if(rolActual !== 'cliente') {
+      // Solo conductores (y usuarios sin rol definido) ven cargas de clientes
+      let qCargas = sb.from('cargas')
+        .select(`*, cliente:usuarios(nombre,apellido,estrellas,num_reviews)`)
+        .eq('estado','activa')
+        .order('created_at', { ascending: false });
+      if(origen)  qCargas = qCargas.ilike('origen',  `%${origen}%`);
+      if(destino) qCargas = qCargas.ilike('destino', `%${destino}%`);
+      const resCargas = await qCargas.limit(20);
+      cargas = resCargas.data || [];
+    }
   } catch(e) {
     console.error('Error cargando rutas/cargas:', e);
     cargandoRutas = false;
@@ -3338,14 +3337,14 @@ async function cargarRutas() {
 
   const totalItems = rutas.length + cargas.length;
   document.getElementById('count-r').textContent = totalItems;
+  const lbl = document.getElementById('count-label');
+  if(lbl) lbl.textContent = perfilActual?.rol === 'conductor' ? 'cargas' : perfilActual?.rol === 'cliente' ? 'rutas' : 'resultados';
 
   if(totalItems === 0) {
     cargandoRutas = false;
     renderRutasDemo();
     return;
   }
-
-  document.getElementById('count-r').textContent = totalItems;
 
   // Renderizar rutas de conductores
   const htmlRutas = (rutas||[]).map(r => `
@@ -3424,7 +3423,7 @@ async function cargarRutas() {
     </div>
     ${htmlRutas}` : '';
 
-  list.innerHTML = secCargas + secRutas || '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">Sin resultados</div></div>';
+  list.innerHTML = secCargas + secRutas || `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">Sin resultados</div><div class="empty-sub">${perfilActual?.rol === 'conductor' ? 'No hay cargas publicadas en este momento.' : 'No hay conductores disponibles en este momento.'}</div></div>`;
   cargandoRutas = false;
 }
 
