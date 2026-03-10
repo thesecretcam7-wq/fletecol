@@ -1984,62 +1984,67 @@ if ('locks' in navigator) {
 }
 
 let usuarioActual = null;
-let enRegistro = false; // true mientras el usuario está completando el registro
+let enRegistro = false;
 let perfilActual = null;
 let vehSeleccionado = 'moto';
 let filtroVehActual = 'todos';
 let misRutas = [];
 let misCargas = [];
 let convActual = null;
-let mensajesPendientes = []; // cola de mensajes que fallaron
+let mensajesPendientes = [];
 let chatSub = null;
 
 // ══ INIT ══
-let estadoSub = null; // suscripción realtime al estado del usuario
-let _manejandoSesion = false; // mutex: evita que manejarSesion corra dos veces en paralelo
+let estadoSub = null;
+let _authListo = false; // true luego de que onAuthStateChange emite el primer evento
 
 async function init() {
   try {
     const pendSaved = sessionStorage.getItem('mensajesPendientes');
     if(pendSaved) try { mensajesPendientes = JSON.parse(pendSaved); } catch(e) {}
 
-    // onAuthStateChange solo maneja SIGNED_OUT y TOKEN_REFRESHED.
-    // El SIGNED_IN inicial lo maneja getSession() más abajo para evitar doble ejecución.
-    sb.auth.onAuthStateChange((event, session) => {
+    // ─── ÚNICA fuente de verdad: onAuthStateChange ──────────────────────────
+    // Supabase siempre emite INITIAL_SESSION (o SIGNED_IN) al iniciar,
+    // ya sea desde localStorage (recarga) o desde el hash de Google OAuth.
+    // NO llamamos getSession() por separado para evitar doble ejecución.
+    sb.auth.onAuthStateChange(async (event, session) => {
+      console.log('[auth]', event, session?.user?.email || 'sin sesión');
+
+      if(event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        if(_authListo) return; // solo procesar la primera vez
+        _authListo = true;
+
+        document.getElementById('loading').style.display = 'none';
+
+        // Limpiar hash OAuth de la URL
+        if(window.location.hash.includes('access_token')) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        if(session && !enRegistro) {
+          usuarioActual = session.user;
+          await manejarSesion(session);
+        } else {
+          ir('s-landing');
+        }
+      }
+
       if(event === 'TOKEN_REFRESHED' && session) {
         usuarioActual = session.user;
       }
+
       if(event === 'SIGNED_OUT') {
+        _authListo = false;
         usuarioActual = null;
         perfilActual = null;
         enRegistro = false;
-        _manejandoSesion = false;
-        setTimeout(() => {
-          detenerPolling();
-          if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e){} estadoSub = null; }
-          if(chatSub)   { try { sb.removeChannel(chatSub);   } catch(e){} chatSub = null; }
-          ir('s-landing');
-        }, 0);
-      }
-      // SIGNED_IN: solo actuar si getSession() no lo manejó ya (p.ej. callback de Google OAuth)
-      if(event === 'SIGNED_IN' && session && !enRegistro && !_manejandoSesion) {
-        // Limpiar hash de OAuth de la URL para no contaminarlo
-        if(window.location.hash.includes('access_token')) {
-          window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
-        }
-        setTimeout(async () => { await manejarSesion(session); }, 0);
+        document.getElementById('loading').style.display = 'none';
+        detenerPolling();
+        if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e){} estadoSub = null; }
+        if(chatSub)   { try { sb.removeChannel(chatSub);   } catch(e){} chatSub = null; }
+        ir('s-landing');
       }
     });
-
-    // getSession() resuelve la sesión persistida en localStorage (recarga de página)
-    const { data: { session } } = await sb.auth.getSession();
-    document.getElementById('loading').style.display = 'none';
-
-    if(session) {
-      await manejarSesion(session); // marca _manejandoSesion = true antes de cualquier await
-    } else {
-      ir('s-landing');
-    }
 
   } catch(e) {
     console.error('Error en init:', e);
@@ -2049,11 +2054,7 @@ async function init() {
 }
 
 async function manejarSesion(session) {
-  // Mutex: si ya estamos manejando esta sesión exacta, ignorar
-  if(_manejandoSesion && usuarioActual?.id === session.user.id) return;
-  _manejandoSesion = true;
   usuarioActual = session.user;
-  document.getElementById('loading').style.display = 'none';
   await cargarPerfil();
 
   if(!perfilActual && session.user.email) {
@@ -2308,7 +2309,6 @@ async function redirigirSegunEstado() {
     await irApp('s-rutas');
   } else if(estado === 'incompleto') {
     await irApp('s-rutas');
-    // Mostrar selector de rol siempre que el perfil esté incompleto (sin importar si es nuevo o recarga)
     setTimeout(() => mostrarSelectorRolGoogle(), 800);
   } else if(estado === 'pendiente') {
     // Conductor que ya envió docs → puede explorar pero no actuar
@@ -2515,6 +2515,7 @@ async function login() {
   btn.disabled = true; btn.textContent = 'Iniciando sesión...';
 
   try {
+    _authListo = false; // permitir que onAuthStateChange procese el SIGNED_IN de este login
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
 
     if(error) {
@@ -2862,7 +2863,7 @@ async function registrar() {
 }
 
 async function logout() {
-  _manejandoSesion = false;
+  _authListo = false;
   await sb.auth.signOut();
   toast('Sesión cerrada', 'info');
 }
