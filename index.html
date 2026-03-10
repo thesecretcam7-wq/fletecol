@@ -18,8 +18,10 @@
 html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavior-x:none;color-scheme:light;}*,*::before,*::after{box-sizing:border-box;}body{background:#FFFFFF !important;color:#111113 !important;font-family:'Inter',sans-serif;overflow:hidden;max-width:100vw;touch-action:pan-y;-webkit-text-size-adjust:100%;}
 
 /* ══ SCREENS ══ */
-.screen{display:none;height:100vh;height:100dvh;flex-direction:column;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+.screen{display:none;height:100vh;height:100dvh;flex-direction:column;overflow:hidden;-webkit-overflow-scrolling:touch;}
 .screen.activa{display:flex;animation:fadeIn 0.3s ease;}
+/* Screens that need full scroll (auth, perfil, publicar, etc) */
+#s-auth,#s-landing,#s-perfil,#s-publicar,#s-pagos,#s-pendiente,#s-politicas,#s-soporte{overflow-y:auto;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 /* ══ NAV ══ */
@@ -191,7 +193,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
 .ftag.active{background:rgba(245,196,0,0.1);border-color:var(--amarillo);color:var(--amarillo);}
 .loc-banner{background:rgba(245,196,0,0.06);border-bottom:1px solid rgba(245,196,0,0.15);padding:10px 28px;display:flex;align-items:center;justify-content:space-between;font-size:12px;flex-wrap:wrap;gap:8px;}
 .loc-banner.gps{background:rgba(0,212,106,0.05);border-bottom-color:rgba(0,212,106,0.15);}
-.rutas-wrap{display:grid;grid-template-columns:1fr 340px;flex:1;overflow:hidden;}
+.rutas-wrap{display:grid;grid-template-columns:1fr 340px;flex:1;min-height:0;overflow:hidden;}
 .rutas-list{padding:20px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
 .carrusel-slide{min-width:100%;height:110px;background-size:cover;background-position:center;cursor:pointer;border-radius:6px;}
 .carrusel-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.4);cursor:pointer;transition:all 0.2s;}
@@ -4058,8 +4060,13 @@ async function publicarRuta() {
 
   if(error) { toast('Error al publicar: '+error.message, 'error'); return; }
   toast('✅ Ruta publicada exitosamente', 'success');
-  misRutas.push({ titulo: document.getElementById('r-origen').value + ' → ' + document.getElementById('r-destino').value, sub: vehSeleccionado + ' · ' + document.getElementById('r-fecha').value, icon:'🚐' });
-  setTimeout(() => irApp('s-mis'), 1000);
+  // Limpiar formulario
+  ['r-origen','r-destino','r-fecha','r-hora','r-capacidad','r-precio','r-desc'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
+  // Ir al buscador para que vea su ruta publicada
+  cargandoRutas = false;
+  await irApp('s-rutas');
 }
 
 // ── AUTOCOMPLETE BARRIOS ──────────────────────────────────────
@@ -4207,8 +4214,9 @@ async function publicarCarga() {
   document.getElementById('c-peso').value = '';
   document.getElementById('c-fecha').value = '';
   document.getElementById('c-desc').value = '';
-  // Ir al buscador de cargas
-  setTimeout(() => irApp('s-rutas'), 800);
+  // Ir al buscador para que vea su carga publicada
+  cargandoRutas = false;
+  await irApp('s-rutas');
 }
 
 async function cargarMisPubs() {
