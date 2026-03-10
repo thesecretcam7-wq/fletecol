@@ -799,7 +799,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
   </div>
 
   <div class="search-hero">
-    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;margin-bottom:16px;" id="buscar-titulo">🗺️ Rutas disponibles</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;margin-bottom:16px;">🗺️ Rutas disponibles</div>
     <div class="search-bar">
       <div style="display:flex;flex-direction:column;gap:5px;"><span style="font-size:10px;color:var(--texto);text-transform:uppercase;letter-spacing:0.8px;font-weight:600;">📍 Origen</span><input class="sb-input" id="f-origen" placeholder="Bogotá"></div>
       <div style="display:flex;flex-direction:column;gap:5px;"><span style="font-size:10px;color:var(--texto);text-transform:uppercase;letter-spacing:0.8px;font-weight:600;">🏁 Destino</span><input class="sb-input" id="f-destino" placeholder="Medellín"></div>
@@ -814,7 +814,7 @@ html{overflow-x:hidden;overscroll-behavior-x:none;color-scheme:light;}*,*::befor
     <button class="ftag" onclick="filtVeh('camioneta',this)">🚐 Camioneta</button>
     <button class="ftag" onclick="filtVeh('camion',this)">🚚 Camión</button>
     <button class="ftag" onclick="filtVeh('mula',this)">🚛 Mula</button>
-    <div style="margin-left:auto;font-size:12px;color:var(--texto);">Mostrando <strong id="count-r" style="color:var(--blanco)">0</strong> <span id="count-label">resultados</span></div>
+    <div style="margin-left:auto;font-size:12px;color:var(--texto);">Mostrando <strong id="count-r" style="color:var(--blanco)">0</strong> rutas</div>
   </div>
 
   <!-- CARRUSEL PUBLICITARIO -->
@@ -2473,21 +2473,7 @@ async function irApp(screenId) {
   document.getElementById('bottom-nav').classList.add('visible');
   const map = {'s-rutas':0,'s-publicar':1,'s-chat':2,'s-pagos':3,'s-perfil':4};
   document.querySelectorAll('.bnav-item').forEach((b,i) => b.classList.toggle('active', i === map[screenId]));
-  if(screenId === 's-rutas') {
-    cargarRutas();
-    // Actualizar título según rol
-    const titulo = document.getElementById('buscar-titulo');
-    if(titulo) {
-      if(perfilActual?.rol === 'conductor') {
-        titulo.textContent = '📦 Cargas disponibles';
-      } else {
-        titulo.textContent = '🗺️ Rutas disponibles';
-      }
-    }
-    // Mostrar/ocultar filtros de vehículo (solo útiles para clientes buscando conductores)
-    const filtrosBar = document.querySelector('.filtros-bar');
-    if(filtrosBar) filtrosBar.style.display = perfilActual?.rol === 'conductor' ? 'none' : '';
-  }
+  if(screenId === 's-rutas') cargarRutas();
   if(screenId === 's-chat') {
     cargarConversaciones();
     // Ocultar panel de pago hasta que se abra una conversación
@@ -2653,6 +2639,9 @@ function irRegistroIncompleto() {
   // Asegurar que authIdTemporal esté seteado para que enviarDocumentos funcione
   if(usuarioActual?.id) authIdTemporal = usuarioActual.id;
 
+  // Resetear documentos subidos para evitar residuos de intento anterior
+  docsSubidos = { cedula_frontal: null, cedula_posterior: null, selfie_cedula: null, foto_vehiculo: null, foto_vehiculo2: null, soat: null };
+
   const modal = document.createElement('div');
   modal.id = 'modal-docs-conductor';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;overflow-y:auto;padding:20px;box-sizing:border-box;';
@@ -2668,39 +2657,39 @@ function irRegistroIncompleto() {
 
       <div style="font-size:11px;color:var(--amarillo);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin-bottom:10px;">🪪 Documentos personales — Obligatorios</div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">
-        <div class="upload-box" id="box-cedula-f" onclick="document.getElementById('file-cedula-f').click()">
-          <input type="file" id="file-cedula-f" accept="image/*,.pdf" style="display:none;" onchange="subirDocumento(this,'cedula_frontal','box-cedula-f','lbl-cedula-f')">
+        <div class="upload-box" id="box-cedula-f-m" onclick="document.getElementById('file-cedula-f-m').click()">
+          <input type="file" id="file-cedula-f-m" accept="image/*,.pdf" style="display:none;" onchange="subirDocumento(this,'cedula_frontal','box-cedula-f-m','lbl-cedula-f-m')">
           <div class="upload-default"><div style="font-size:26px;margin-bottom:6px;">🪪</div><div style="font-size:13px;font-weight:700;color:var(--blanco);">Cédula — Parte frontal</div><div style="font-size:11px;color:var(--texto);">Foto clara donde se lea tu nombre · <strong style="color:var(--amarillo)">Subir</strong></div></div>
-          <div class="upload-ok" id="lbl-cedula-f" style="display:none;">✅ Cédula frontal subida</div>
+          <div class="upload-ok" id="lbl-cedula-f-m" style="display:none;">✅ Cédula frontal subida</div>
         </div>
-        <div class="upload-box" id="box-cedula-p" onclick="document.getElementById('file-cedula-p').click()">
-          <input type="file" id="file-cedula-p" accept="image/*,.pdf" style="display:none;" onchange="subirDocumento(this,'cedula_posterior','box-cedula-p','lbl-cedula-p')">
+        <div class="upload-box" id="box-cedula-p-m" onclick="document.getElementById('file-cedula-p-m').click()">
+          <input type="file" id="file-cedula-p-m" accept="image/*,.pdf" style="display:none;" onchange="subirDocumento(this,'cedula_posterior','box-cedula-p-m','lbl-cedula-p-m')">
           <div class="upload-default"><div style="font-size:26px;margin-bottom:6px;">🪪</div><div style="font-size:13px;font-weight:700;color:var(--blanco);">Cédula — Parte posterior</div><div style="font-size:11px;color:var(--texto);">La parte de atrás · <strong style="color:var(--amarillo)">Subir</strong></div></div>
-          <div class="upload-ok" id="lbl-cedula-p" style="display:none;">✅ Cédula posterior subida</div>
+          <div class="upload-ok" id="lbl-cedula-p-m" style="display:none;">✅ Cédula posterior subida</div>
         </div>
-        <div class="upload-box" id="box-selfie" onclick="document.getElementById('file-selfie').click()">
-          <input type="file" id="file-selfie" accept="image/*" style="display:none;" onchange="subirDocumento(this,'selfie_cedula','box-selfie','lbl-selfie')">
+        <div class="upload-box" id="box-selfie-m" onclick="document.getElementById('file-selfie-m').click()">
+          <input type="file" id="file-selfie-m" accept="image/*" style="display:none;" onchange="subirDocumento(this,'selfie_cedula','box-selfie-m','lbl-selfie-m')">
           <div class="upload-default"><div style="font-size:26px;margin-bottom:6px;">🤳</div><div style="font-size:13px;font-weight:700;color:var(--blanco);">Selfie sosteniendo tu cédula</div><div style="font-size:11px;color:var(--texto);">Tómate una foto sujetando la cédula visible · <strong style="color:var(--amarillo)">Subir</strong></div></div>
-          <div class="upload-ok" id="lbl-selfie" style="display:none;">✅ Selfie subida</div>
+          <div class="upload-ok" id="lbl-selfie-m" style="display:none;">✅ Selfie subida</div>
         </div>
       </div>
 
       <div style="font-size:11px;color:var(--amarillo);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin-bottom:10px;">🚛 Documentos del vehículo — Obligatorios</div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">
-        <div class="upload-box" id="box-foto-veh" onclick="document.getElementById('file-foto-veh').click()">
-          <input type="file" id="file-foto-veh" accept="image/*" style="display:none;" onchange="subirDocumento(this,'foto_vehiculo','box-foto-veh','lbl-foto-veh')">
+        <div class="upload-box" id="box-foto-veh-m" onclick="document.getElementById('file-foto-veh-m').click()">
+          <input type="file" id="file-foto-veh-m" accept="image/*" style="display:none;" onchange="subirDocumento(this,'foto_vehiculo','box-foto-veh-m','lbl-foto-veh-m')">
           <div class="upload-default"><div style="font-size:26px;margin-bottom:6px;">📸</div><div style="font-size:13px;font-weight:700;color:var(--blanco);">Foto del vehículo — Frontal</div><div style="font-size:11px;color:var(--texto);">Donde se vea la placa · <strong style="color:var(--amarillo)">Subir</strong></div></div>
-          <div class="upload-ok" id="lbl-foto-veh" style="display:none;">✅ Foto frontal subida</div>
+          <div class="upload-ok" id="lbl-foto-veh-m" style="display:none;">✅ Foto frontal subida</div>
         </div>
-        <div class="upload-box" id="box-foto-veh2" onclick="document.getElementById('file-foto-veh2').click()">
-          <input type="file" id="file-foto-veh2" accept="image/*" style="display:none;" onchange="subirDocumento(this,'foto_vehiculo2','box-foto-veh2','lbl-foto-veh2')">
+        <div class="upload-box" id="box-foto-veh2-m" onclick="document.getElementById('file-foto-veh2-m').click()">
+          <input type="file" id="file-foto-veh2-m" accept="image/*" style="display:none;" onchange="subirDocumento(this,'foto_vehiculo2','box-foto-veh2-m','lbl-foto-veh2-m')">
           <div class="upload-default"><div style="font-size:26px;margin-bottom:6px;">📸</div><div style="font-size:13px;font-weight:700;color:var(--blanco);">Foto del vehículo — Lateral o trasera</div><div style="font-size:11px;color:var(--texto);">Segunda foto · <strong style="color:var(--amarillo)">Subir</strong></div></div>
-          <div class="upload-ok" id="lbl-foto-veh2" style="display:none;">✅ Segunda foto subida</div>
+          <div class="upload-ok" id="lbl-foto-veh2-m" style="display:none;">✅ Segunda foto subida</div>
         </div>
-        <div class="upload-box" id="box-soat" onclick="document.getElementById('file-soat').click()">
-          <input type="file" id="file-soat" accept="image/*,.pdf" style="display:none;" onchange="subirDocumento(this,'soat','box-soat','lbl-soat')">
+        <div class="upload-box" id="box-soat-m" onclick="document.getElementById('file-soat-m').click()">
+          <input type="file" id="file-soat-m" accept="image/*,.pdf" style="display:none;" onchange="subirDocumento(this,'soat','box-soat-m','lbl-soat-m')">
           <div class="upload-default"><div style="font-size:26px;margin-bottom:6px;">📋</div><div style="font-size:13px;font-weight:700;color:var(--blanco);">SOAT vigente</div><div style="font-size:11px;color:var(--texto);">Seguro obligatorio vigente · <strong style="color:var(--amarillo)">Subir</strong></div></div>
-          <div class="upload-ok" id="lbl-soat" style="display:none;">✅ SOAT subido</div>
+          <div class="upload-ok" id="lbl-soat-m" style="display:none;">✅ SOAT subido</div>
         </div>
       </div>
 
@@ -2889,9 +2878,12 @@ async function subirDocumento(input, tipo, boxId, lblId) {
   const file = input.files[0];
   if(!file) return;
 
-  const box = document.getElementById(boxId);
-  const lbl = document.getElementById(lblId);
-  const errEl = document.getElementById('docs-error');
+  // Buscar el box y lbl desde el contenedor más cercano al input,
+  // para evitar conflictos cuando hay IDs duplicados (modal + formulario estático)
+  const contenedor = input.closest('[id^="modal"]') || input.closest('.screen') || document;
+  const box  = contenedor.querySelector('#' + boxId)  || document.getElementById(boxId);
+  const lbl  = contenedor.querySelector('#' + lblId)  || document.getElementById(lblId);
+  const errEl = contenedor.querySelector('#docs-error') || document.getElementById('docs-error');
 
   // Validar tamaño máximo 5MB
   if(file.size > 5 * 1024 * 1024) {
@@ -2956,8 +2948,10 @@ async function subirDocumento(input, tipo, boxId, lblId) {
 }
 
 async function enviarDocumentos() {
-  const errEl = document.getElementById('docs-error');
-  const btn = document.getElementById('btn-enviar-docs');
+  // Buscar en el modal activo primero, luego en el DOM general
+  const modalActivo = document.getElementById('modal-docs-conductor') || document;
+  const errEl = modalActivo.querySelector('#docs-error') || document.getElementById('docs-error');
+  const btn   = modalActivo.querySelector('#btn-enviar-docs') || document.getElementById('btn-enviar-docs');
 
   // Validar documentos personales
   const faltantes = [];
@@ -3299,35 +3293,28 @@ async function cargarRutas() {
   const origen  = document.getElementById('f-origen')?.value.trim();
   const destino = document.getElementById('f-destino')?.value.trim();
 
-  const rolActual = perfilActual?.rol;
+  // Cargar rutas de conductores
+  let qRutas = sb.from('rutas')
+    .select(`*, conductor:usuarios(nombre,apellido,estrellas,num_reviews,viajes_completados,vehiculo,ciudad)`)
+    .eq('estado','activa')
+    .order('created_at', { ascending: false });
+  if(filtroVehActual !== 'todos') qRutas = qRutas.eq('vehiculo', filtroVehActual);
+  if(origen)  qRutas = qRutas.ilike('origen',  `%${origen}%`);
+  if(destino) qRutas = qRutas.ilike('destino', `%${destino}%`);
 
-  // Conductor solo ve cargas de clientes; cliente solo ve rutas de conductores
+  // Cargar cargas publicadas por clientes
+  let qCargas = sb.from('cargas')
+    .select(`*, cliente:usuarios(nombre,apellido,estrellas,num_reviews)`)
+    .eq('estado','activa')
+    .order('created_at', { ascending: false });
+  if(origen)  qCargas = qCargas.ilike('origen',  `%${origen}%`);
+  if(destino) qCargas = qCargas.ilike('destino', `%${destino}%`);
+
   let rutas = [], cargas = [];
   try {
-    if(rolActual !== 'conductor') {
-      // Solo clientes (y usuarios sin rol definido) ven rutas de conductores
-      let qRutas = sb.from('rutas')
-        .select(`*, conductor:usuarios(nombre,apellido,estrellas,num_reviews,viajes_completados,vehiculo,ciudad)`)
-        .eq('estado','activa')
-        .order('created_at', { ascending: false });
-      if(filtroVehActual !== 'todos') qRutas = qRutas.eq('vehiculo', filtroVehActual);
-      if(origen)  qRutas = qRutas.ilike('origen',  `%${origen}%`);
-      if(destino) qRutas = qRutas.ilike('destino', `%${destino}%`);
-      const resRutas = await qRutas.limit(20);
-      rutas = resRutas.data || [];
-    }
-
-    if(rolActual !== 'cliente') {
-      // Solo conductores (y usuarios sin rol definido) ven cargas de clientes
-      let qCargas = sb.from('cargas')
-        .select(`*, cliente:usuarios(nombre,apellido,estrellas,num_reviews)`)
-        .eq('estado','activa')
-        .order('created_at', { ascending: false });
-      if(origen)  qCargas = qCargas.ilike('origen',  `%${origen}%`);
-      if(destino) qCargas = qCargas.ilike('destino', `%${destino}%`);
-      const resCargas = await qCargas.limit(20);
-      cargas = resCargas.data || [];
-    }
+    const [resRutas, resCargas] = await Promise.all([qRutas.limit(20), qCargas.limit(20)]);
+    rutas = resRutas.data || [];
+    cargas = resCargas.data || [];
   } catch(e) {
     console.error('Error cargando rutas/cargas:', e);
     cargandoRutas = false;
@@ -3337,14 +3324,14 @@ async function cargarRutas() {
 
   const totalItems = rutas.length + cargas.length;
   document.getElementById('count-r').textContent = totalItems;
-  const lbl = document.getElementById('count-label');
-  if(lbl) lbl.textContent = perfilActual?.rol === 'conductor' ? 'cargas' : perfilActual?.rol === 'cliente' ? 'rutas' : 'resultados';
 
   if(totalItems === 0) {
     cargandoRutas = false;
     renderRutasDemo();
     return;
   }
+
+  document.getElementById('count-r').textContent = totalItems;
 
   // Renderizar rutas de conductores
   const htmlRutas = (rutas||[]).map(r => `
@@ -3423,7 +3410,7 @@ async function cargarRutas() {
     </div>
     ${htmlRutas}` : '';
 
-  list.innerHTML = secCargas + secRutas || `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">Sin resultados</div><div class="empty-sub">${perfilActual?.rol === 'conductor' ? 'No hay cargas publicadas en este momento.' : 'No hay conductores disponibles en este momento.'}</div></div>`;
+  list.innerHTML = secCargas + secRutas || '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">Sin resultados</div></div>';
   cargandoRutas = false;
 }
 
