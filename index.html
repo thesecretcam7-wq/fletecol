@@ -2004,18 +2004,11 @@ async function init() {
     if(pendSaved) try { mensajesPendientes = JSON.parse(pendSaved); } catch(e) {}
 
     sb.auth.onAuthStateChange((event, session) => {
-      console.log('[auth]', event, session?.user?.email || 'sin sesión');
-
-      if(event === 'TOKEN_REFRESHED' && session) {
-        usuarioActual = session.user;
-        return;
-      }
+      if(event === 'TOKEN_REFRESHED' && session) { usuarioActual = session.user; return; }
 
       if(event === 'SIGNED_OUT') {
         _authListo = false;
-        usuarioActual = null;
-        perfilActual = null;
-        enRegistro = false;
+        usuarioActual = null; perfilActual = null; enRegistro = false;
         document.getElementById('loading').style.display = 'none';
         detenerPolling();
         if(estadoSub) { try { sb.removeChannel(estadoSub); } catch(e){} estadoSub = null; }
@@ -2025,7 +2018,7 @@ async function init() {
       }
 
       if((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && !enRegistro) {
-        if(_authListo) { console.log('[auth] ignorado (lock activo)'); return; }
+        if(_authListo) return; // lock síncrono — bloquea el segundo disparo
         _authListo = true;
         document.getElementById('loading').style.display = 'none';
         if(window.location.hash.includes('access_token')) {
@@ -2033,9 +2026,8 @@ async function init() {
         }
         if(session) {
           usuarioActual = session.user;
-          manejarSesion(session).catch(e => console.error('[manejarSesion error]', e));
+          manejarSesion(session).catch(e => console.error('[manejarSesion]', e));
         } else {
-          console.log('[auth] sin sesión → landing');
           ir('s-landing');
         }
       }
@@ -2049,10 +2041,8 @@ async function init() {
 }
 
 async function manejarSesion(session) {
-  console.log('[manejarSesion] inicio, user:', session.user.email);
   usuarioActual = session.user;
   await cargarPerfil();
-  console.log('[manejarSesion] perfilActual:', perfilActual?.estado, perfilActual?.rol);
 
   if(!perfilActual && session.user.email) {
     const nombreCompleto = session.user.user_metadata?.full_name || '';
@@ -2074,7 +2064,6 @@ async function manejarSesion(session) {
   }
 
   const vieneDePago = await verificarRetornoWompi();
-  console.log('[manejarSesion] vieneDePago:', vieneDePago);
   if(!vieneDePago) await redirigirSegunEstado();
   suscribirEstado();
   suscribirBadge();
@@ -2086,12 +2075,18 @@ let tabHiddenAt = null;
 document.addEventListener('visibilitychange', async () => {
   if(document.visibilityState === 'hidden') {
     tabHiddenAt = Date.now();
-    // Guardar estado antes de salir
+    // Guardar estado antes de salir — SOLO si hay sesión activa y la pantalla es de app
     try {
       if(convActual) localStorage.setItem('fl_conv', JSON.stringify(convActual));
       if(montoAcordado) localStorage.setItem('fl_monto', String(montoAcordado));
       const pantallaActiva = document.querySelector('.screen.activa')?.id || '';
-      if(pantallaActiva) localStorage.setItem('fl_pantalla', pantallaActiva);
+      // NO guardar pantallas de auth/landing — solo pantallas de app autenticada
+      const pantallasSegurasApp = ['s-rutas','s-publicar','s-chat','s-pagos','s-perfil','s-mis'];
+      if(pantallaActiva && pantallasSegurasApp.includes(pantallaActiva)) {
+        localStorage.setItem('fl_pantalla', pantallaActiva);
+      } else {
+        localStorage.removeItem('fl_pantalla'); // limpiar cualquier valor previo
+      }
     } catch(e) {}
     return;
   }
@@ -2130,7 +2125,7 @@ document.addEventListener('visibilitychange', async () => {
 // Al cargar la página, restaurar pantalla y estado si venimos de recarga
 (async function restaurarEstado() {
   await new Promise(r => setTimeout(r, 1000));
-  if(!perfilActual) return;
+  if(!perfilActual || !usuarioActual) return; // sin sesión, no restaurar nada
 
   const pantalla = localStorage.getItem('fl_pantalla');
   const savedMonto = localStorage.getItem('fl_monto');
@@ -2146,18 +2141,26 @@ document.addEventListener('visibilitychange', async () => {
     } catch(e) {}
   }
 
-  if(pantalla) {
+  // Solo restaurar pantallas de app — NUNCA auth, landing, pendiente
+  const pantallasSegurasApp = ['s-rutas','s-publicar','s-chat','s-pagos','s-perfil','s-mis'];
+  if(pantalla && pantallasSegurasApp.includes(pantalla)) {
     localStorage.removeItem('fl_pantalla');
-    const el = document.getElementById(pantalla);
-    if(el) {
-      document.querySelectorAll('.screen').forEach(s => s.classList.remove('activa'));
-      el.classList.add('activa');
-      try {
-        if(pantalla === 's-rutas') { cargandoRutas = false; cargarRutas(); }
-        if(pantalla === 's-chat') { await cargarConversaciones(convActual?.id); }
-        if(pantalla === 's-pagos') { await cargarCuentaBancaria(); }
-      } catch(e) { console.warn('[restaurar] Error:', e.message); }
+    // Solo restaurar si actualmente estamos en una pantalla de app (no sobreescribir si ya navegamos)
+    const pantallaHoy = document.querySelector('.screen.activa')?.id || '';
+    if(pantallasSegurasApp.includes(pantallaHoy)) {
+      const el = document.getElementById(pantalla);
+      if(el) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('activa'));
+        el.classList.add('activa');
+        try {
+          if(pantalla === 's-rutas') { cargandoRutas = false; cargarRutas(); }
+          if(pantalla === 's-chat') { await cargarConversaciones(convActual?.id); }
+          if(pantalla === 's-pagos') { await cargarCuentaBancaria(); }
+        } catch(e) { console.warn('[restaurar] Error:', e.message); }
+      }
     }
+  } else {
+    localStorage.removeItem('fl_pantalla'); // limpiar cualquier basura
   }
 })();
 
@@ -2293,24 +2296,19 @@ function suscribirEstado() {
 }
 
 async function redirigirSegunEstado() {
-  console.log('[redirigir] perfilActual:', perfilActual?.estado, '| rol:', perfilActual?.rol);
-  if(!perfilActual) { console.log('[redirigir] sin perfil → landing'); ir('s-landing'); return; }
+  if(!perfilActual) { ir('s-landing'); return; }
 
   // Si es admin, cerrar sesión y mandar al landing — no pertenece a esta app
   if(perfilActual.rol === 'admin') {
-    console.log('[redirigir] admin → signOut');
     await sb.auth.signOut();
     ir('s-landing');
     return;
   }
 
   const estado = perfilActual.estado;
-  console.log('[redirigir] estado final:', estado);
   if(estado === 'aprobado') {
-    console.log('[redirigir] → irApp s-rutas');
     await irApp('s-rutas');
   } else if(estado === 'incompleto') {
-    console.log('[redirigir] incompleto → irApp s-rutas + modal rol');
     await irApp('s-rutas');
     setTimeout(() => mostrarSelectorRolGoogle(), 800);
   } else if(estado === 'pendiente') {
@@ -2367,10 +2365,9 @@ function actualizarPantallaPendiente(estado, motivo, rol) {
 }
 
 async function cargarPerfil() {
-  if(!usuarioActual) { console.log('[cargarPerfil] sin usuarioActual'); return; }
+  if(!usuarioActual) return;
   try {
     const { data, error } = await sb.from('usuarios').select('*').eq('auth_id', usuarioActual.id).maybeSingle();
-    console.log('[cargarPerfil] data:', data?.estado, data?.rol, '| error:', error?.message);
     if(error) { console.error('Error cargando perfil:', error); return; }
     if(data) {
       perfilActual = data;
