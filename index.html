@@ -1996,7 +1996,7 @@ let chatSub = null;
 
 // ══ INIT ══
 let estadoSub = null;
-let _authListo = false; // lock síncrono — se activa ANTES de cualquier await
+let _authListo = false;
 
 async function init() {
   try {
@@ -2024,24 +2024,18 @@ async function init() {
         return;
       }
 
-      // INITIAL_SESSION y SIGNED_IN: procesar solo una vez
-      // El lock se activa SÍNCRONAMENTE aquí, antes de cualquier await,
-      // así el segundo evento (SIGNED_IN que llega ms después) ya lo ve activo.
       if((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && !enRegistro) {
-        if(_authListo) return; // ya estamos procesando — ignorar
-        _authListo = true;     // ← síncrono, bloquea el siguiente evento YA
-
+        if(_authListo) { console.log('[auth] ignorado (lock activo)'); return; }
+        _authListo = true;
         document.getElementById('loading').style.display = 'none';
-
         if(window.location.hash.includes('access_token')) {
           window.history.replaceState({}, document.title, window.location.pathname);
         }
-
         if(session) {
           usuarioActual = session.user;
-          // Lanzar async sin bloquear el callback
-          manejarSesion(session).catch(e => console.error('[manejarSesion]', e));
+          manejarSesion(session).catch(e => console.error('[manejarSesion error]', e));
         } else {
+          console.log('[auth] sin sesión → landing');
           ir('s-landing');
         }
       }
@@ -2055,8 +2049,10 @@ async function init() {
 }
 
 async function manejarSesion(session) {
+  console.log('[manejarSesion] inicio, user:', session.user.email);
   usuarioActual = session.user;
   await cargarPerfil();
+  console.log('[manejarSesion] perfilActual:', perfilActual?.estado, perfilActual?.rol);
 
   if(!perfilActual && session.user.email) {
     const nombreCompleto = session.user.user_metadata?.full_name || '';
@@ -2078,6 +2074,7 @@ async function manejarSesion(session) {
   }
 
   const vieneDePago = await verificarRetornoWompi();
+  console.log('[manejarSesion] vieneDePago:', vieneDePago);
   if(!vieneDePago) await redirigirSegunEstado();
   suscribirEstado();
   suscribirBadge();
@@ -2296,19 +2293,24 @@ function suscribirEstado() {
 }
 
 async function redirigirSegunEstado() {
-  if(!perfilActual) { ir('s-landing'); return; }
+  console.log('[redirigir] perfilActual:', perfilActual?.estado, '| rol:', perfilActual?.rol);
+  if(!perfilActual) { console.log('[redirigir] sin perfil → landing'); ir('s-landing'); return; }
 
   // Si es admin, cerrar sesión y mandar al landing — no pertenece a esta app
   if(perfilActual.rol === 'admin') {
+    console.log('[redirigir] admin → signOut');
     await sb.auth.signOut();
     ir('s-landing');
     return;
   }
 
   const estado = perfilActual.estado;
+  console.log('[redirigir] estado final:', estado);
   if(estado === 'aprobado') {
+    console.log('[redirigir] → irApp s-rutas');
     await irApp('s-rutas');
   } else if(estado === 'incompleto') {
+    console.log('[redirigir] incompleto → irApp s-rutas + modal rol');
     await irApp('s-rutas');
     setTimeout(() => mostrarSelectorRolGoogle(), 800);
   } else if(estado === 'pendiente') {
@@ -2365,9 +2367,10 @@ function actualizarPantallaPendiente(estado, motivo, rol) {
 }
 
 async function cargarPerfil() {
-  if(!usuarioActual) return;
+  if(!usuarioActual) { console.log('[cargarPerfil] sin usuarioActual'); return; }
   try {
     const { data, error } = await sb.from('usuarios').select('*').eq('auth_id', usuarioActual.id).maybeSingle();
+    console.log('[cargarPerfil] data:', data?.estado, data?.rol, '| error:', error?.message);
     if(error) { console.error('Error cargando perfil:', error); return; }
     if(data) {
       perfilActual = data;
