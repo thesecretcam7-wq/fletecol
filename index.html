@@ -1805,6 +1805,13 @@ function actualizarEscrowBar(estado) {
 function confirmarEntregaMobile() {
   // En mobile abrir modal con pantalla de confirmación de entrega
   if(esMobile()) {
+    // Asegurar que el panel muestra pp-exitoso2 antes de copiar al modal
+    const ppForm      = document.getElementById('pp-form2');
+    const ppExitoso   = document.getElementById('pp-exitoso2');
+    const ppCompletado= document.getElementById('pp-completado2');
+    if(ppForm)       ppForm.style.display       = 'none';
+    if(ppExitoso)    ppExitoso.style.display    = 'block';
+    if(ppCompletado) ppCompletado.style.display = 'none';
     const panel = document.getElementById('pago-panel');
     const modalContent = document.getElementById('pago-modal-content');
     if(panel && modalContent) modalContent.innerHTML = panel.innerHTML;
@@ -5465,7 +5472,14 @@ async function confirmarEntrega2(){
 function pedirConfEntrega() {
   // Verificar si hay pago aprobado para confirmar entrega
   if(esMobile()) {
-    // En mobile: abrir modal con la pantalla de confirmación
+    // Asegurar que el panel muestra la pantalla correcta antes de copiar
+    const ppForm     = document.getElementById('pp-form2');
+    const ppExitoso  = document.getElementById('pp-exitoso2');
+    const ppCompletado = document.getElementById('pp-completado2');
+    if(ppForm)      ppForm.style.display      = 'none';
+    if(ppExitoso)   ppExitoso.style.display   = 'block';
+    if(ppCompletado) ppCompletado.style.display = 'none';
+    // Copiar al modal y abrir
     const panel = document.getElementById('pago-panel');
     const modalContent = document.getElementById('pago-modal-content');
     if(panel && modalContent) modalContent.innerHTML = panel.innerHTML;
