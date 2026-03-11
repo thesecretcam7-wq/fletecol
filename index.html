@@ -4424,18 +4424,18 @@ async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, des
 
   try {
     const miId = perfilActual.id;
-    // Buscar conversación existente entre estos dos usuarios
-    let { data: convs } = await sb.from('conversaciones')
+    // Buscar conversación existente entre estos dos usuarios, filtrando por carga si aplica
+    let query = sb.from('conversaciones')
       .select('*')
       .or(`and(usuario1_id.eq.${miId},usuario2_id.eq.${otroUserId}),and(usuario1_id.eq.${otroUserId},usuario2_id.eq.${miId})`);
+    if(cargaId) {
+      query = query.eq('carga_id', cargaId);
+    } else {
+      query = query.is('carga_id', null);
+    }
+    let { data: convs } = await query;
 
     let conv = convs?.[0] || null;
-
-    // Si la conv existe pero no tiene carga_id, guardarlo en BD
-    if(conv && cargaId && !conv.carga_id) {
-      await sb.from('conversaciones').update({ carga_id: cargaId }).eq('id', conv.id);
-      conv.carga_id = cargaId;
-    }
 
     if(!conv) {
       const { data: nueva, error } = await sb.from('conversaciones').insert({
