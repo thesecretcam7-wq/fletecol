@@ -5359,7 +5359,7 @@ async function prepararWompiConMonto(monto) {
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
 
     const inner = document.createElement('div');
-    inner.style.cssText = 'background:#fff;border-radius:8px;padding:32px 24px;max-width:480px;width:95%;max-height:90vh;overflow-y:auto;position:relative;text-align:center;';
+    inner.style.cssText = 'background:#fff;border-radius:8px;padding:32px 24px calc(80px + env(safe-area-inset-bottom,0px)) 24px;max-width:480px;width:95%;max-height:90vh;overflow-y:auto;position:relative;text-align:center;';
 
     const closeBtn = document.createElement('button');
     closeBtn.innerHTML = '✕';
@@ -5388,7 +5388,7 @@ async function prepararWompiConMonto(monto) {
     s.setAttribute('data-redirect-url', redirectUrl);
     s.setAttribute('data-customer-data:email', perfilActual.email || '');
     s.setAttribute('data-customer-data:full-name', nombre);
-    s.setAttribute('data-customer-data:phone-number', (perfilActual.telefono || '3000000000').replace(/^\+57/, ''));
+    s.setAttribute('data-customer-data:phone-number', '');
     s.setAttribute('data-customer-data:phone-number-prefix', '+57');
     formEl.appendChild(s);
     inner.appendChild(formEl);
@@ -5590,8 +5590,12 @@ async function guardarResenaDesdeEntrega() {
     calificar2(0);
     const ta = document.getElementById('review-comment2');
     if(ta) ta.value = '';
+    // Cerrar modal
+    const modal = document.getElementById('pago-modal-mobile');
+    if(modal) modal.classList.remove('open');
   } catch(e) {
-    toast('Error al guardar reseña: ' + e.message, 'error');
+    console.error('[guardarResenaDesdeEntrega]', e);
+    toast('Error al guardar reseña: ' + (e.message || JSON.stringify(e)), 'error');
   }
 }
 
