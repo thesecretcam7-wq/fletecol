@@ -1691,7 +1691,7 @@ function setBotonesSegunEstadoPago(estado) {
     if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
     if(btnOfertaBottom) btnOfertaBottom.style.display = 'none';
     if(btnPagar) { btnPagar.style.display = ''; btnPagar.textContent = '✅ Confirmar entrega'; btnPagar.style.background = 'var(--verde)'; btnPagar.onclick = confirmarEntregaMobile; }
-    if(btnConfirmar) btnConfirmar.style.display = '';
+    if(btnConfirmar) btnConfirmar.style.display = esCliente ? '' : 'none';
   } else if(estado === 'oferta_aceptada') {
     // Oferta aceptada — solo pagar
     if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
@@ -4621,8 +4621,7 @@ async function cargarMensajes(convId) {
           botonesAccion.forEach(b => b.style.display = 'none');
           actualizarEscrowBar('LIBERADO');
         } else {
-          // Pago APPROVED — conductor puede confirmar la entrega
-          setBotonesSegunEstadoPago('pagado');
+          botonesAccion.forEach(b => b.style.display = 'none');
           actualizarEscrowBar('APPROVED');
         }
       } else if(tieneOfertaAceptadaG) {
@@ -5322,13 +5321,28 @@ async function confirmarEntrega2(){
   const convId = convActual?.id;
   if(convId && perfilActual?.id) {
     // Guardar mensaje de entrega confirmada en BD
-    await sb.from('mensajes').insert({
+    const { error: eMsj } = await sb.from('mensajes').insert({
       conversacion_id: convId,
       emisor_id: perfilActual.id,
       tipo: 'entrega_confirmada',
       contenido: 'entrega_confirmada',
       leido: false
     });
+    // Renderizar localmente para el cliente (el realtime ignora mensajes propios)
+    if(!eMsj) {
+      const wrap = document.getElementById('msgs-wrap');
+      if(wrap) {
+        const localId = 'local-entrega-' + Date.now();
+        if(!wrap.querySelector(`[data-msg-id="${localId}"]`)) {
+          const div = document.createElement('div');
+          div.className = 'msg-g';
+          div.dataset.msgId = localId;
+          div.innerHTML = `<div class="sys-msg">🎉 <strong style="color:var(--verde)">Entrega confirmada</strong> · Pago liberado</div>`;
+          wrap.appendChild(div);
+          wrap.scrollTop = wrap.scrollHeight;
+        }
+      }
+    }
     // Actualizar estado del pago a LIBERADO
     sb.from('pagos').update({ estado: 'LIBERADO' }).eq('conversacion_id', convId).eq('estado','APPROVED').then(()=>{});
   }
