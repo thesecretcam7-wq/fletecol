@@ -3589,15 +3589,17 @@ async function cargarRutas() {
   // ── Sección: Cargas buscando conductor ──
   const htmlCargas = (cargas||[]).map(c => {
     const esMia = c.cliente_id === perfilActual?.id;
+    const esSoloCliente = !esMia && perfilActual?.rol === 'cliente';
     const accion = esMia
       ? `<div style="display:flex;gap:8px;align-items:center;">
            <span style="font-size:11px;color:var(--amarillo);font-weight:700;">Tu publicación</span>
            <button onclick="eliminarCargaBuscar('${c.id}',this)" style="background:rgba(255,69,69,0.12);border:1px solid rgba(255,69,69,0.25);color:var(--rojo);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;">🗑️ Eliminar</button>
          </div>`
-      : `<button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;cursor:pointer;"
+      : esSoloCliente ? `` : `<button style="background:var(--amarillo);color:var(--negro);border:none;border-radius:9px;padding:8px 16px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;cursor:pointer;"
            onclick="abrirChatConConductor('${c.cliente_id||''}','${(c.cliente?.nombre||'Cliente')+' '+(c.cliente?.apellido||'')}',0,'${c.origen||''}','${c.destino||''}',true,'${c.id||''}')">
            Ofrecer precio →
-         </button>`;
+         </button>`
+      : ``;
     return `
     <div class="ruta-card" style="border-left:3px solid var(--amarillo);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
@@ -5302,12 +5304,12 @@ async function guardarResenaDesdeEntrega() {
   if(estrellas < 1) { toast('⭐ Selecciona al menos 1 estrella', 'info'); return; }
   const comentario = document.getElementById('review-comment2')?.value.trim() || null;
   try {
-    const { error } = await sb.from('resenas').insert({
+    const { error } = await sb.from('resenas').upsert({
       conductor_id: conductorId,
       cliente_id: perfilActual.id,
       estrellas,
       comentario
-    });
+    }, { onConflict: 'conductor_id,cliente_id' });
     if(error) throw error;
     toast('✅ ¡Reseña enviada, gracias!', 'success');
     // Resetear formulario
