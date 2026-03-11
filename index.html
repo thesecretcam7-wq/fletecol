@@ -4490,7 +4490,11 @@ function mostrarHeaderChat(nombre, origen, destino, precio, limpiar=true) {
   // Mostrar menú ⋯ para todos
   const menuBtn = document.getElementById('chat-menu-btn');
   if(menuBtn) menuBtn.style.display = 'block';
-  document.querySelectorAll('.btn-accion-cliente').forEach(b => b.style.display = esConductor ? 'none' : '');
+  // btn-confirmar-entrega lo gestiona cargarMensajes — no tocarlo aquí
+  document.querySelectorAll('.btn-accion-cliente').forEach(b => {
+    if(b.id === 'btn-confirmar-entrega') return;
+    b.style.display = esConductor ? 'none' : '';
+  });
 
   // Ocultar panel de pago y escrow-bar para conductores
   const pagoPanelEl = document.getElementById('pago-panel');
@@ -4501,7 +4505,16 @@ function mostrarHeaderChat(nombre, origen, destino, precio, limpiar=true) {
     if(escrowBarEl) escrowBarEl.style.display = 'none';
     if(chatLayout) chatLayout.style.gridTemplateColumns = '260px 1fr';
   } else {
-    if(pagoPanelEl) pagoPanelEl.style.display = 'block';
+    // Mostrar el panel pero ocultar todos los sub-paneles hasta que cargarMensajes determine el estado
+    if(pagoPanelEl) {
+      pagoPanelEl.style.display = 'block';
+      const ppF = document.getElementById('pp-form2');
+      const ppE = document.getElementById('pp-exitoso2');
+      const ppC = document.getElementById('pp-completado2');
+      if(ppF) ppF.style.display = 'none';
+      if(ppE) ppE.style.display = 'none';
+      if(ppC) ppC.style.display = 'none';
+    }
     if(escrowBarEl) escrowBarEl.style.display = 'flex';
     if(chatLayout) chatLayout.style.gridTemplateColumns = '260px 1fr 300px';
   }
