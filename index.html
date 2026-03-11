@@ -1758,7 +1758,15 @@ async function abrirPagoMobile() {
     }
   }
   if(!esMobile()) {
-    mostrarPago();
+    // Desktop: mostrar formulario de pago en el panel derecho
+    const ppF = document.getElementById('pp-form2');
+    const ppE = document.getElementById('pp-exitoso2');
+    const ppC = document.getElementById('pp-completado2');
+    const panel = document.getElementById('pago-panel');
+    if(ppF) ppF.style.display = 'block';
+    if(ppE) ppE.style.display = 'none';
+    if(ppC) ppC.style.display = 'none';
+    if(panel) panel.style.display = 'block';
     return;
   }
   // Resetear panel al estado formulario antes de copiar
