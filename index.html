@@ -1622,6 +1622,25 @@ async function pagoWompiExitoso(txData, convIdParam) {
     }
     setBotonesSegunEstadoPago('pagado');
     actualizarEscrowBar('APPROVED');
+
+    // Registrar en pagos_v2 vía RPC (nueva arquitectura)
+    const viajeId = convActual?.viaje_id;
+    if(viajeId && perfilActual?.id) {
+      const txRef    = txData?.reference          || sessionStorage.getItem('wompi_ref') || '';
+      const txMonto  = txData?.amount_in_cents     || (montoAcordado * 100)              || 0;
+      const txMetodo = txData?.payment_method_type || 'wompi';
+      sb.rpc('registrar_pago', {
+        p_viaje_id:         viajeId,
+        p_cliente_id:       perfilActual.id,
+        p_referencia_wompi: txRef,
+        p_monto_total:      txMonto,
+        p_metodo_pago:      txMetodo
+      }).then(({ data: r, error: e }) => {
+        if(e || !r?.ok) console.warn('[registrar_pago RPC]', e?.message || r?.error);
+        else console.log('✅ pagos_v2 registrado, viaje → pagado');
+      });
+    }
+
     // Refrescar buscador siempre para que la carga desaparezca
     cargandoRutas = false;
     cargarRutas();
@@ -1675,7 +1694,44 @@ async function pagoWompiExitoso(txData, convIdParam) {
 }
 
 async function verificarEstadoPagoConv(convId) {
-  // Toda la lógica está en cargarMensajes — esta función ya no hace nada
+  if(!convId || perfilActual?.rol !== 'cliente') return;
+
+  // Intentar con pagos_v2 (nueva arquitectura) si hay viaje_id
+  const viajeId = convActual?.viaje_id;
+  if(viajeId) {
+    const { data: pv2 } = await sb.from('pagos_v2')
+      .select('estado')
+      .eq('viaje_id', viajeId)
+      .single();
+    if(pv2) {
+      if(pv2.estado === 'retenido' || pv2.estado === 'pagado') {
+        setBotonesSegunEstadoPago('pagado');
+        actualizarEscrowBar('APPROVED');
+        return;
+      }
+      if(pv2.estado === 'liberado' || pv2.estado === 'pagado_conductor') {
+        setBotonesSegunEstadoPago('entregado');
+        actualizarEscrowBar('LIBERADO');
+        return;
+      }
+    }
+  }
+
+  // Fallback: tabla pagos antigua (compatibilidad)
+  const { data } = await sb.from('pagos')
+    .select('estado')
+    .eq('conversacion_id', convId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+  if(!data) return;
+  if(data.estado === 'APPROVED') {
+    setBotonesSegunEstadoPago('pagado');
+    actualizarEscrowBar('APPROVED');
+  } else if(data.estado === 'LIBERADO') {
+    setBotonesSegunEstadoPago('entregado');
+    actualizarEscrowBar('LIBERADO');
+  }
 }
 
 function setBotonesSegunEstadoPago(estado) {
@@ -1945,8 +2001,8 @@ async function verificarRetornoWompi() {
       } catch(e) {}
     }
 
-    // Si Wompi redirigió con pago=ok, consideramos aprobado aunque no podamos verificar
-    const aprobado = tx ? tx.status === 'APPROVED' : true;
+    // Solo aprobado si Wompi confirma explícitamente — nunca asumir si no hay respuesta
+    const aprobado = tx && tx.status === 'APPROVED';
 
     if(aprobado) {
       // Actualizar estado del pago (silenciado — RLS puede bloquearlo sin afectar el flujo)
@@ -4814,11 +4870,17 @@ function suscribirMensajes(convId) {
           // Si el cliente recibe oferta_aceptada → actualizar monto automáticamente
           if(msg.tipo === 'oferta_aceptada' && perfilActual?.rol === 'cliente') {
             const { data: conv } = await sb.from('conversaciones')
-              .select('precio_acordado').eq('id', msg.conversacion_id).single();
+              .select('precio_acordado, viaje_id').eq('id', msg.conversacion_id).single();
             if(conv?.precio_acordado > 0) {
               actualizarMonto(conv.precio_acordado);
               setBotonesSegunEstadoPago('oferta_aceptada');
               actualizarEscrowBar('sin_pagar');
+            }
+            // Cargar viaje_id en convActual para que el pago use la nueva arquitectura
+            if(conv?.viaje_id && convActual) {
+              convActual.viaje_id = conv.viaje_id;
+              localStorage.setItem('fl_conv', JSON.stringify(convActual));
+              sessionStorage.setItem('convActual', JSON.stringify(convActual));
             }
           }
           // Si el conductor recibe recibo → actualizar escrow bar y ocultar botones
@@ -4985,6 +5047,8 @@ async function abrirConvExistente(convId) {
   }
   convActual = { ...conv, otro_id: otroIdTemp, desdeCarga: desdeCargaConv };
   sessionStorage.setItem('convActual', JSON.stringify(convActual));
+  localStorage.setItem('fl_conv', JSON.stringify(convActual));
+  localStorage.setItem('fl_pantalla', 's-chat');
   const soyUno = conv.usuario1_id === perfilActual?.id;
   const otroId = soyUno ? conv.usuario2_id : conv.usuario1_id;
   const { data: otroUser } = await sb.from('usuarios').select('nombre, apellido').eq('id', otroId).single();
@@ -5153,6 +5217,23 @@ async function aceptarOfertaReal(monto) {
           renderMensaje(msgInsertado);
           wrap.scrollTop = wrap.scrollHeight;
         }
+      }
+    }
+    // Crear viaje en BD y vincular a la conversación (Camino B)
+    if(convActual?.id && convActual.id !== 'demo') {
+      const { data: viajeRes } = await sb.rpc('crear_viaje_desde_conversacion', {
+        p_conversacion_id: convActual.id,
+        p_monto:           parseInt(monto),
+        p_cliente_id:      convActual.otro_id,
+        p_conductor_id:    perfilActual.id
+      });
+      if(viajeRes?.ok && viajeRes.viaje_id) {
+        convActual.viaje_id = viajeRes.viaje_id;
+        localStorage.setItem('fl_conv', JSON.stringify(convActual));
+        sessionStorage.setItem('convActual', JSON.stringify(convActual));
+        console.log('✅ Viaje creado:', viajeRes.viaje_id);
+      } else {
+        console.warn('[crear_viaje]', viajeRes?.error);
       }
     }
     actualizarMonto(monto);
@@ -5359,7 +5440,18 @@ async function confirmarEntrega2(){
         }
       }
     }
-    // Actualizar estado del pago a LIBERADO
+    // Confirmar entrega vía RPC — actualiza pagos_v2 y viajes (nueva arquitectura)
+    const viajeIdConf = convActual?.viaje_id;
+    if(viajeIdConf && perfilActual?.id) {
+      sb.rpc('confirmar_entrega', {
+        p_viaje_id:   viajeIdConf,
+        p_cliente_id: perfilActual.id
+      }).then(({ data: r, error: e }) => {
+        if(e || !r?.ok) console.warn('[confirmar_entrega RPC]', e?.message || r?.error);
+        else console.log('✅ Viaje finalizado, pago liberado en pagos_v2');
+      });
+    }
+    // Mantener compatibilidad con tabla pagos antigua
     sb.from('pagos').update({ estado: 'LIBERADO' }).eq('conversacion_id', convId).eq('estado','APPROVED').then(()=>{});
   }
   // Restaurar botones para nuevos fletes
