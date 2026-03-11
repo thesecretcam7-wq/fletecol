@@ -4423,7 +4423,7 @@ async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, des
     let conv = convs?.[0] || null;
 
     // Si la conv existe pero no tiene carga_id, guardarlo en BD
-    if(conv && cargaId && \!conv.carga_id) {
+    if(conv && cargaId && !conv.carga_id) {
       await sb.from('conversaciones').update({ carga_id: cargaId }).eq('id', conv.id);
       conv.carga_id = cargaId;
     }
