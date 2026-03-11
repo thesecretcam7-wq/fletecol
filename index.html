@@ -3452,14 +3452,19 @@ async function cargarCarrusel() {
 
     if(!banners || banners.length === 0) return;
 
-    // Normalizar texto: quitar tildes y pasar a minúsculas para comparación robusta
-    const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+    // Normalizar texto: quitar tildes, puntos, comas y pasar a minúsculas
+    const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[.,\s]+/g,' ').trim();
+
+    console.log('[carrusel] ciudadUsuario:', ciudadUsuario, '| banners:', banners.map(b => ({id:b.id, ciudad:b.ciudad})));
 
     // Filtrar por ciudad
     const bannersVisibles = banners.filter(b => {
-      if(!b.ciudad || b.ciudad === 'todas') return true;   // banner global: siempre visible
-      if(!ciudadUsuario) return false;                     // sin ciudad del usuario: no mostrar banners de ciudad específica
-      return norm(b.ciudad) === norm(ciudadUsuario);
+      const bc = norm(b.ciudad);
+      if(!bc || bc === 'todas') return true;              // banner global: siempre visible
+      if(!ciudadUsuario) return false;                    // sin ciudad del usuario: ocultar banners de ciudad específica
+      const uc = norm(ciudadUsuario);
+      // Coincidencia exacta o parcial (cubre "Bogotá D.C." vs "Bogotá")
+      return bc === uc || uc.includes(bc) || bc.includes(uc);
     });
 
     if(!bannersVisibles.length) return;
@@ -5359,10 +5364,10 @@ async function prepararWompiConMonto(monto) {
 
     const modal = document.createElement('div');
     modal.id = 'wompi-modal';
-    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100dvh;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;overflow-y:auto;';
 
     const inner = document.createElement('div');
-    inner.style.cssText = 'background:#fff;border-radius:8px;padding:32px 24px calc(80px + env(safe-area-inset-bottom,0px)) 24px;max-width:480px;width:95%;max-height:90vh;overflow-y:auto;position:relative;text-align:center;';
+    inner.style.cssText = 'background:#fff;border-radius:8px;padding:32px 24px calc(env(safe-area-inset-bottom,0px) + 32px) 24px;max-width:480px;width:95%;max-height:calc(100dvh - 40px);overflow-y:auto;position:relative;text-align:center;';
 
     const closeBtn = document.createElement('button');
     closeBtn.innerHTML = '✕';
@@ -5476,6 +5481,13 @@ function procesarPago2(){document.getElementById('pp-form2').style.display='none
 async function confirmarEntrega2(){
   document.getElementById('pp-exitoso2').style.display='none';
   document.getElementById('pp-completado2').style.display='block';
+  // Refrescar el modal mobile si está abierto (el modal es una copia desconectada del panel)
+  if(esMobile()) {
+    const _modal = document.getElementById('pago-modal-mobile');
+    const _panel = document.getElementById('pago-panel');
+    const _mc    = document.getElementById('pago-modal-content');
+    if(_modal?.classList.contains('open') && _panel && _mc) _mc.innerHTML = _panel.innerHTML;
+  }
   document.getElementById('escrow-est2').textContent='✅ Liberado';
   toast('🎉 Entrega confirmada','success');
 
@@ -5569,17 +5581,38 @@ function pedirConfEntrega() {
     if(layout) layout.style.gridTemplateColumns = '260px 1fr 300px';
   }
 }
-function calificar2(n){document.querySelectorAll('#stars-r span').forEach((s,i)=>{s.textContent=i<n?'★':'☆';s.style.color=i<n?'var(--amarillo)':'var(--texto)';});}
+function calificar2(n){
+  // Actualizar TODAS las instancias de #stars-r (original + copia modal) para sincronizarlas
+  document.querySelectorAll('[id="stars-r"]').forEach(container => {
+    [...container.querySelectorAll('span')].forEach((s,i)=>{
+      s.textContent = i<n ? '★' : '☆';
+      s.style.color = i<n ? 'var(--amarillo)' : 'var(--texto)';
+    });
+  });
+}
 
 async function guardarResenaDesdeEntrega() {
   const conductorId = convActual?.otro_id;
   if(!conductorId) { toast('No se identificó el conductor', 'error'); return; }
   if(!perfilActual?.id) { toast('Debes iniciar sesión', 'error'); return; }
-  // Contar estrellas marcadas
-  const spans = document.querySelectorAll('#stars-r span');
-  const estrellas = [...spans].filter(s => s.textContent === '★').length;
+
+  // En mobile el formulario está en el modal (copia del panel); en desktop está en el panel.
+  // Leer siempre desde la raíz correcta para evitar confusión de IDs duplicados.
+  const _mc = document.getElementById('pago-modal-content');
+  const _root = (esMobile() && _mc) ? _mc : document;
+
+  // Contar estrellas marcadas en la raíz correcta
+  const spans = _root.querySelectorAll('[id="stars-r"] span, #stars-r span');
+  // Eliminar duplicados (por si hay más de un #stars-r visible)
+  const uniqueSpans = [...new Set([..._root.querySelectorAll('*')].filter(el => el.id === 'stars-r'))].flatMap(el => [...el.querySelectorAll('span')]);
+  const stellas = (uniqueSpans.length ? uniqueSpans : [...spans]);
+  const estrellas = stellas.filter(s => s.textContent === '★').length;
   if(estrellas < 1) { toast('⭐ Selecciona al menos 1 estrella', 'info'); return; }
-  const comentario = document.getElementById('review-comment2')?.value.trim() || null;
+
+  // Leer textarea desde la raíz correcta
+  const ta = _root.querySelector('#review-comment2');
+  const comentario = ta?.value.trim() || null;
+
   try {
     const { error } = await sb.from('resenas').upsert({
       conductor_id: conductorId,
@@ -5589,10 +5622,6 @@ async function guardarResenaDesdeEntrega() {
     }, { onConflict: 'conductor_id,cliente_id' });
     if(error) throw error;
     toast('✅ ¡Reseña enviada, gracias!', 'success');
-    // Resetear formulario
-    calificar2(0);
-    const ta = document.getElementById('review-comment2');
-    if(ta) ta.value = '';
     // Cerrar modal
     const modal = document.getElementById('pago-modal-mobile');
     if(modal) modal.classList.remove('open');
