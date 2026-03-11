@@ -2185,7 +2185,7 @@ document.addEventListener('visibilitychange', async () => {
         el.classList.add('activa');
         try {
           if(pantalla === 's-rutas') { cargandoRutas = false; cargarRutas(); }
-          if(pantalla === 's-chat') { await cargarConversaciones(convActual?.id); }
+          if(pantalla === 's-chat') { await cargarConversaciones(convActual?.id); if(convActual?.id) await cargarMensajes(convActual.id); }
           if(pantalla === 's-pagos') { await cargarCuentaBancaria(); }
         } catch(e) { console.warn('[restaurar] Error:', e.message); }
       }
