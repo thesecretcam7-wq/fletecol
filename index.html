@@ -22,7 +22,6 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
 .screen.activa{display:flex;animation:fadeIn 0.3s ease;}
 /* Screens that scroll fully */
 #s-auth,#s-landing,#s-perfil,#s-publicar,#s-pagos,#s-pendiente,#s-politicas,#s-soporte,#s-rutas,#s-mis{overflow-y:auto;overflow-x:hidden;}
-@media(min-width:701px){#s-rutas{overflow:hidden;}.rutas-list{flex:1;min-height:0;}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 /* ══ NAV ══ */
@@ -195,7 +194,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
 .loc-banner{background:rgba(245,196,0,0.06);border-bottom:1px solid rgba(245,196,0,0.15);padding:10px 28px;display:flex;align-items:center;justify-content:space-between;font-size:12px;flex-wrap:wrap;gap:8px;}
 .loc-banner.gps{background:rgba(0,212,106,0.05);border-bottom-color:rgba(0,212,106,0.15);}
 .rutas-wrap{display:grid;grid-template-columns:1fr 340px;flex:1;min-height:0;overflow:hidden;}
-.rutas-list{padding:0 24px 100px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;}
+.rutas-list{padding:0 24px 100px;display:flex;flex-direction:column;gap:12px;}
 .carrusel-slide{min-width:100%;height:110px;background-size:cover;background-position:center;cursor:pointer;border-radius:6px;}
 .carrusel-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.4);cursor:pointer;transition:all 0.2s;}
 .carrusel-dot.active{background:#fff;width:18px;border-radius:3px;}
