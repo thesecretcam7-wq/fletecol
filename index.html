@@ -1602,9 +1602,14 @@ async function pagoWompiExitoso(txData, convIdParam) {
 
     // Nota: la ruta del conductor la marca el propio conductor al recibir el mensaje recibo (RLS)
 
-       // Quitar carga publicada por el cliente de búsquedas
+    // Quitar carga publicada por el cliente de búsquedas
     if(perfilActual?.id) {
-      const cargaIdConv = convActual?.carga_id || null;
+      // Obtener carga_id directo de la BD para no depender de convActual (puede estar desactualizado)
+      let cargaIdConv = convActual?.carga_id || null;
+      if(!cargaIdConv && convId) {
+        const { data: convDb } = await sb.from('conversaciones').select('carga_id').eq('id', convId).single();
+        cargaIdConv = convDb?.carga_id || null;
+      }
       let cargaQuery = sb.from('cargas').update({ estado: 'en_curso' }).eq('estado', 'activa');
       if(cargaIdConv) {
         cargaQuery = cargaQuery.eq('id', cargaIdConv);
@@ -1617,8 +1622,9 @@ async function pagoWompiExitoso(txData, convIdParam) {
     }
     setBotonesSegunEstadoPago('pagado');
     actualizarEscrowBar('APPROVED');
-    // Refrescar buscador para eliminar la carga/ruta pagada
-    if(document.getElementById('s-rutas')?.classList.contains('activa')) cargarRutas();
+    // Refrescar buscador siempre para que la carga desaparezca
+    cargandoRutas = false;
+    cargarRutas();
     return;
   }
   console.warn('⚠️ Sin convId para guardar recibo. convId:', convId, 'perfilActual:', perfilActual?.id);
@@ -1685,7 +1691,7 @@ function setBotonesSegunEstadoPago(estado) {
     if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
     if(btnOfertaBottom) btnOfertaBottom.style.display = 'none';
     if(btnPagar) { btnPagar.style.display = ''; btnPagar.textContent = '✅ Confirmar entrega'; btnPagar.style.background = 'var(--verde)'; btnPagar.onclick = confirmarEntregaMobile; }
-    if(btnConfirmar) btnConfirmar.style.display = esCliente ? '' : 'none';
+    if(btnConfirmar) btnConfirmar.style.display = '';
   } else if(estado === 'oferta_aceptada') {
     // Oferta aceptada — solo pagar
     if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
@@ -4611,8 +4617,14 @@ async function cargarMensajes(convId) {
           .select('estado').eq('conversacion_id', convId)
           .order('created_at', { ascending: false }).limit(1);
         const estadoPagoCond = pagosCond?.[0]?.estado;
-        botonesAccion.forEach(b => b.style.display = 'none');
-        actualizarEscrowBar(estadoPagoCond === 'LIBERADO' ? 'LIBERADO' : 'APPROVED');
+        if(estadoPagoCond === 'LIBERADO') {
+          botonesAccion.forEach(b => b.style.display = 'none');
+          actualizarEscrowBar('LIBERADO');
+        } else {
+          // Pago APPROVED — conductor puede confirmar la entrega
+          setBotonesSegunEstadoPago('pagado');
+          actualizarEscrowBar('APPROVED');
+        }
       } else if(tieneOfertaAceptadaG) {
         botonesAccion.forEach(b => b.style.display = 'none');
         actualizarEscrowBar('esperando_pago');
