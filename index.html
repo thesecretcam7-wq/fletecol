@@ -1823,11 +1823,13 @@ async function eliminarChat() {
     toast('Error: no hay conversación seleccionada', 'error');
     return;
   }
-  // Bloquear si hay pago activo sin entrega confirmada
-  const { data: pagosActivos } = await sb.from('pagos')
+  // Bloquear solo si hay pago APPROVED sin entrega confirmada (no bloquear si ya está LIBERADO)
+  const { data: pagosConv } = await sb.from('pagos')
     .select('estado').eq('conversacion_id', convIdAEliminar)
-    .in('estado', ['APPROVED', 'pendiente']).limit(1);
-  if(pagosActivos?.length) {
+    .in('estado', ['APPROVED', 'LIBERADO']).limit(2);
+  const tieneAprobado = pagosConv?.some(p => p.estado === 'APPROVED');
+  const tieneLiberado = pagosConv?.some(p => p.estado === 'LIBERADO');
+  if(tieneAprobado && !tieneLiberado) {
     toast('\u26a0\ufe0f No puedes eliminar esta conversación hasta confirmar la entrega', 'error');
     return;
   }
