@@ -1502,6 +1502,13 @@ function calcularMontoPago() {
 
 async function registrarPagoPendiente(referencia, monto) {
   try {
+    // Guardia final: no insertar si ya existe un pago para esta conversación
+    if(convActual?.id) {
+      const { data: existe } = await sb.from('pagos')
+        .select('id').eq('conversacion_id', convActual.id)
+        .in('estado', ['pendiente', 'APPROVED', 'LIBERADO']).limit(1);
+      if(existe?.length) { console.warn('[pago] Ya existe un pago para esta conversación'); return; }
+    }
     const comision = Math.round(monto * 0.05); // 5% plataforma
     await sb.from('pagos').insert({
       wompi_referencia: referencia,
@@ -1747,13 +1754,16 @@ function confirmarEntregaMobile() {
 }
 
 async function abrirPagoMobile() {
-  // Verificar que no haya pago activo sin entrega confirmada
+  // Solo se permite 1 pago por conversación
   if(convActual?.id) {
-    const { data: pagosActivos } = await sb.from('pagos')
+    const { data: pagosExistentes } = await sb.from('pagos')
       .select('estado').eq('conversacion_id', convActual.id)
-      .eq('estado', 'APPROVED').limit(1);
-    if(pagosActivos?.length) {
-      toast('⚠️ Debes confirmar la entrega antes de realizar un nuevo pago', 'error');
+      .in('estado', ['pendiente', 'APPROVED', 'LIBERADO']).limit(1);
+    if(pagosExistentes?.length) {
+      const est = pagosExistentes[0].estado;
+      if(est === 'APPROVED') toast('⚠️ Debes confirmar la entrega antes de continuar', 'error');
+      else if(est === 'LIBERADO') toast('✅ Esta conversación ya tiene un pago completado', 'info');
+      else toast('⚠️ Ya existe un pago en proceso para esta conversación', 'error');
       return;
     }
   }
@@ -2164,7 +2174,12 @@ document.addEventListener('visibilitychange', async () => {
 
 // Al cargar la página, restaurar pantalla y estado si venimos de recarga
 (async function restaurarEstado() {
-  await new Promise(r => setTimeout(r, 1000));
+  // Esperar a que la autenticación complete — en mobile puede tardar más de 1 segundo
+  let waited = 0;
+  while((!perfilActual || !usuarioActual) && waited < 5000) {
+    await new Promise(r => setTimeout(r, 300));
+    waited += 300;
+  }
   if(!perfilActual || !usuarioActual) return; // sin sesión, no restaurar nada
 
   const pantalla = localStorage.getItem('fl_pantalla');
@@ -2521,7 +2536,14 @@ async function irApp(screenId) {
     if(pp) pp.style.display = 'none';
     const cl = document.querySelector('.chat-layout');
     if(cl) cl.style.gridTemplateColumns = '260px 1fr';
-    if(esMobile()) volverListaChat();
+    if(esMobile()) {
+      if(convActual?.id) {
+        // Re-abrir la conversación activa para restaurar el estado de los botones
+        abrirConvExistente(convActual.id);
+      } else {
+        volverListaChat();
+      }
+    }
   }
   if(screenId === 's-rutas') cargarCarrusel();
   if(screenId === 's-pagos') cargarCuentaBancaria();
@@ -5128,6 +5150,16 @@ async function prepararWompiConMonto(monto) {
   if(!perfilActual) { toast('Debes iniciar sesion', 'error'); return; }
   if(!verificarRegistroParaAccion('realizar el pago')) return;
   if(!monto || monto < 1000) { toast('Monto invalido', 'error'); return; }
+  // Bloquear si ya existe un pago para esta conversación
+  if(convActual?.id) {
+    const { data: pagosExistentes } = await sb.from('pagos')
+      .select('estado').eq('conversacion_id', convActual.id)
+      .in('estado', ['pendiente', 'APPROVED', 'LIBERADO']).limit(1);
+    if(pagosExistentes?.length) {
+      toast('⚠️ Esta conversación ya tiene un pago registrado', 'error');
+      return;
+    }
+  }
   toast('⏳ Preparando pago...', 'info');
   try {
     const montoCentavos = monto * 100;
