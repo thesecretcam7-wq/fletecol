@@ -1358,8 +1358,14 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
     <div style="font-size:13px;color:var(--texto);margin-bottom:24px;">Todo lo que has publicado en FleteCOL</div>
     <div style="font-size:11px;color:var(--texto);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Rutas</div>
     <div id="mis-rutas-wrap"><div class="empty"><div class="empty-icon">🗺️</div><div class="empty-title">Sin rutas</div><div class="empty-sub">Publica tu primera ruta.</div></div></div>
-    <div style="font-size:11px;color:var(--texto);text-transform:uppercase;letter-spacing:0.8px;margin:20px 0 10px;">Cargas</div>
-    <div id="mis-cargas-wrap"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Sin cargas</div><div class="empty-sub">Publica tu primera carga.</div></div></div>
+    <div style="font-size:11px;color:var(--texto);text-transform:uppercase;letter-spacing:0.8px;margin:20px 0 10px;">Cargas activas</div>
+    <div id="mis-cargas-wrap"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Sin cargas activas</div><div class="empty-sub">Publica tu primera carga.</div></div></div>
+
+    <div style="font-size:11px;color:var(--texto);text-transform:uppercase;letter-spacing:0.8px;margin:28px 0 10px;display:flex;align-items:center;gap:8px;">
+      <span>Historial de cargas</span>
+      <span id="historial-count" style="background:var(--gris3);border-radius:20px;padding:2px 8px;font-size:10px;"></span>
+    </div>
+    <div id="mis-cargas-historial-wrap"><div class="empty"><div class="empty-icon">🗂️</div><div class="empty-title">Sin historial</div><div class="empty-sub">Aquí aparecerán tus cargas finalizadas.</div></div></div>
   </div>
 </div>
 
@@ -4405,22 +4411,50 @@ async function publicarCarga() {
 
 async function cargarMisPubs() {
   if(!perfilActual) return;
-  const rw = document.getElementById('mis-rutas-wrap');
-  const cw = document.getElementById('mis-cargas-wrap');
+  const rw  = document.getElementById('mis-rutas-wrap');
+  const cw  = document.getElementById('mis-cargas-wrap');
+  const hw  = document.getElementById('mis-cargas-historial-wrap');
+  const hct = document.getElementById('historial-count');
 
-  const { data: rutas } = await sb.from('rutas').select('*').eq('conductor_id', perfilActual.id).eq('estado','activa');
-  const { data: cargas } = await sb.from('cargas').select('*').eq('cliente_id', perfilActual.id).eq('estado','activa');
+  const [
+    { data: rutas },
+    { data: cargasActivas },
+    { data: cargasHistorial }
+  ] = await Promise.all([
+    sb.from('rutas').select('*').eq('conductor_id', perfilActual.id).eq('estado','activa').order('created_at', { ascending: false }),
+    sb.from('cargas').select('*').eq('cliente_id', perfilActual.id).in('estado',['activa','en_curso']).order('created_at', { ascending: false }),
+    sb.from('cargas').select('*').eq('cliente_id', perfilActual.id).eq('estado','finalizada').order('created_at', { ascending: false }).limit(50)
+  ]);
 
-  const allRutas = [...(rutas||[]), ...misRutas];
-  const allCargas = [...(cargas||[]), ...misCargas];
+  const allRutas  = [...(rutas||[]),         ...misRutas ];
+  const allActivas = [...(cargasActivas||[]), ...misCargas];
 
+  // Rutas activas
   rw.innerHTML = allRutas.length === 0
     ? `<div class="empty"><div class="empty-icon">🗺️</div><div class="empty-title">Sin rutas</div><div class="empty-sub">Publica tu primera ruta.</div></div>`
     : allRutas.map(r => `<div class="pub-item"><div class="pub-icon">${r.icon||'🚐'}</div><div style="flex:1;min-width:120px;"><div style="font-weight:700;font-size:13px;margin-bottom:2px;">${r.titulo||r.origen+' → '+r.destino}</div><div style="font-size:12px;color:var(--texto);">${r.sub||r.vehiculo+' · '+r.fecha}</div></div><span class="pub-status2 activa">● Activa</span><button class="btn-del2" onclick="eliminarRuta('${r.id}',this)">Eliminar</button></div>`).join('');
 
-  cw.innerHTML = allCargas.length === 0
-    ? `<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Sin cargas</div><div class="empty-sub">Publica tu primera carga.</div></div>`
-    : allCargas.map(c => `<div class="pub-item"><div class="pub-icon">${c.icon||'📦'}</div><div style="flex:1;min-width:120px;"><div style="font-weight:700;font-size:13px;margin-bottom:2px;">${c.titulo||c.tipo}</div><div style="font-size:12px;color:var(--texto);">${c.sub||c.origen+' → '+c.destino}</div></div><span class="pub-status2 activa">● Activa</span><button class="btn-del2" onclick="eliminarCarga('${c.id}',this)">Eliminar</button></div>`).join('');
+  // Cargas activas / en curso
+  cw.innerHTML = allActivas.length === 0
+    ? `<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Sin cargas activas</div><div class="empty-sub">Publica tu primera carga.</div></div>`
+    : allActivas.map(c => {
+        const enCurso = c.estado === 'en_curso';
+        const badge   = enCurso
+          ? `<span class="pub-status2" style="color:#F5C400;background:rgba(245,196,0,0.1);">● En curso</span>`
+          : `<span class="pub-status2 activa">● Activa</span>`;
+        const btnEl = enCurso ? '' : `<button class="btn-del2" onclick="eliminarCarga('${c.id}',this)">Eliminar</button>`;
+        return `<div class="pub-item"><div class="pub-icon">${c.icon||'📦'}</div><div style="flex:1;min-width:120px;"><div style="font-weight:700;font-size:13px;margin-bottom:2px;">${c.titulo||c.tipo||'Carga'}</div><div style="font-size:12px;color:var(--texto);">${c.sub||c.origen+' → '+c.destino}</div></div>${badge}${btnEl}</div>`;
+      }).join('');
+
+  // Historial de cargas finalizadas
+  const hist = cargasHistorial || [];
+  if(hct) hct.textContent = hist.length > 0 ? hist.length : '';
+  hw.innerHTML = hist.length === 0
+    ? `<div class="empty"><div class="empty-icon">🗂️</div><div class="empty-title">Sin historial</div><div class="empty-sub">Aquí aparecerán tus cargas finalizadas.</div></div>`
+    : hist.map(c => {
+        const fecha = c.updated_at ? new Date(c.updated_at).toLocaleDateString('es-CO') : '';
+        return `<div class="pub-item" style="opacity:0.75;"><div class="pub-icon">${c.icon||'📦'}</div><div style="flex:1;min-width:120px;"><div style="font-weight:700;font-size:13px;margin-bottom:2px;">${c.titulo||c.tipo||'Carga'}</div><div style="font-size:12px;color:var(--texto);">${c.sub||c.origen+' → '+c.destino}</div></div><span style="font-size:11px;color:var(--verde);white-space:nowrap;">✅ Finalizada<br><span style="color:var(--texto);font-size:10px;">${fecha}</span></span></div>`;
+      }).join('');
 }
 
 async function eliminarRuta(id, btn) {
@@ -5461,13 +5495,27 @@ async function confirmarEntrega2(){
     // Mantener compatibilidad con tabla pagos antigua
     sb.from('pagos').update({ estado: 'LIBERADO' }).eq('conversacion_id', convId).eq('estado','APPROVED').then(()=>{});
   }
-  // Restaurar botones para nuevos fletes
+  // Restaurar botones
   setBotonesSegunEstadoPago('entregado');
-  // Reactivar publicaciones para nuevos fletes
+
   if(perfilActual?.id) {
-    sb.from('rutas').update({ estado: 'activa' }).eq('conductor_id', convActual?.otro_id).eq('estado','en_curso').then(()=>{});
-    sb.from('cargas').update({ estado: 'activa' }).eq('cliente_id', perfilActual.id).eq('estado','en_curso').then(()=>{});
+    // Conductor: su ruta vuelve a estar activa para nuevos viajes
+    sb.from('rutas').update({ estado: 'activa' })
+      .eq('conductor_id', convActual?.otro_id).eq('estado','en_curso').then(()=>{});
+
+    // Carga del cliente: pasa a 'finalizada' — ya no aparece en el buscador ni vuelve a activa
+    const cargaId = convActual?.carga_id;
+    if(cargaId) {
+      sb.from('cargas').update({ estado: 'finalizada' })
+        .eq('id', cargaId).then(()=>{});
+    } else {
+      // Fallback: marcar por cliente_id si no tenemos carga_id
+      sb.from('cargas').update({ estado: 'finalizada' })
+        .eq('cliente_id', perfilActual.id).eq('estado','en_curso').then(()=>{});
+    }
   }
+  cargandoRutas = false;
+  cargarRutas();
 }
 function pedirConfEntrega() {
   // Verificar si hay pago aprobado para confirmar entrega
