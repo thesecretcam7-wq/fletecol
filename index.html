@@ -4608,6 +4608,9 @@ async function cargarMensajes(convId) {
     // === CONDUCTOR ===
     if(perfilActual?.rol === 'conductor') {
       const botonesAccion = document.querySelectorAll('.btn-accion-cliente');
+      // El conductor nunca debe ver chat-pay-btn (es el botón de pago/confirmar entrega del cliente)
+      const chatPayBtnCond = document.getElementById('chat-pay-btn');
+      if(chatPayBtnCond) chatPayBtnCond.style.display = 'none';
       if(tieneEntregaConfirmadaG) {
         botonesAccion.forEach(b => b.style.display = 'none');
         actualizarEscrowBar('LIBERADO');
@@ -4668,6 +4671,17 @@ async function cargarMensajes(convId) {
           if(ppExitoso) ppExitoso.style.display = 'block';
           if(ppCompletado) ppCompletado.style.display = 'none';
           actualizarEscrowBar('APPROVED');
+          // Lógica de respaldo: asegurar que la carga desaparece del buscador
+          // (se ejecuta cada vez que el cliente abre el chat con pago APPROVED — es idempotente)
+          const cargaIdActual = convActual?.carga_id;
+          if(cargaIdActual) {
+            sb.from('cargas').update({ estado: 'en_curso' })
+              .eq('id', cargaIdActual).eq('estado', 'activa')
+              .then(({ error }) => {
+                if(!error) { cargandoRutas = false; cargarRutas(); }
+                else console.warn('[carga] No se pudo marcar en_curso:', error.message);
+              });
+          }
         } else {
           setBotonesSegunEstadoPago('oferta_aceptada');
           if(ppForm) ppForm.style.display = 'block';
@@ -4810,8 +4824,10 @@ function suscribirMensajes(convId) {
           // Si el conductor recibe recibo → actualizar escrow bar y ocultar botones
           if(msg.tipo === 'recibo' && perfilActual?.rol === 'conductor') {
             actualizarEscrowBar('APPROVED');
-            setBotonesSegunEstadoPago('pagado');
+            // NO llamar setBotonesSegunEstadoPago — esa función muestra chat-pay-btn como "Confirmar entrega"
             document.querySelectorAll('.btn-accion-cliente').forEach(b => b.style.display = 'none');
+            const chatPayBtnCond = document.getElementById('chat-pay-btn');
+            if(chatPayBtnCond) chatPayBtnCond.style.display = 'none';
             // Conductor marca su propia ruta como en_curso (tiene permisos RLS sobre sus rutas)
             sb.from('rutas').update({ estado: 'en_curso' })
               .eq('conductor_id', perfilActual.id).eq('estado', 'activa')
