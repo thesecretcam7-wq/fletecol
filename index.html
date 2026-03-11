@@ -1816,7 +1816,7 @@ async function eliminarChat() {
   if(!ok) return;
   try {
     // Obtener la conversación para saber si soy usuario1 o usuario2
-    const { data: conv, error: eConv, eConv } = await sb.from('conversaciones')
+    const { data: conv, error: eConv } = await sb.from('conversaciones')
       .select('usuario1_id, usuario2_id, oculta_usuario1, oculta_usuario2')
       .eq('id', convIdAEliminar).single();
     if(!conv) throw new Error(eConv?.message || 'Conversación no encontrada');
