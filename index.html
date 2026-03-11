@@ -1760,6 +1760,13 @@ async function abrirPagoMobile() {
     mostrarPago();
     return;
   }
+  // Resetear panel al estado formulario antes de copiar
+  const ppF = document.getElementById('pp-form2');
+  const ppE = document.getElementById('pp-exitoso2');
+  const ppC = document.getElementById('pp-completado2');
+  if(ppF) ppF.style.display = 'block';
+  if(ppE) ppE.style.display = 'none';
+  if(ppC) ppC.style.display = 'none';
   // Mobile: abrir modal desde abajo con el contenido del panel
   const panel = document.getElementById('pago-panel');
   const modalContent = document.getElementById('pago-modal-content');
@@ -1809,10 +1816,10 @@ async function eliminarChat() {
   if(!ok) return;
   try {
     // Obtener la conversación para saber si soy usuario1 o usuario2
-    const { data: conv } = await sb.from('conversaciones')
+    const { data: conv, error: eConv, eConv } = await sb.from('conversaciones')
       .select('usuario1_id, usuario2_id, oculta_usuario1, oculta_usuario2')
       .eq('id', convIdAEliminar).single();
-    if(!conv) throw new Error('Conversación no encontrada');
+    if(!conv) throw new Error(eConv?.message || 'Conversación no encontrada');
 
     const soyUno = conv.usuario1_id === perfilActual?.id;
     const campoOcultar = soyUno ? 'oculta_usuario1' : 'oculta_usuario2';
