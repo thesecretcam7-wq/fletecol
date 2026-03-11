@@ -4552,6 +4552,16 @@ async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, des
 
   irApp('s-chat');
 
+  // Reset UI state before loading new conversation
+  actualizarEscrowBar('sin_pagar');
+  setBotonesSegunEstadoPago('sin_oferta');
+  const _ppForm0 = document.getElementById('pp-form2');
+  const _ppExit0 = document.getElementById('pp-exitoso2');
+  const _ppComp0 = document.getElementById('pp-completado2');
+  if(_ppForm0) _ppForm0.style.display = 'block';
+  if(_ppExit0) _ppExit0.style.display = 'none';
+  if(_ppComp0) _ppComp0.style.display = 'none';
+
   // Determinar quién es cliente y quién conductor
   const soyCliente = perfilActual.rol === 'cliente';
   const clienteId  = soyCliente ? perfilActual.id : otroUserId;
@@ -5073,6 +5083,16 @@ function abrirChatMobile() {
 }
 
 async function abrirConvExistente(convId) {
+  // Reset UI state before loading new conversation
+  actualizarEscrowBar('sin_pagar');
+  setBotonesSegunEstadoPago('sin_oferta');
+  const _ppForm1 = document.getElementById('pp-form2');
+  const _ppExit1 = document.getElementById('pp-exitoso2');
+  const _ppComp1 = document.getElementById('pp-completado2');
+  if(_ppForm1) _ppForm1.style.display = 'block';
+  if(_ppExit1) _ppExit1.style.display = 'none';
+  if(_ppComp1) _ppComp1.style.display = 'none';
+
   const { data: conv, error } = await sb.from('conversaciones')
     .select('*')
     .eq('id', convId)
