@@ -1536,7 +1536,7 @@ function escucharRetornoWompi(referencia) {
     const { data } = await sb.from('pagos')
       .select('estado')
       .eq('wompi_referencia', referencia)
-      .single();
+      .maybeSingle();
     
     if(data?.estado === 'APPROVED') {
       clearInterval(intervalo);
@@ -1708,7 +1708,7 @@ async function verificarEstadoPagoConv(convId) {
     const { data: pv2 } = await sb.from('pagos_v2')
       .select('estado')
       .eq('viaje_id', viajeId)
-      .single();
+      .maybeSingle();
     if(pv2) {
       if(pv2.estado === 'retenido' || pv2.estado === 'pagado') {
         setBotonesSegunEstadoPago('pagado');
@@ -1729,7 +1729,7 @@ async function verificarEstadoPagoConv(convId) {
     .eq('conversacion_id', convId)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
   if(!data) return;
   if(data.estado === 'APPROVED') {
     setBotonesSegunEstadoPago('pagado');
@@ -3452,11 +3452,14 @@ async function cargarCarrusel() {
 
     if(!banners || banners.length === 0) return;
 
+    // Normalizar texto: quitar tildes y pasar a minúsculas para comparación robusta
+    const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+
     // Filtrar por ciudad
     const bannersVisibles = banners.filter(b => {
-      if(!b.ciudad || b.ciudad === 'todas') return true;
-      if(!ciudadUsuario) return true; // sin ciudad detectada, mostrar todos
-      return b.ciudad.toLowerCase() === ciudadUsuario.toLowerCase();
+      if(!b.ciudad || b.ciudad === 'todas') return true;   // banner global: siempre visible
+      if(!ciudadUsuario) return false;                     // sin ciudad del usuario: no mostrar banners de ciudad específica
+      return norm(b.ciudad) === norm(ciudadUsuario);
     });
 
     if(!bannersVisibles.length) return;
@@ -5388,7 +5391,7 @@ async function prepararWompiConMonto(monto) {
     s.setAttribute('data-redirect-url', redirectUrl);
     s.setAttribute('data-customer-data:email', perfilActual.email || '');
     s.setAttribute('data-customer-data:full-name', nombre);
-    s.setAttribute('data-customer-data:phone-number', '');
+    s.setAttribute('data-customer-data:phone-number', (perfilActual.telefono || '3000000000').replace(/^\+57/, ''));
     s.setAttribute('data-customer-data:phone-number-prefix', '+57');
     formEl.appendChild(s);
     inner.appendChild(formEl);
