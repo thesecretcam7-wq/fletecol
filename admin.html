@@ -823,19 +823,24 @@ tbody tr:hover { background:rgba(0,0,0,0.02); }
 
       <div class="commission-row">
         <div class="comm-card">
-          <div class="comm-label">💰 Comisiones totales</div>
+          <div class="comm-label">💰 Comisiones acumuladas</div>
           <div class="comm-val" id="stat-comisiones">$0 COP</div>
-          <div class="comm-sub">10% de cada servicio</div>
+          <div class="comm-sub">10% de cada servicio pagado</div>
         </div>
         <div class="comm-card">
-          <div class="comm-label">🔒 Dinero en escrow</div>
+          <div class="comm-label">🔒 En escrow (retenido)</div>
           <div class="comm-val" style="color:var(--naranja)" id="stat-escrow">$0 COP</div>
-          <div class="comm-sub">Retenido, pendiente entrega</div>
+          <div class="comm-sub">Pago recibido, viaje en curso</div>
         </div>
         <div class="comm-card">
-          <div class="comm-label">✅ Pagos aprobados</div>
+          <div class="comm-label">✅ Liberado (por pagar)</div>
           <div class="comm-val" style="color:var(--verde)" id="stat-aprobados">$0 COP</div>
-          <div class="comm-sub">Aprobados por Wompi</div>
+          <div class="comm-sub">Cliente confirmó entrega — pendiente transferir</div>
+        </div>
+        <div class="comm-card">
+          <div class="comm-label">🏦 Pagado a conductores</div>
+          <div class="comm-val" style="color:#059669" id="stat-pagado-conductor">$0 COP</div>
+          <div class="comm-sub">Transferencias completadas</div>
         </div>
       </div>
 
@@ -847,7 +852,7 @@ tbody tr:hover { background:rgba(0,0,0,0.02); }
         <div class="table-wrap">
           <table id="tb-pagos">
             <thead><tr>
-              <th>Referencia</th><th>Cliente</th><th>Monto</th><th>Estado</th><th>Fecha</th><th>Acción</th>
+              <th>Cliente</th><th>Conductor</th><th>Total</th><th>Comisión</th><th>Para conductor</th><th>Estado</th><th>Fecha pago</th><th>Acción</th>
             </tr></thead>
             <tbody id="tbody-pagos">
               <tr><td colspan="6" style="text-align:center;padding:30px;color:#52525B;">Cargando pagos...</td></tr>
@@ -1397,50 +1402,118 @@ const ESTADOS_LABEL = {
   'ERROR': '⚠️ Error'
 };
 
+const ESTADOS_PAGO_COLOR = {
+  'pendiente':        '#888',
+  'pagado':           '#2563EB',
+  'retenido':         '#C41E2A',
+  'liberado':         '#16A34A',
+  'pagado_conductor': '#059669'
+};
+const ESTADOS_PAGO_LABEL = {
+  'pendiente':        '⏳ Pendiente',
+  'pagado':           '💳 Pagado',
+  'retenido':         '🔒 Retenido',
+  'liberado':         '✅ Liberado',
+  'pagado_conductor': '🏦 Pagado al conductor'
+};
+
 async function cargarPagos() {
   const tbody = document.getElementById('tbody-pagos');
   if(!tbody) return;
 
   const { data } = await sb
     .from('pagos')
-    .select('*, usuarios(nombre, apellido, email)')
+    .select(`
+      *,
+      cliente:cliente_id(nombre, apellido, email),
+      conductor:conductor_id(nombre, apellido)
+    `)
     .order('created_at', { ascending: false })
-    .limit(100);
+    .limit(200);
 
   if(!data || data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#52525B;padding:30px;">No hay pagos registrados aún</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#52525B;padding:30px;">No hay pagos registrados aún</td></tr>';
     return;
   }
 
-  // Stats
-  let totalCom = 0, totalEscrow = 0, totalAprobados = 0;
+  // Stats con nueva arquitectura
+  let totalComisiones = 0, totalRetenido = 0, totalLiberado = 0, totalPagadoConductor = 0;
   data.forEach(p => {
-    if(p.estado === 'APPROVED') { totalAprobados += p.monto; totalCom += Math.round(p.monto * 0.1); }
-    if(p.estado === 'pendiente') totalEscrow += p.monto;
+    if(['retenido','liberado','pagado_conductor'].includes(p.estado)) {
+      totalComisiones += p.comision_app || 0;
+    }
+    if(p.estado === 'retenido')         totalRetenido        += p.monto_total || 0;
+    if(p.estado === 'liberado')         totalLiberado        += p.monto_conductor || 0;
+    if(p.estado === 'pagado_conductor') totalPagadoConductor += p.monto_conductor || 0;
   });
-  document.getElementById('stat-comisiones').textContent = '$' + totalCom.toLocaleString('es-CO') + ' COP';
-  document.getElementById('stat-escrow').textContent = '$' + totalEscrow.toLocaleString('es-CO') + ' COP';
-  document.getElementById('stat-aprobados').textContent = '$' + totalAprobados.toLocaleString('es-CO') + ' COP';
+
+  const fmt = n => '$' + Math.round(n / 100).toLocaleString('es-CO');
+  document.getElementById('stat-comisiones').textContent = fmt(totalComisiones);
+  document.getElementById('stat-escrow').textContent     = fmt(totalRetenido);
+  document.getElementById('stat-aprobados').textContent  = fmt(totalLiberado);
+  const elPagCond = document.getElementById('stat-pagado-conductor');
+  if(elPagCond) elPagCond.textContent = fmt(totalPagadoConductor);
 
   tbody.innerHTML = data.map(p => {
-    const u = p.usuarios || {};
-    const nombre = `${u.nombre||''} ${u.apellido||''}`.trim() || p.usuario_id?.slice(0,8);
-    const color = ESTADOS_COLOR[p.estado] || '#888';
-    const label = ESTADOS_LABEL[p.estado] || p.estado;
-    const monto = '$' + (p.monto||0).toLocaleString('es-CO');
-    const fecha = p.created_at ? new Date(p.created_at).toLocaleDateString('es-CO') : '—';
-    const accion = p.estado === 'pendiente' 
-      ? `<button onclick="verificarPagoWompi('${p.referencia}')" style="background:rgba(245,196,0,0.15);color:#F5C400;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:11px;">🔄 Verificar</button>`
-      : (p.wompi_id ? `<span style="font-size:10px;color:#555;">${p.wompi_id.slice(0,12)}...</span>` : '—');
+    const c  = p.cliente   || {};
+    const co = p.conductor || {};
+    const cliente   = `${c.nombre||''} ${c.apellido||''}`.trim()  || '—';
+    const conductor = `${co.nombre||''} ${co.apellido||''}`.trim() || '—';
+    const color = ESTADOS_PAGO_COLOR[p.estado] || '#888';
+    const label = ESTADOS_PAGO_LABEL[p.estado] || p.estado;
+    const total    = fmt(p.monto_total    || 0);
+    const comision = fmt(p.comision_app   || 0);
+    const paraCond = fmt(p.monto_conductor|| 0);
+    const fecha    = p.fecha_pago ? new Date(p.fecha_pago).toLocaleDateString('es-CO') : '—';
+
+    let accion = '—';
+    if(p.estado === 'pendiente') {
+      accion = `<button onclick="verificarPagoWompi('${p.referencia_externa||''}')"
+        style="background:rgba(245,196,0,0.15);color:#F5C400;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:11px;">
+        🔄 Verificar Wompi</button>`;
+    } else if(p.estado === 'liberado') {
+      accion = `<button onclick="pagarConductor('${p.id}', '${conductor}', '${paraCond}')"
+        style="background:rgba(22,163,74,0.15);color:#16A34A;border:1px solid rgba(22,163,74,0.3);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;">
+        🏦 Pagar conductor</button>`;
+    } else if(p.estado === 'pagado_conductor') {
+      const fechaCond = p.fecha_pago_conductor ? new Date(p.fecha_pago_conductor).toLocaleDateString('es-CO') : '';
+      accion = `<span style="font-size:11px;color:#059669;">✅ Pagado ${fechaCond}</span>`;
+    }
+
     return `<tr>
-      <td style="font-family:monospace;font-size:11px;">${p.referencia||'—'}</td>
-      <td><div style="font-weight:600;font-size:12px;">${nombre}</div><div style="font-size:10px;color:#52525B;">${u.email||''}</div></td>
-      <td style="font-weight:700;">${monto}</td>
+      <td><div style="font-weight:600;font-size:12px;">${cliente}</div><div style="font-size:10px;color:#52525B;">${c.email||''}</div></td>
+      <td style="font-size:12px;font-weight:600;">${conductor}</td>
+      <td style="font-weight:700;">${total}</td>
+      <td style="color:#C41E2A;font-size:12px;">${comision}</td>
+      <td style="color:#16A34A;font-weight:600;">${paraCond}</td>
       <td><span style="color:${color};font-weight:700;font-size:12px;">${label}</span></td>
       <td style="font-size:12px;color:#52525B;">${fecha}</td>
       <td>${accion}</td>
     </tr>`;
   }).join('');
+}
+
+async function pagarConductor(pagoId, nombreConductor, monto) {
+  const ok = confirm(`¿Confirmas que ya realizaste la transferencia?\n\nConductor: ${nombreConductor}\nMonto: ${monto}\n\nEsta acción no se puede deshacer.`);
+  if(!ok) return;
+
+  const { data: perfil } = await sb.from('usuarios')
+    .select('id').eq('auth_id', (await sb.auth.getSession()).data.session?.user?.id).single();
+
+  if(!perfil?.id) { toast('Error: sesión no válida', 'error'); return; }
+
+  const { data, error } = await sb.rpc('admin_pagar_conductor', {
+    p_pago_id:  pagoId,
+    p_admin_id: perfil.id
+  });
+
+  if(error || !data?.ok) {
+    toast(data?.error || error?.message || 'Error al registrar pago', 'error');
+    return;
+  }
+
+  toast('✅ Pago al conductor registrado correctamente', 'success');
+  cargarPagos();
 }
 
 async function verificarPagoWompi(referencia) {
