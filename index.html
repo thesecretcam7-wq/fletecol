@@ -4466,8 +4466,8 @@ async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, des
 function mostrarHeaderChat(nombre, origen, destino, precio, limpiar=true) {
   document.getElementById('chat-nombre').textContent = nombre||'Conversación';
   document.getElementById('chat-sub').textContent = (origen&&destino) ? `${origen} → ${destino}` : 'Conversación';
-  document.getElementById('escrow-bar').style.display = 'flex';
-  document.getElementById('chat-empty-state').style.display = 'none';
+  const _eb = document.getElementById('escrow-bar'); if(_eb) _eb.style.display = 'flex';
+  const _es = document.getElementById('chat-empty-state'); if(_es) _es.style.display = 'none';
 
   // Conductores solo ven botón oferta si vienen desde una carga de cliente
   const esConductor = perfilActual?.rol === 'conductor';
@@ -4476,16 +4476,16 @@ function mostrarHeaderChat(nombre, origen, destino, precio, limpiar=true) {
   const chatAcciones = document.getElementById('chat-acciones');
   if(esConductor) {
     if(conductorPuedeOfertar) {
-      chatAcciones.style.display = 'flex';
+      if(chatAcciones) chatAcciones.style.display = 'flex';
       const btnOfertaH = document.getElementById('btn-oferta-header');
       if(btnOfertaH) btnOfertaH.style.display = '';
       const btnPagar = document.getElementById('chat-pay-btn');
       if(btnPagar) btnPagar.style.display = 'none';
     } else {
-      chatAcciones.style.display = 'none';
+      if(chatAcciones) chatAcciones.style.display = 'none';
     }
   } else {
-    chatAcciones.style.display = 'flex';
+    if(chatAcciones) chatAcciones.style.display = 'flex';
   }
   // Mostrar menú ⋯ para todos
   const menuBtn = document.getElementById('chat-menu-btn');
