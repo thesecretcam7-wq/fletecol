@@ -1081,7 +1081,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
         <div class="input-warn2" id="i-warn2">🚫 <span id="i-warn-txt2"></span></div>
         <div style="display:flex;gap:7px;margin-bottom:8px;">
           <button id="btn-oferta-bottom" class="btn-accion-cliente" style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;" onclick="hacerOferta()">💰 Hacer oferta</button>
-          <button class="btn-accion-cliente" style="background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;" onclick="pedirConfEntrega()">📦 Confirmar entrega</button>
+          <button class="btn-accion-cliente" id="btn-confirmar-entrega" style="display:none;background:var(--gris3);border:1px solid var(--gris4);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--texto);cursor:pointer;" onclick="pedirConfEntrega()">📦 Confirmar entrega</button>
         </div>
         <div style="display:flex;gap:8px;align-items:flex-end;">
           <textarea class="msg-input2" id="m-input2" rows="1" placeholder="Escribe tu mensaje..." oninput="checkMsg(this)" onkeydown="enterSend2(event)"></textarea>
@@ -1670,14 +1670,15 @@ function setBotonesSegunEstadoPago(estado) {
   const btnOfertaHeader = document.getElementById('btn-oferta-header');
   const btnOfertaBottom = document.getElementById('btn-oferta-bottom');
   const btnPagar = document.getElementById('chat-pay-btn');
-  const btnConfirmar = document.querySelector('.btn-accion-cliente[onclick="pedirConfEntrega()"]');
+  const btnConfirmar = document.getElementById('btn-confirmar-entrega');
+  const esCliente = perfilActual?.rol === 'cliente';
 
   if(estado === 'pagado') {
     // Pago APPROVED — solo confirmar entrega
     if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
     if(btnOfertaBottom) btnOfertaBottom.style.display = 'none';
     if(btnPagar) { btnPagar.style.display = ''; btnPagar.textContent = '✅ Confirmar entrega'; btnPagar.style.background = 'var(--verde)'; btnPagar.onclick = confirmarEntregaMobile; }
-    if(btnConfirmar) btnConfirmar.style.display = '';
+    if(btnConfirmar) btnConfirmar.style.display = esCliente ? '' : 'none';
   } else if(estado === 'oferta_aceptada') {
     // Oferta aceptada — solo pagar
     if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
@@ -1689,7 +1690,7 @@ function setBotonesSegunEstadoPago(estado) {
     if(btnOfertaHeader) btnOfertaHeader.style.display = '';
     if(btnOfertaBottom) btnOfertaBottom.style.display = '';
     if(btnPagar) { btnPagar.style.display = 'none'; btnPagar.textContent = '🔒 Pagar'; btnPagar.style.background = 'var(--amarillo)'; btnPagar.onclick = abrirPagoMobile; }
-    if(btnConfirmar) btnConfirmar.style.display = '';
+    if(btnConfirmar) btnConfirmar.style.display = 'none';
   } else if(estado === 'esperando_conductor') {
     // Conductor aceptó — no mostrar nada extra al conductor
     if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
@@ -4568,7 +4569,10 @@ async function cargarMensajes(convId) {
         botonesAccion.forEach(b => b.style.display = 'none');
         actualizarEscrowBar(estadoPagoCond === 'LIBERADO' ? 'LIBERADO' : 'APPROVED');
       } else if(tieneOfertaAceptadaG) {
+        botonesAccion.forEach(b => b.style.display = 'none');
         actualizarEscrowBar('esperando_pago');
+      } else {
+        botonesAccion.forEach(b => b.style.display = 'none');
       }
     }
 
