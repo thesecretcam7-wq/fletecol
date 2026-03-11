@@ -1593,15 +1593,7 @@ async function pagoWompiExitoso(txData, convIdParam) {
       }
     }
 
-    // Quitar ruta del conductor de búsquedas
-    if(conductorId) {
-      const { error: eRuta } = await sb.from('rutas')
-        .update({ estado: 'en_curso' })
-        .eq('conductor_id', conductorId)
-        .eq('estado', 'activa');
-      if(eRuta) console.warn('ruta en_curso:', eRuta.message);
-      else console.log('✅ Ruta del conductor marcada como en_curso');
-    }
+    // Nota: la ruta del conductor la marca el propio conductor al recibir el mensaje recibo (RLS)
 
        // Quitar carga publicada por el cliente de búsquedas
     if(perfilActual?.id) {
@@ -4430,6 +4422,12 @@ async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, des
 
     let conv = convs?.[0] || null;
 
+    // Si la conv existe pero no tiene carga_id, guardarlo en BD
+    if(conv && cargaId && \!conv.carga_id) {
+      await sb.from('conversaciones').update({ carga_id: cargaId }).eq('id', conv.id);
+      conv.carga_id = cargaId;
+    }
+
     if(!conv) {
       const { data: nueva, error } = await sb.from('conversaciones').insert({
         usuario1_id: miId,
@@ -4658,7 +4656,7 @@ function renderMensaje(m) {
         : `<div style="background:rgba(0,212,106,0.08);border:1px solid rgba(0,212,106,0.2);border-radius:12px;padding:12px 16px;text-align:center;">
             <div style="font-size:20px;margin-bottom:4px;">✅</div>
             <div style="font-weight:700;color:var(--verde);font-size:13px;">¡El conductor aceptó tu oferta!</div>
-            <div style="font-size:12px;color:var(--texto);margin-top:4px;">Procede a realizar el pago 🔒</div>
+            <button onclick="abrirPagoMobile()" style="margin-top:10px;background:var(--amarillo);color:#111;border:none;border-radius:8px;padding:8px 20px;font-family:&apos;Barlow Condensed&apos;,sans-serif;font-weight:700;font-size:13px;cursor:pointer;width:100%;">🔒 Pagar ahora</button>
            </div>`;
       wrap.appendChild(div);
       wrap.scrollTop = wrap.scrollHeight;
@@ -4744,7 +4742,15 @@ function suscribirMensajes(convId) {
           // Si el conductor recibe recibo → actualizar escrow bar y ocultar botones
           if(msg.tipo === 'recibo' && perfilActual?.rol === 'conductor') {
             actualizarEscrowBar('APPROVED');
+            setBotonesSegunEstadoPago('pagado');
             document.querySelectorAll('.btn-accion-cliente').forEach(b => b.style.display = 'none');
+            // Conductor marca su propia ruta como en_curso (tiene permisos RLS sobre sus rutas)
+            sb.from('rutas').update({ estado: 'en_curso' })
+              .eq('conductor_id', perfilActual.id).eq('estado', 'activa')
+              .then(({ error }) => {
+                if(error) console.warn('ruta en_curso:', error.message);
+                else { console.log('\u2705 Ruta marcada en_curso por conductor'); }
+              });
           }
           // Solo marcar leído si el chat está visible en pantalla
           const pantallaActiva = document.getElementById('s-chat')?.classList.contains('activa');
