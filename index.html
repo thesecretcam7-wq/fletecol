@@ -21,7 +21,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
 .screen{display:none;height:100vh;height:100dvh;flex-direction:column;overflow:hidden;-webkit-overflow-scrolling:touch;}
 .screen.activa{display:flex;animation:fadeIn 0.3s ease;}
 /* Screens that scroll fully */
-#s-auth,#s-landing,#s-perfil,#s-publicar,#s-pagos,#s-pendiente,#s-politicas,#s-soporte,#s-rutas,#s-mis{overflow-y:auto;overflow-x:hidden;}
+#s-auth,#s-landing,#s-perfil,#s-publicar,#s-pagos,#s-pendiente,#s-politicas,#s-soporte,#s-rutas,#s-mis{overflow-y:auto;overflow-x:hidden;}@media(min-width:701px){#s-rutas{height:auto;min-height:100dvh;overflow-y:visible;overflow-x:visible;}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 /* ══ NAV ══ */
@@ -2185,7 +2185,7 @@ document.addEventListener('visibilitychange', async () => {
         el.classList.add('activa');
         try {
           if(pantalla === 's-rutas') { cargandoRutas = false; cargarRutas(); }
-          if(pantalla === 's-chat') { await cargarConversaciones(convActual?.id); if(convActual?.id) await cargarMensajes(convActual.id); }
+          if(pantalla === 's-chat') { await cargarConversaciones(convActual?.id); if(convActual?.id) await abrirConvExistente(convActual.id); }
           if(pantalla === 's-pagos') { await cargarCuentaBancaria(); }
         } catch(e) { console.warn('[restaurar] Error:', e.message); }
       }
