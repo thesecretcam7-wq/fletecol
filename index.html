@@ -8,6 +8,8 @@
 <title>FleteCOL — Transporte seguro en Colombia</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 <style>
 :root {
   --amarillo:#C41E2A;--negro:#FFFFFF;--gris1:#F8F8F8;--gris2:#F1F1F1;
@@ -2923,11 +2925,6 @@ function irRegistroIncompleto() {
       if(!file) return;
 
       const errEl  = document.getElementById('m2-error');
-      const box    = document.getElementById(id + '-box');
-      const badge  = document.getElementById(id + '-badge');
-      const sub    = document.getElementById(id + '-sub');
-      const loader = document.getElementById(id + '-loading');
-
       errEl.style.display = 'none';
 
       if(file.size > 5 * 1024 * 1024) {
@@ -2936,39 +2933,57 @@ function irRegistroIncompleto() {
         return;
       }
 
-      // Estado: cargando
-      box.style.borderColor = '#F5C400';
-      box.style.borderStyle = 'solid';
-      loader.style.display = 'block';
-      badge.style.display  = 'none';
-      sub.textContent = 'Subiendo...';
+      const _subirModalBlob = async (blob, ext) => {
+        const box    = document.getElementById(id + '-box');
+        const badge  = document.getElementById(id + '-badge');
+        const sub    = document.getElementById(id + '-sub');
+        const loader = document.getElementById(id + '-loading');
 
-      try {
-        const userId = usuarioActual.id;
-        const ext  = file.name.split('.').pop();
-        const path = `${userId}/${tipo}.${ext}`;
-        const { error } = await sb.storage.from('documentos').upload(path, file, { upsert: true });
-        if(error) throw error;
+        box.style.borderColor = '#F5C400';
+        box.style.borderStyle = 'solid';
+        loader.style.display = 'block';
+        badge.style.display  = 'none';
+        sub.textContent = 'Subiendo...';
 
-        docsModal[tipo] = path;
+        try {
+          const userId = usuarioActual.id;
+          const path = `${userId}/${tipo}.${ext}`;
+          const opts = { upsert: true };
+          if(ext === 'jpg') opts.contentType = 'image/jpeg';
+          const { error } = await sb.storage.from('documentos').upload(path, blob, opts);
+          if(error) throw error;
 
-        // Estado: OK
-        box.style.background    = 'rgba(0,212,106,0.06)';
-        box.style.borderColor   = '#00D46A';
-        box.style.borderStyle   = 'solid';
-        loader.style.display    = 'none';
-        badge.style.display     = 'block';
-        sub.style.color         = '#00D46A';
-        sub.textContent         = 'Subido correctamente';
+          docsModal[tipo] = path;
+          box.style.background  = 'rgba(0,212,106,0.06)';
+          box.style.borderColor = '#00D46A';
+          box.style.borderStyle = 'solid';
+          loader.style.display  = 'none';
+          badge.style.display   = 'block';
+          sub.style.color       = '#00D46A';
+          sub.textContent       = 'Subido correctamente';
+        } catch(err) {
+          const box2 = document.getElementById(id + '-box');
+          const loader2 = document.getElementById(id + '-loading');
+          const sub2 = document.getElementById(id + '-sub');
+          box2.style.borderColor = '#ff4545';
+          loader2.style.display  = 'none';
+          sub2.style.color       = '#ff6b6b';
+          sub2.textContent       = 'Error al subir';
+          errEl.textContent      = '❌ ' + (err.message || 'Error al subir. Intenta de nuevo.');
+          errEl.style.display    = 'block';
+        }
+      };
 
-      } catch(err) {
-        box.style.borderColor = '#ff4545';
-        loader.style.display  = 'none';
-        sub.style.color       = '#ff6b6b';
-        sub.textContent       = 'Error al subir';
-        errEl.textContent     = '❌ ' + (err.message || 'Error al subir. Intenta de nuevo.');
-        errEl.style.display   = 'block';
+      // Imágenes → crop primero
+      if(file.type.startsWith('image/')) {
+        abrirCrop(file, async function(blob) {
+          if(!blob) { input.value = ''; return; }
+          await _subirModalBlob(blob, 'jpg');
+        });
+        return;
       }
+      // PDF → directo
+      await _subirModalBlob(file, file.name.split('.').pop());
     });
   });
 
@@ -3226,26 +3241,37 @@ async function subirDocumento(input, tipo, boxId, lblId) {
   const file = input.files[0];
   if(!file) return;
 
-  const box = document.getElementById(boxId);
-  const lbl = document.getElementById(lblId);
   const errEl = document.getElementById('docs-error');
-
-  // Validar tamaño máximo 5MB
   if(file.size > 5 * 1024 * 1024) {
     errEl.textContent = 'El archivo es muy grande. Máximo 5MB.';
     errEl.style.display = 'block';
     return;
   }
 
-  // Verificar que haya sesión activa
+  // Imágenes → mostrar cropper primero
+  if(file.type.startsWith('image/')) {
+    abrirCrop(file, async function(blob) {
+      if(!blob) { input.value = ''; return; }
+      await _subirDocBlob(blob, 'jpg', tipo, boxId, lblId);
+    });
+    return;
+  }
+  // PDF → subir directo
+  await _subirDocBlob(file, file.name.split('.').pop(), tipo, boxId, lblId);
+}
+
+async function _subirDocBlob(fileOrBlob, ext, tipo, boxId, lblId) {
+  const box = document.getElementById(boxId);
+  const lbl = document.getElementById(lblId);
+  const errEl = document.getElementById('docs-error');
+
   const { data:{ session } } = await sb.auth.getSession();
   if(!session) {
-    errEl.textContent = 'Debes verificar tu correo antes de subir documentos. Revisa tu bandeja de entrada.';
+    errEl.textContent = 'Debes verificar tu correo antes de subir documentos.';
     errEl.style.display = 'block';
     return;
   }
 
-  // Mostrar cargando
   box.style.opacity = '0.6';
   lbl.textContent = '⏳ Subiendo...';
   lbl.style.display = 'block';
@@ -3253,11 +3279,11 @@ async function subirDocumento(input, tipo, boxId, lblId) {
 
   try {
     const userId = session.user.id;
-    const ext = file.name.split('.').pop();
     const path = `${userId}/${tipo}.${ext}`;
+    const opts = { upsert: true };
+    if(ext === 'jpg') opts.contentType = 'image/jpeg';
 
-    const { data, error } = await sb.storage.from('documentos').upload(path, file, { upsert: true });
-
+    const { error } = await sb.storage.from('documentos').upload(path, fileOrBlob, opts);
     if(error) throw error;
 
     docsSubidos[tipo] = path;
@@ -3269,8 +3295,7 @@ async function subirDocumento(input, tipo, boxId, lblId) {
     lbl.style.fontWeight = '700';
     errEl.style.display = 'none';
 
-    // Si es la selfie y el usuario NO subió foto de perfil propia,
-    // mostrarla como preview del avatar en el paso de registro
+    // Preview selfie en avatar de registro
     if(tipo === 'selfie_cedula' && !fotoPerfilFile) {
       const reader = new FileReader();
       reader.onload = function(e) {
@@ -3280,9 +3305,8 @@ async function subirDocumento(input, tipo, boxId, lblId) {
           av.style.border = '3px solid var(--verde)';
         }
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(fileOrBlob);
     }
-
   } catch(err) {
     box.style.opacity = '1';
     box.querySelector('.upload-default').style.display = 'block';
@@ -6123,5 +6147,85 @@ async function enviarMensajeSoporte() {
     </div>
   </div>
 </div>
+
+<!-- ══ MODAL RECORTE DE DOCUMENTO ══ -->
+<div id="crop-modal" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#1a1a1a;border:1px solid #333;border-radius:18px;padding:20px;width:min(96vw,520px);display:flex;flex-direction:column;gap:14px;max-height:95vh;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;color:#fff;">✂️ Recorta el documento</div>
+        <div style="font-size:12px;color:#888;margin-top:2px;">Ajusta el recuadro para que quede solo el documento</div>
+      </div>
+      <button onclick="cancelarCrop()" style="background:#333;border:none;border-radius:50%;width:32px;height:32px;color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;">×</button>
+    </div>
+    <div style="border-radius:10px;overflow:hidden;background:#000;max-height:58vh;">
+      <img id="crop-img" style="display:block;max-width:100%;">
+    </div>
+    <div style="font-size:11px;color:#666;text-align:center;">Arrastra el recuadro · Esquinas para redimensionar</div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="cancelarCrop()" style="flex:1;padding:13px;background:#2a2a2a;border:1px solid #444;border-radius:10px;color:#aaa;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;font-size:13px;">Cancelar</button>
+      <button id="crop-confirm-btn" onclick="confirmarCrop()" style="flex:2;padding:13px;background:var(--amarillo);color:#fff;border:none;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;cursor:pointer;">✅ Confirmar recorte</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ CROP DE DOCUMENTOS (Cropper.js) ══
+let _cropperInst = null;
+let _cropCallback = null;
+
+function abrirCrop(file, callback) {
+  _cropCallback = callback;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const modal = document.getElementById('crop-modal');
+    modal.style.display = 'flex';
+    const img = document.getElementById('crop-img');
+    if(_cropperInst) { _cropperInst.destroy(); _cropperInst = null; }
+    img.src = '';
+    img.onload = function() {
+      _cropperInst = new Cropper(img, {
+        viewMode: 1,
+        dragMode: 'move',
+        autoCropArea: 0.88,
+        guides: true,
+        center: true,
+        highlight: true,
+        cropBoxMovable: true,
+        cropBoxResizable: true,
+        toggleDragModeOnDblclick: false,
+        responsive: true,
+        minContainerHeight: 200,
+      });
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function confirmarCrop() {
+  if(!_cropperInst) return;
+  const btn = document.getElementById('crop-confirm-btn');
+  if(btn) { btn.disabled = true; btn.textContent = '⏳ Procesando...'; }
+  _cropperInst.getCroppedCanvas({ maxWidth: 1600, maxHeight: 1600, imageSmoothingEnabled: true, imageSmoothingQuality: 'high' })
+    .toBlob(function(blob) {
+      cerrarCrop();
+      if(_cropCallback) { _cropCallback(blob); _cropCallback = null; }
+    }, 'image/jpeg', 0.93);
+}
+
+function cancelarCrop() {
+  cerrarCrop();
+  if(_cropCallback) { _cropCallback(null); _cropCallback = null; }
+}
+
+function cerrarCrop() {
+  const modal = document.getElementById('crop-modal');
+  if(modal) modal.style.display = 'none';
+  if(_cropperInst) { _cropperInst.destroy(); _cropperInst = null; }
+  const btn = document.getElementById('crop-confirm-btn');
+  if(btn) { btn.disabled = false; btn.textContent = '✅ Confirmar recorte'; }
+}
+</script>
 </body>
 </html>
