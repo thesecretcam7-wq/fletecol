@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FleteCOL — Panel Admin</title>
+<title>fletescolombia — Panel Admin</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -416,7 +417,7 @@ tbody tr:hover { background:rgba(0,0,0,0.02); }
 <!-- ═══ SIDEBAR ═══ -->
 <div class="sidebar" id="sidebar">
   <div class="sidebar-logo">
-    <div class="logo-txt">Flete<span>COL</span></div>
+    <div class="logo-txt">fletes<span>colombia</span></div>
     <div class="logo-sub">Panel de administración</div>
   </div>
 
@@ -481,7 +482,7 @@ tbody tr:hover { background:rgba(0,0,0,0.02); }
       <button class="menu-btn" onclick="toggleSidebar()">☰</button>
       <div>
         <div class="page-title" id="page-title">Dashboard</div>
-        <div class="page-breadcrumb" id="page-breadcrumb">FleteCOL › Inicio</div>
+        <div class="page-breadcrumb" id="page-breadcrumb">fletescolombia › Inicio</div>
       </div>
     </div>
     <div class="topbar-right">
@@ -1104,13 +1105,43 @@ function abrirModalRechazar(id) {
 async function confirmarRechazo(id) {
   const motivo = document.getElementById('motivo-rechazo').value;
   if(!motivo) { toast('Selecciona un motivo de rechazo', 'error'); return; }
+
+  // FIX 1: Combinar motivo + mensaje adicional
+  const msgAdicional = document.getElementById('msg-rechazo').value.trim();
+  const motivoCompleto = msgAdicional ? `${motivo} — ${msgAdicional}` : motivo;
+
   const u = usuarios.find(x => x.id === id);
-  const { error } = await sb.from('usuarios').update({ estado: 'rechazado', motivo_rechazo: motivo }).eq('id', id);
+
+  // Guardar estado + motivo completo en Supabase
+  const { error } = await sb.from('usuarios')
+    .update({ estado: 'rechazado', motivo_rechazo: motivoCompleto })
+    .eq('id', id);
   if(error) { toast('Error al rechazar: ' + error.message, 'error'); return; }
+
   u.estado = 'rechazado';
-  u.motivo_rechazo = motivo;
+  u.motivo_rechazo = motivoCompleto;
+
+  // FIX 2: Enviar email de rechazo al conductor
+  if (EMAILJS_PUBLIC_KEY !== 'TU_PUBLIC_KEY' && u.email) {
+    try {
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_RECHAZO, {
+        nombre:   u.nombre || u.email,
+        correo:   u.email,
+        motivo:   motivo,
+        mensaje:  msgAdicional || 'Sin mensaje adicional',
+      });
+      toast('📧 Correo de rechazo enviado a ' + u.email, 'info');
+    } catch(emailErr) {
+      console.warn('Error enviando email:', emailErr);
+      toast('⚠️ El rechazo se guardó pero no se pudo enviar el correo', 'error');
+    }
+  }
+
   renderTables();
   cerrarModal('modal-rechazar');
+  // Limpiar campos del modal para la próxima vez
+  document.getElementById('motivo-rechazo').value = '';
+  document.getElementById('msg-rechazo').value = '';
   toast(`❌ ${nombreCompleto(u)} rechazado.`, 'error');
 }
 
@@ -1222,7 +1253,7 @@ function irA(id, navEl) {
     navEl.classList.add('active');
   }
   document.getElementById('page-title').textContent = pageTitles[id] || 'Panel';
-  document.getElementById('page-breadcrumb').textContent = `FleteCOL › ${pageTitles[id] || ''}`;
+  document.getElementById('page-breadcrumb').textContent = `fletescolombia › ${pageTitles[id] || ''}`;
   closeSidebar();
   if(id === 'p-banners') cargarBanners();
   if(id === 'p-cuentas') cargarCuentas();
@@ -1294,6 +1325,24 @@ const sb = createClient(
   'https://sorldaixuzpqlyqdcedi.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvcmxkYWl4dXpwcWx5cWRjZWRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMjkxODIsImV4cCI6MjA4NzcwNTE4Mn0.L1RjnhY62XiBltYHaT0vciFY9SHSrKbiM3GA8Buy89Q'
 );
+
+// ══ EMAILJS CONFIG ══
+// Pasos para activar el envío de correos:
+// 1. Crea cuenta gratis en https://www.emailjs.com
+// 2. En "Email Services" conecta tu Gmail (o cualquier correo)
+// 3. En "Email Templates" crea una plantilla con estas variables:
+//      {{nombre}}  → nombre del conductor
+//      {{correo}}  → email del conductor
+//      {{motivo}}  → motivo del rechazo seleccionado
+//      {{mensaje}} → mensaje adicional del admin
+// 4. Reemplaza los 3 valores de abajo con los tuyos
+const EMAILJS_PUBLIC_KEY       = 'SDVxXqTContsTR6VQ';  // Account > API Keys
+const EMAILJS_SERVICE_ID       = 'service_u6qx15q';    // Email Services > Service ID
+const EMAILJS_TEMPLATE_RECHAZO = 'lim41ic';             // Email Templates > Template ID
+
+if (EMAILJS_PUBLIC_KEY !== 'TU_PUBLIC_KEY') {
+  emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+}
 
 async function checkAdmin() {
   try {
