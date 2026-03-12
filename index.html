@@ -3445,8 +3445,8 @@ let carruselInterval = null;
 
 async function cargarCarrusel() {
   try {
-    // Detectar ciudad del usuario
-    let ciudadUsuario = perfilActual?.ciudad || null;
+    // Detectar ciudad del usuario: priorizar selector manual → perfil → GPS
+    let ciudadUsuario = document.getElementById('depto-sel')?.value?.trim() || perfilActual?.ciudad || null;
 
     // Intentar geolocalización para obtener ciudad
     if(!ciudadUsuario && navigator.geolocation) {
@@ -3652,6 +3652,11 @@ async function cargarRutas() {
     .order('created_at', { ascending: false });
   if(origen)  qCargas = qCargas.ilike('origen',  `%${origen}%`);
   if(destino) qCargas = qCargas.ilike('destino', `%${destino}%`);
+  // Filtrar cargas por ciudad/departamento del usuario si no hay búsqueda específica
+  if(!origen && !destino) {
+    const ciudadSel = (document.getElementById('depto-sel')?.value || perfilActual?.ciudad || '').trim();
+    if(ciudadSel) qCargas = qCargas.ilike('origen', `%${ciudadSel}%`);
+  }
 
   let rutas = [], cargas = [];
   try {
@@ -4628,6 +4633,10 @@ function setDepto(ciudad) {
   document.getElementById('depto-sel').value = ciudad;
   document.getElementById('loc-banner').classList.add('gps');
   toast(`📍 Mostrando contenido de ${ciudad}`, 'info');
+  // Refrescar carrusel y listado con la nueva ciudad
+  cargarCarrusel();
+  cargandoRutas = false;
+  cargarRutas();
 }
 
 // ══ CHAT — FILTRO ANTI-CONTACTO ══
