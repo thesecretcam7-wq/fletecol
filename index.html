@@ -1379,7 +1379,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
       <div style="font-size:13px;color:var(--texto);margin-top:4px;" id="perfil-rol">—</div>
       <div style="margin-top:8px;"><span style="background:rgba(245,196,0,0.1);color:var(--amarillo);padding:4px 12px;border-radius:8px;font-size:12px;font-weight:700;" id="perfil-estado">Cargando...</span></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px;">
+    <div id="perfil-stats-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px;">
       <div class="perfil-stat"><div class="perfil-stat-val" id="perfil-viajes">0</div><div style="font-size:11px;color:var(--texto);margin-top:4px;">Viajes</div></div>
       <div class="perfil-stat"><div class="perfil-stat-val" id="perfil-stars">5.0</div><div style="font-size:11px;color:var(--texto);margin-top:4px;">Calificación</div></div>
       <div class="perfil-stat"><div class="perfil-stat-val" id="perfil-reviews">0</div><div style="font-size:11px;color:var(--texto);margin-top:4px;">Reseñas</div></div>
@@ -2576,9 +2576,15 @@ function actualizarUIperfil() {
   document.getElementById('perfil-email').textContent = perfilActual.email;
   document.getElementById('perfil-ciudad').textContent = perfilActual.ciudad || '—';
   document.getElementById('perfil-depto').textContent = perfilActual.departamento || '—';
-  document.getElementById('perfil-viajes').textContent = perfilActual.viajes_completados || 0;
-  document.getElementById('perfil-stars').textContent = (perfilActual.estrellas || 5.0).toFixed(1);
-  document.getElementById('perfil-reviews').textContent = perfilActual.num_reviews || 0;
+  const statsGrid = document.getElementById('perfil-stats-grid');
+  if(perfilActual.rol === 'conductor') {
+    if(statsGrid) statsGrid.style.display = 'grid';
+    document.getElementById('perfil-viajes').textContent = perfilActual.viajes_completados || 0;
+    document.getElementById('perfil-stars').textContent = (perfilActual.estrellas || 5.0).toFixed(1);
+    document.getElementById('perfil-reviews').textContent = perfilActual.num_reviews || 0;
+  } else {
+    if(statsGrid) statsGrid.style.display = 'none';
+  }
   const estadoBadge = document.getElementById('perfil-estado');
   const estados = { pendiente:'⏳ Pendiente de aprobación', aprobado:'✅ Aprobado', rechazado:'❌ Rechazado', baneado:'🚫 Baneado' };
   estadoBadge.textContent = estados[perfilActual.estado] || perfilActual.estado;
