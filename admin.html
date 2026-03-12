@@ -460,6 +460,10 @@ tbody tr:hover { background:rgba(0,0,0,0.02); }
     <div class="nav-item" onclick="irA('p-pagos', this)">
       <span class="nav-icon">💰</span> Pagos y comisiones
     </div>
+    <div class="nav-item" onclick="irA('p-disputas', this)">
+      <span class="nav-icon">⚠️</span> Disputas
+      <span class="nav-badge" id="badge-disputas" style="background:#DC2626;">0</span>
+    </div>
   </nav>
 
   <div class="sidebar-footer">
@@ -863,8 +867,58 @@ tbody tr:hover { background:rgba(0,0,0,0.02); }
       </div>
     </div>
 
+    <!-- ══════════════ DISPUTAS ══════════════ -->
+    <div class="pantalla" id="p-disputas">
+      <div class="section-header">
+        <div>
+          <div class="section-title">⚠️ Disputas abiertas</div>
+          <div class="section-sub">Revisa cada caso y decide liberar el pago al conductor o marcar como reembolso</div>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="search-box">
+            <span>🔍</span>
+            <input type="text" placeholder="Buscar por cliente o conductor..." oninput="filtrarTabla(this,'tb-disputas')">
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="tb-disputas">
+            <thead><tr>
+              <th>Cliente</th><th>Conductor</th><th>Monto</th><th>Motivo</th><th>Fecha</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="tbody-disputas">
+              <tr><td colspan="6" style="text-align:center;padding:30px;color:#52525B;">Cargando disputas...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /main -->
+
+<!-- ══ MODAL RESOLVER DISPUTA ══ -->
+<div class="modal-overlay" id="modal-resolver-disputa">
+  <div class="modal">
+    <div class="modal-title">⚠️ Resolver disputa</div>
+    <div class="modal-sub" id="modal-disputa-sub">Elige cómo resolver este caso.</div>
+    <div class="modal-user" id="modal-disputa-user"></div>
+    <div class="form-group">
+      <label class="form-label">Motivo reportado por el cliente</label>
+      <div id="modal-disputa-razon" style="background:#F4F4F5;border-radius:8px;padding:10px 12px;font-size:13px;color:#52525B;"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nota interna (opcional)</label>
+      <input class="form-input" type="text" id="nota-disputa" placeholder="Ej: Conductor no respondió mensajes">
+    </div>
+    <div class="modal-actions" style="flex-direction:column;gap:8px;">
+      <button class="btn-modal-confirm green" id="btn-liberar-disputa">✅ Liberar pago al conductor</button>
+      <button class="btn-modal-confirm red" id="btn-reembolso-disputa">↩️ Marcar como reembolso manual</button>
+      <button class="btn-modal-cancel" onclick="cerrarModal('modal-resolver-disputa')">Cancelar</button>
+    </div>
+  </div>
+</div>
 
 <!-- ═══ MODALES ═══ -->
 
@@ -940,6 +994,12 @@ tbody tr:hover { background:rgba(0,0,0,0.02); }
 <div class="toast-container" id="toasts"></div>
 
 <script>
+// ══ UTILIDAD DE ESCAPE HTML ══
+function h(str) {
+  if(str == null) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 // ══ DATOS DEMO ══
 let usuarios = [];
 let baneados  = [];
@@ -1097,7 +1157,7 @@ function abrirModalRechazar(id) {
   if(!u) return;
   document.getElementById('modal-rech-user').innerHTML = `
     <div class="u-av">${u.rol==='conductor'?'🚛':'📦'}</div>
-    <div><div class="u-name">${nombreCompleto(u)}</div><div class="u-doc">${u.cedula?'C.C. '+u.cedula:u.email} · ${u.ciudad||'—'}</div></div>`;
+    <div><div class="u-name">${h(nombreCompleto(u))}</div><div class="u-doc">${u.cedula?'C.C. '+h(u.cedula):h(u.email)} · ${h(u.ciudad||'—')}</div></div>`;
   document.getElementById('btn-confirmar-rechazo').onclick = () => confirmarRechazo(id);
   abrirModal('modal-rechazar');
 }
@@ -1151,7 +1211,7 @@ function abrirModalBanear(id) {
   if(!u) return;
   document.getElementById('modal-ban-user').innerHTML = `
     <div class="u-av">🚫</div>
-    <div><div class="u-name">${nombreCompleto(u)}</div><div class="u-doc">${u.cedula?'C.C. '+u.cedula:u.email} · ${u.ciudad||'—'}</div></div>`;
+    <div><div class="u-name">${h(nombreCompleto(u))}</div><div class="u-doc">${u.cedula?'C.C. '+h(u.cedula):h(u.email)} · ${h(u.ciudad||'—')}</div></div>`;
   document.getElementById('btn-confirmar-ban').onclick = () => confirmarBan(id);
   abrirModal('modal-banear');
 }
@@ -1194,8 +1254,8 @@ function verDocs(id) {
   document.getElementById('modal-docs-user').innerHTML = `
     <div class="u-av">${u.rol==='conductor'?'🚛':'📦'}</div>
     <div>
-      <div class="u-name">${nombreCompleto(u)}</div>
-      <div class="u-doc">${u.rol==='conductor'?'🚛 Conductor':'📦 Cliente'} · ${u.email||''}</div>
+      <div class="u-name">${h(nombreCompleto(u))}</div>
+      <div class="u-doc">${u.rol==='conductor'?'🚛 Conductor':'📦 Cliente'} · ${h(u.email||'')}</div>
     </div>`;
 
   // Construir URL completa de Supabase Storage
@@ -1238,11 +1298,88 @@ function eliminarRuta(btn) {
   toast('🗑️ Ruta eliminada correctamente', 'info');
 }
 
+// ══ DISPUTAS ══
+let disputasData = [];
+
+async function cargarDisputas() {
+  const tbody = document.getElementById('tbody-disputas');
+  try {
+    const { data, error } = await sb.from('pagos')
+      .select('id, monto_total, disputa_razon, created_at, conversacion_id, cliente_id, conductor_id')
+      .eq('estado', 'EN_DISPUTA')
+      .order('created_at', { ascending: false });
+
+    if(error) throw error;
+    disputasData = data || [];
+
+    document.getElementById('badge-disputas').textContent = disputasData.length;
+
+    if(!disputasData.length) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><div class="empty-icon">✅</div><div class="empty-title">Sin disputas abiertas</div><div class="empty-sub">No hay casos pendientes de revisión.</div></div></td></tr>`;
+      return;
+    }
+
+    // Cargar nombres de usuarios
+    const allIds = [...new Set([...disputasData.map(d=>d.cliente_id), ...disputasData.map(d=>d.conductor_id)].filter(Boolean))];
+    const { data: usersData } = await sb.from('usuarios').select('id,nombre,apellido,email').in('id', allIds);
+    const usersMap = {};
+    (usersData||[]).forEach(u => { usersMap[u.id] = u; });
+
+    tbody.innerHTML = disputasData.map(d => {
+      const cliente   = usersMap[d.cliente_id];
+      const conductor = usersMap[d.conductor_id];
+      const nombreCliente   = cliente   ? `${h(cliente.nombre||'')} ${h(cliente.apellido||'')}`.trim() || h(cliente.email) : '—';
+      const nombreConductor = conductor ? `${h(conductor.nombre||'')} ${h(conductor.apellido||'')}`.trim() || h(conductor.email) : '—';
+      const monto = d.monto_total ? '$' + parseInt(d.monto_total).toLocaleString('es-CO') : '—';
+      const fecha = d.created_at ? new Date(d.created_at).toLocaleDateString('es-CO',{day:'numeric',month:'short',year:'numeric'}) : '—';
+      return `<tr data-nombre="${nombreCliente.toLowerCase()} ${nombreConductor.toLowerCase()}">
+        <td><div class="u-name">${nombreCliente}</div></td>
+        <td><div class="u-name">${nombreConductor}</div></td>
+        <td style="font-weight:700;color:var(--amarillo)">${monto}</td>
+        <td style="max-width:200px;font-size:12px;color:#52525B;">${h(d.disputa_razon||'Sin motivo')}</td>
+        <td style="font-size:12px;color:#52525B;">${fecha}</td>
+        <td>
+          <button onclick="abrirModalResolverDisputa('${d.id}')" style="background:var(--amarillo);color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">Resolver</button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#DC2626;">Error al cargar disputas: ${h(e.message)}</td></tr>`;
+  }
+}
+
+function abrirModalResolverDisputa(pagoId) {
+  const d = disputasData.find(x => x.id === pagoId);
+  if(!d) return;
+
+  document.getElementById('modal-disputa-razon').textContent = d.disputa_razon || 'Sin motivo especificado';
+  document.getElementById('nota-disputa').value = '';
+
+  document.getElementById('btn-liberar-disputa').onclick = () => resolverDisputa(pagoId, 'liberar');
+  document.getElementById('btn-reembolso-disputa').onclick = () => resolverDisputa(pagoId, 'reembolso');
+  abrirModal('modal-resolver-disputa');
+}
+
+async function resolverDisputa(pagoId, accion) {
+  const nuevoEstado = accion === 'liberar' ? 'LIBERADO' : 'REEMBOLSO';
+  const nota = document.getElementById('nota-disputa').value.trim();
+
+  const update = { estado: nuevoEstado };
+  if(nota) update.nota_admin = nota;
+
+  const { error } = await sb.from('pagos').update(update).eq('id', pagoId);
+  if(error) { toast('Error al resolver: ' + error.message, 'error'); return; }
+
+  cerrarModal('modal-resolver-disputa');
+  toast(accion === 'liberar' ? '✅ Pago liberado al conductor' : '↩️ Marcado como reembolso manual', 'success');
+  cargarDisputas();
+}
+
 // ══ NAVEGACIÓN ══
 const pageTitles = {
   'p-dashboard':'Dashboard','p-pendientes':'Pendientes',
   'p-usuarios':'Todos los usuarios','p-baneados':'Usuarios baneados','p-banners':'Banners publicitarios','p-cuentas':'Cuentas bancarias',
-  'p-rutas':'Rutas publicadas','p-cargas':'Cargas publicadas','p-pagos':'Pagos y comisiones'
+  'p-rutas':'Rutas publicadas','p-cargas':'Cargas publicadas','p-pagos':'Pagos y comisiones','p-disputas':'Disputas'
 };
 
 function irA(id, navEl) {
@@ -1258,6 +1395,7 @@ function irA(id, navEl) {
   if(id === 'p-banners') cargarBanners();
   if(id === 'p-cuentas') cargarCuentas();
   if(id === 'p-pagos') cargarPagos();
+  if(id === 'p-disputas') cargarDisputas();
 }
 
 // ══ FILTROS ══
@@ -1358,6 +1496,7 @@ async function checkAdmin() {
     document.getElementById('admin-wrap').style.display = 'flex';
     document.getElementById('admin-wrap').style.flexDirection = 'row';
     await cargarUsuarios();
+    cargarDisputas(); // badge inicial
   } catch(e) {
     showLoginScreen('Error de conexión: ' + e.message);
   }
