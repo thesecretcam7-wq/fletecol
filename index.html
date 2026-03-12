@@ -1390,6 +1390,19 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
       <div class="cp-row"><span style="color:var(--texto);">Ciudad</span><span id="perfil-ciudad" style="font-weight:600;">—</span></div>
       <div class="cp-row"><span style="color:var(--texto);">Ciudad</span><span id="perfil-depto" style="font-weight:600;">—</span></div>
     </div>
+    <!-- Mis publicaciones -->
+    <div id="perfil-pubs-section" style="margin-bottom:16px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:17px;margin-bottom:12px;">📋 Mis publicaciones</div>
+      <div id="perfil-pubs-lista"><div style="font-size:12px;color:var(--texto);">Cargando publicaciones…</div></div>
+    </div>
+
+    <!-- Reseñas recibidas (solo conductores) -->
+    <div id="perfil-resenas-section" style="display:none;margin-bottom:16px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:17px;margin-bottom:12px;">⭐ Mis reseñas</div>
+      <div id="perfil-resenas-lista" style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-size:12px;color:var(--texto);">Cargando reseñas…</div>
+      </div>
+    </div>
     <button class="btn-full" style="background:var(--gris3);margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="abrirSoporteApp()">💬 Chat de soporte</button>
     <button class="btn-full" style="background:var(--rojo);margin-top:8px;" onclick="logout()">Cerrar sesión</button>
   </div>
@@ -2629,6 +2642,7 @@ async function irApp(screenId) {
   // Verificar si debe mostrar banner de documentos
   verificarBannerDocs();
   if(screenId === 's-mis') cargarMisPubs();
+  if(screenId === 's-perfil') { cargarResenasPerfil(); cargarPublicacionesPerfil(); }
   if(screenId === 's-publicar') {
     if(!perfilActual && usuarioActual) await cargarPerfil();
     cargarVehiculoConductor();
@@ -3900,6 +3914,94 @@ async function enviarResena() {
   } catch(e) {
     console.error('enviarResena:', e);
     toast('Error al enviar reseña: ' + (e.message || 'tabla no encontrada'), 'error');
+  }
+}
+
+async function cargarPublicacionesPerfil() {
+  const lista = document.getElementById('perfil-pubs-lista');
+  if(!lista || !perfilActual) return;
+  lista.innerHTML = '<div style="font-size:12px;color:var(--texto);">Cargando publicaciones…</div>';
+  try {
+    const esConductor = perfilActual.rol === 'conductor';
+    const iconosVeh = { moto:'🏍️', camioneta:'🚐', camion:'🚚', mula:'🚛' };
+    const iconosCarga = { mudanza:'🛋️', mercancia:'📦', industrial:'🏭', agricola:'🌾', construccion:'🚧' };
+
+    let items = [];
+    if(esConductor) {
+      const { data: rutas } = await sb.from('rutas').select('*').eq('conductor_id', perfilActual.id).eq('estado','activa').order('created_at', { ascending: false }).limit(20);
+      (rutas||[]).forEach(r => items.push({
+        icon: iconosVeh[r.vehiculo] || '🚐',
+        titulo: r.origen + ' → ' + r.destino,
+        sub: (r.vehiculo||'') + (r.fecha ? ' · ' + r.fecha : ''),
+        badge: '<span class="pub-status2 activa">● Activa</span>',
+        del: `onclick="eliminarRuta('${r.id}',this)"`
+      }));
+    } else {
+      const { data: cargas } = await sb.from('cargas').select('*').eq('cliente_id', perfilActual.id).in('estado',['activa','en_curso']).order('created_at', { ascending: false }).limit(20);
+      (cargas||[]).forEach(c => {
+        const enCurso = c.estado === 'en_curso';
+        items.push({
+          icon: iconosCarga[c.tipo] || '📦',
+          titulo: c.titulo || c.tipo || 'Carga',
+          sub: c.origen + ' → ' + c.destino,
+          badge: enCurso ? '<span class="pub-status2" style="color:#F5C400;background:rgba(245,196,0,0.1);">● En curso</span>' : '<span class="pub-status2 activa">● Activa</span>',
+          del: enCurso ? '' : `onclick="eliminarCarga('${c.id}',this)"`
+        });
+      });
+    }
+
+    if(items.length === 0) {
+      lista.innerHTML = `<div class="empty" style="padding:24px 0;"><div class="empty-icon">${esConductor?'🗺️':'📦'}</div><div class="empty-title">Sin publicaciones activas</div><div class="empty-sub">Tus publicaciones aparecerán aquí.</div></div>`;
+      return;
+    }
+    lista.innerHTML = items.map(p => `
+      <div class="pub-item">
+        <div class="pub-icon">${p.icon}</div>
+        <div style="flex:1;min-width:100px;">
+          <div style="font-weight:700;font-size:13px;margin-bottom:2px;">${p.titulo}</div>
+          <div style="font-size:12px;color:var(--texto);">${p.sub}</div>
+        </div>
+        ${p.badge}
+        ${p.del ? `<button class="btn-del2" ${p.del}>Eliminar</button>` : ''}
+      </div>`).join('');
+  } catch(e) {
+    lista.innerHTML = '<div style="font-size:12px;color:var(--texto);font-style:italic;">No se pudieron cargar las publicaciones.</div>';
+  }
+}
+
+async function cargarResenasPerfil() {
+  const section = document.getElementById('perfil-resenas-section');
+  if(!section) return;
+  if(!perfilActual || perfilActual.rol !== 'conductor') {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+  const lista = document.getElementById('perfil-resenas-lista');
+  if(!lista) return;
+  lista.innerHTML = '<div style="font-size:12px;color:var(--texto);">Cargando reseñas…</div>';
+  try {
+    const { data, error } = await sb
+      .from('resenas')
+      .select('estrellas, comentario, created_at')
+      .eq('conductor_id', perfilActual.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if(error) throw error;
+    if(!data || data.length === 0) {
+      lista.innerHTML = '<div style="font-size:12px;color:var(--texto);font-style:italic;">Sin reseñas aún. ¡Completa viajes para recibir calificaciones!</div>';
+      return;
+    }
+    lista.innerHTML = data.map(rv => `
+      <div class="review-item">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+          <span style="color:var(--amarillo);font-size:13px;">${'★'.repeat(rv.estrellas)}${'☆'.repeat(5-rv.estrellas)}</span>
+          <span style="font-size:11px;color:var(--texto);">${new Date(rv.created_at).toLocaleDateString('es-CO')}</span>
+        </div>
+        ${rv.comentario ? `<div style="color:var(--blanco);font-size:13px;">${rv.comentario}</div>` : ''}
+      </div>`).join('');
+  } catch(e) {
+    lista.innerHTML = '<div style="font-size:12px;color:var(--texto);font-style:italic;">No se pudieron cargar las reseñas.</div>';
   }
 }
 
