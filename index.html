@@ -8,8 +8,6 @@
 <title>fletescolombia — Transporte seguro en Colombia</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 <style>
 :root {
   --amarillo:#C41E2A;--negro:#FFFFFF;--gris1:#F8F8F8;--gris2:#F1F1F1;
@@ -1127,7 +1125,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
         <div id="wompi-container" style="margin-top:4px;">
           <div style="font-size:10px;color:var(--texto);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Método de pago</div>
           <div id="wompi-btn-wrap" style="display:flex;justify-content:center;">
-            <button class="btn-full" id="pp-btn2" onclick="prepararWompiConMonto(montoAcordado || calcularMontoPago())" style="margin-top:4px;background:linear-gradient(135deg,#C41E2A,#a01824);color:#FFFFFF;">
+            <button class="btn-full" id="pp-btn2" onclick="prepararWompiConMonto(montoAcordado)" style="margin-top:4px;background:linear-gradient(135deg,#C41E2A,#a01824);color:#FFFFFF;">
               🔒 Pagar ahora con Wompi
             </button>
           </div>
@@ -1145,6 +1143,13 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
         <div style="font-size:12px;color:var(--texto);margin-bottom:16px;">El conductor fue notificado y está listo.</div>
         <button class="btn-full" style="background:var(--verde);" onclick="confirmarEntrega2()">✅ Confirmar que recibí</button>
         <div style="font-size:11px;color:var(--texto);margin-top:8px;">Solo confirma cuando verificaste que todo llegó bien</div>
+        <button id="btn-abrir-disputa" onclick="abrirModalDisputa()" style="margin-top:14px;background:none;border:1px solid var(--rojo);color:var(--rojo);border-radius:8px;padding:7px 14px;font-size:11px;font-weight:600;cursor:pointer;width:100%;">⚠️ Hay un problema con esta entrega</button>
+      </div>
+      <div id="pp-disputa2" style="display:none;text-align:center;padding:20px 0;">
+        <div style="font-size:44px;margin-bottom:12px;">⚠️</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;margin-bottom:8px;color:var(--rojo);">Disputa abierta</div>
+        <div style="font-size:12px;color:var(--texto);margin-bottom:8px;">Nuestro equipo revisará el caso y te contactará en menos de 24h.</div>
+        <div style="font-size:11px;color:var(--texto);background:var(--gris2);border-radius:8px;padding:10px 12px;" id="disputa-razon-txt"></div>
       </div>
       <div id="pp-completado2" style="display:none;text-align:center;padding:20px 0;">
         <div style="font-size:44px;margin-bottom:12px;">🎉</div>
@@ -1376,6 +1381,12 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
       <span id="historial-count" style="background:var(--gris3);border-radius:20px;padding:2px 8px;font-size:10px;"></span>
     </div>
     <div id="mis-cargas-historial-wrap"><div class="empty"><div class="empty-icon">🗂️</div><div class="empty-title">Sin historial</div><div class="empty-sub">Aquí aparecerán tus cargas finalizadas.</div></div></div>
+
+    <div style="font-size:11px;color:var(--texto);text-transform:uppercase;letter-spacing:0.7px;font-weight:700;margin:18px 0 8px;display:flex;align-items:center;gap:8px;">
+      <span>✅ Servicios completados</span>
+      <span id="servicios-count" style="background:var(--gris3);border-radius:20px;padding:2px 8px;font-size:10px;"></span>
+    </div>
+    <div id="servicios-completados-wrap"><div class="empty"><div class="empty-icon">🚛</div><div class="empty-title">Sin servicios aún</div><div class="empty-sub">Aquí aparecerán tus fletes completados.</div></div></div>
   </div>
 </div>
 
@@ -1439,6 +1450,35 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
 <div class="toast-container" id="toasts"></div>
 
 <script>
+// ══ UTILIDAD DE ESCAPE HTML ══
+function h(str) {
+  if(str == null) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ══ NOTIFICACIONES DEL NAVEGADOR ══
+function pedirPermisoNotificaciones() {
+  if(!('Notification' in window)) return;
+  if(Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function pushNotif(titulo, cuerpo, tag) {
+  if(!('Notification' in window)) return;
+  if(Notification.permission !== 'granted') return;
+  try {
+    const n = new Notification(titulo, {
+      body: cuerpo || '',
+      icon: '/favicon.ico',
+      tag: tag || titulo,
+      renotify: true
+    });
+    n.onclick = () => { window.focus(); n.close(); };
+    setTimeout(() => n.close(), 8000);
+  } catch(e) {}
+}
+
 // ══ SUPABASE INIT ══
 // Registrar Service Worker
 // ══ WOMPI CONFIG ══
@@ -1521,13 +1561,6 @@ async function prepararWompi() {
 
 const abrirWompi = prepararWompi;
 
-function calcularMontoPago() {
-  // Leer el monto del resumen de pago visible
-  const el = document.getElementById('r-tot');
-  if(!el) return 0;
-  const txt = el.textContent.replace(/\D/g,'');
-  return parseInt(txt) || 0;
-}
 
 async function registrarPagoPendiente(referencia, monto) {
   try {
@@ -1789,6 +1822,12 @@ function setBotonesSegunEstadoPago(estado) {
     if(btnOfertaBottom) btnOfertaBottom.style.display = '';
     if(btnPagar) { btnPagar.style.display = 'none'; btnPagar.textContent = '🔒 Pagar'; btnPagar.style.background = 'var(--amarillo)'; btnPagar.onclick = abrirPagoMobile; }
     if(btnConfirmar) btnConfirmar.style.display = 'none';
+  } else if(estado === 'en_disputa') {
+    // Disputa abierta — bloquear todas las acciones
+    if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
+    if(btnOfertaBottom) btnOfertaBottom.style.display = 'none';
+    if(btnPagar) btnPagar.style.display = 'none';
+    if(btnConfirmar) btnConfirmar.style.display = 'none';
   } else if(estado === 'esperando_conductor') {
     // Conductor aceptó — no mostrar nada extra al conductor
     if(btnOfertaHeader) btnOfertaHeader.style.display = 'none';
@@ -1818,6 +1857,11 @@ function actualizarEscrowBar(estado) {
     est.textContent = '✅ Liberado';
     est.style.color = 'var(--verde)';
     est.style.background = 'rgba(0,212,106,0.1)';
+  } else if(estado === 'EN_DISPUTA') {
+    txt.innerHTML = '⚠️ <span style="color:var(--rojo);">Disputa abierta · En revisión</span>';
+    est.textContent = '⚠️ En disputa';
+    est.style.color = 'var(--rojo)';
+    est.style.background = 'rgba(220,38,38,0.1)';
   } else if(estado === 'esperando_pago') {
     txt.innerHTML = '⏳ <span style="color:var(--amarillo);">Esperando pago del cliente</span>';
     est.textContent = '⏳ Pendiente';
@@ -2217,6 +2261,10 @@ async function manejarSesion(session) {
   suscribirEstado();
   suscribirBadge();
   suscribirBuscador();
+  suscribirPagos();
+  suscribirDisputaResuelta();
+  pedirPermisoNotificaciones();
+  verificarPagosVencidos();
 }
 // Reconectar chat cuando la página vuelve a estar activa
 // Guardar timestamp cuando la pestaña se oculta
@@ -2228,7 +2276,7 @@ document.addEventListener('visibilitychange', async () => {
     // Guardar estado antes de salir — SOLO si hay sesión activa y la pantalla es de app
     try {
       if(convActual) localStorage.setItem('fl_conv', JSON.stringify(convActual));
-      if(montoAcordado) localStorage.setItem('fl_monto', String(montoAcordado));
+      // montoAcordado no se persiste en localStorage (se lee desde Supabase al pagar)
       const pantallaActiva = document.querySelector('.screen.activa')?.id || '';
       // NO guardar pantallas de auth/landing — solo pantallas de app autenticada
       const pantallasSegurasApp = ['s-rutas','s-publicar','s-chat','s-pagos','s-perfil','s-mis'];
@@ -2283,10 +2331,8 @@ document.addEventListener('visibilitychange', async () => {
   if(!perfilActual || !usuarioActual) return; // sin sesión, no restaurar nada
 
   const pantalla = localStorage.getItem('fl_pantalla');
-  const savedMonto = localStorage.getItem('fl_monto');
   const savedConv = localStorage.getItem('fl_conv');
-
-  if(savedMonto) { montoAcordado = parseInt(savedMonto); localStorage.removeItem('fl_monto'); }
+  localStorage.removeItem('fl_monto'); // limpiar legado
 
   if(savedConv) {
     try {
@@ -2391,6 +2437,9 @@ async function verificarEstadoManual() {
 }
 
 // Escucha en tiempo real si el admin cambia el estado del usuario
+// Cache global de nombres de usuario para notificaciones
+const _nombresCache = {};
+
 let badgeSub = null;
 function suscribirBadge() {
   if(!usuarioActual || !perfilActual) return;
@@ -2403,9 +2452,23 @@ function suscribirBadge() {
       table: 'mensajes'
     }, async (payload) => {
       const msg = payload.new;
-      // Solo contar mensajes dirigidos a este usuario (no propios)
+      // Solo mensajes de otros usuarios
       if(msg.emisor_id === perfilActual.id) return;
-      // Verificar que pertenece a una conversación del usuario
+
+      // Notificación del navegador si no está en esa conversación o el tab está oculto
+      const convAbierta = convActual?.id === msg.conversacion_id && document.visibilityState === 'visible';
+      if(!convAbierta) {
+        const nombre = _nombresCache[msg.emisor_id] || 'Nuevo mensaje';
+        if(msg.tipo === 'oferta') {
+          const monto = msg.oferta_monto ? '$' + parseInt(msg.oferta_monto).toLocaleString('es-CO') + ' COP' : '';
+          pushNotif('💰 Oferta de ' + nombre, monto, 'oferta-' + msg.conversacion_id);
+        } else if(msg.tipo === 'oferta_aceptada') {
+          pushNotif('✅ Oferta aceptada', nombre + ' aceptó el precio acordado', 'oferta-aceptada-' + msg.conversacion_id);
+        } else if(msg.tipo !== 'disputa' && msg.contenido) {
+          pushNotif('💬 ' + nombre, msg.contenido.slice(0, 80), 'msg-' + msg.conversacion_id);
+        }
+      }
+
       await cargarConversaciones(convActual?.id);
     })
     .subscribe();
@@ -2431,9 +2494,11 @@ function suscribirEstado() {
         if(nuevoEstado === estadoViejo) return;
 
         if(nuevoEstado === 'aprobado') {
+          pushNotif('✅ Cuenta aprobada', '¡Ya puedes usar todas las funciones de fletescolombia!', 'cuenta-aprobada');
           mostrarBannerEstado('aprobado', perfilActual.nombre);
           setTimeout(() => irApp('s-rutas'), 2000);
         } else if(nuevoEstado === 'rechazado') {
+          pushNotif('❌ Solicitud rechazada', payload.new?.motivo_rechazo || 'Revisa tu perfil para más información.', 'cuenta-rechazada');
           actualizarPantallaPendiente('rechazado', payload.new?.motivo_rechazo, perfilActual.rol);
           ir('s-pendiente');
         } else if(nuevoEstado === 'baneado') {
@@ -2448,6 +2513,86 @@ function suscribirEstado() {
         estadoSub = null;
       }
     });
+}
+
+let pagosSub = null;
+function suscribirPagos() {
+  if(!perfilActual || perfilActual.rol !== 'conductor') return;
+  if(pagosSub) { try { sb.removeChannel(pagosSub); } catch(e){} pagosSub = null; }
+
+  pagosSub = sb.channel('pagos-conductor-' + perfilActual.id + '-' + Date.now())
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'pagos',
+      filter: 'conductor_id=eq.' + perfilActual.id
+    }, (payload) => {
+      const pago = payload.new;
+      if(pago.estado === 'pendiente' || pago.estado === 'APPROVED') {
+        pushNotif('🔒 Pago recibido', 'El cliente realizó el pago. Prepara la entrega.', 'pago-' + pago.id);
+        toast('🔒 El cliente realizó el pago. ¡Prepara la entrega!', 'success');
+      }
+    })
+    .subscribe();
+}
+
+let disputaSub = null;
+function suscribirDisputaResuelta() {
+  if(!perfilActual) return;
+  if(disputaSub) { try { sb.removeChannel(disputaSub); } catch(e){} disputaSub = null; }
+
+  disputaSub = sb.channel('disputa-' + perfilActual.id + '-' + Date.now())
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'pagos',
+      filter: 'cliente_id=eq.' + perfilActual.id
+    }, (payload) => {
+      const pago = payload.new;
+      const anterior = payload.old;
+      if(anterior?.estado === 'EN_DISPUTA') {
+        if(pago.estado === 'LIBERADO') {
+          pushNotif('⚠️ Disputa resuelta', 'El pago fue liberado al conductor tras revisión.', 'disputa-res');
+          toast('⚠️ Disputa resuelta: pago liberado al conductor', 'info');
+        } else if(pago.estado === 'REEMBOLSO') {
+          pushNotif('↩️ Disputa resuelta', 'Tu caso fue marcado para reembolso manual. Te contactaremos.', 'disputa-res');
+          toast('↩️ Disputa resuelta: reembolso manual en proceso', 'info');
+        }
+      }
+    })
+    .subscribe();
+}
+
+const DIAS_TIMEOUT_PAGO = 7;
+async function verificarPagosVencidos() {
+  if(!perfilActual) return;
+  const limite = new Date(Date.now() - DIAS_TIMEOUT_PAGO * 24 * 60 * 60 * 1000).toISOString();
+  const { data: vencidos } = await sb
+    .from('pagos')
+    .select('id, conversacion_id, cliente_id, conductor_id')
+    .eq('estado', 'APPROVED')
+    .lt('created_at', limite)
+    .or(`cliente_id.eq.${perfilActual.id},conductor_id.eq.${perfilActual.id}`);
+  if(!vencidos || vencidos.length === 0) return;
+  for(const p of vencidos) {
+    await sb.from('pagos').update({
+      estado: 'EN_DISPUTA',
+      disputa_razon: `Entrega no confirmada despu\u00E9s de ${DIAS_TIMEOUT_PAGO} d\u00EDas. Escalada autom\u00E1tica.`
+    }).eq('id', p.id);
+    // Mensaje de sistema en la conversaci\u00F3n
+    if(p.conversacion_id) {
+      await sb.from('mensajes').insert({
+        conversacion_id: p.conversacion_id,
+        remitente_id: perfilActual.id,
+        contenido: `\u26A0\uFE0F Pago escalado autom\u00E1ticamente a disputa por falta de confirmaci\u00F3n de entrega (${DIAS_TIMEOUT_PAGO} d\u00EDas). Un administrador revisar\u00E1 el caso.`,
+        tipo: 'disputa'
+      });
+    }
+  }
+  if(vencidos.length > 0) {
+    toast(`\u26A0\uFE0F ${vencidos.length} pago(s) escalado(s) a disputa por tiempo vencido`, 'error');
+    pushNotif('\u26A0\uFE0F Pago en disputa', 'Un pago sin confirmar fue escalado autom\u00E1ticamente.', 'timeout-pago');
+  }
 }
 
 async function redirigirSegunEstado() {
@@ -2652,12 +2797,12 @@ async function irApp(screenId) {
     }
   }
   if(screenId === 's-rutas') cargarCarrusel();
-  if(screenId === 's-pagos') cargarCuentaBancaria();
+  if(screenId === 's-pagos') { cargarCuentaBancaria(); verificarPagosVencidos(); }
   // Enviar pendientes al entrar a cualquier pantalla
   if(mensajesPendientes.length > 0) enviarPendientes();
   // Verificar si debe mostrar banner de documentos
   verificarBannerDocs();
-  if(screenId === 's-mis') cargarMisPubs();
+  if(screenId === 's-mis') { cargarMisPubs(); cargarServiciosCompletados(); }
   if(screenId === 's-perfil') { cargarResenasPerfil(); cargarPublicacionesPerfil(); }
   if(screenId === 's-publicar') {
     if(!perfilActual && usuarioActual) await cargarPerfil();
@@ -2974,15 +3119,6 @@ function irRegistroIncompleto() {
         }
       };
 
-      // Imágenes → crop primero
-      if(file.type.startsWith('image/')) {
-        abrirCrop(file, async function(blob) {
-          if(!blob) { input.value = ''; return; }
-          await _subirModalBlob(blob, 'jpg');
-        });
-        return;
-      }
-      // PDF → directo
       await _subirModalBlob(file, file.name.split('.').pop());
     });
   });
@@ -3248,15 +3384,6 @@ async function subirDocumento(input, tipo, boxId, lblId) {
     return;
   }
 
-  // Imágenes → mostrar cropper primero
-  if(file.type.startsWith('image/')) {
-    abrirCrop(file, async function(blob) {
-      if(!blob) { input.value = ''; return; }
-      await _subirDocBlob(blob, 'jpg', tipo, boxId, lblId);
-    });
-    return;
-  }
-  // PDF → subir directo
   await _subirDocBlob(file, file.name.split('.').pop(), tipo, boxId, lblId);
 }
 
@@ -3917,7 +4044,7 @@ async function cargarResenas(conductorId) {
     lista.innerHTML = data.map(rv => `
       <div style="border-bottom:1px solid var(--gris3);padding:8px 0;font-size:12px;">
         <div style="color:var(--amarillo);font-size:14px;">${'★'.repeat(rv.estrellas)}${'☆'.repeat(5-rv.estrellas)}</div>
-        ${rv.comentario ? `<div style="color:var(--blanco);margin-top:3px;">${rv.comentario}</div>` : ''}
+        ${rv.comentario ? `<div style="color:var(--blanco);margin-top:3px;">${h(rv.comentario)}</div>` : ''}
         <div style="color:var(--texto);font-size:11px;margin-top:2px;">${new Date(rv.created_at).toLocaleDateString('es-CO')}</div>
       </div>`).join('');
   } catch(e) {
@@ -4608,8 +4735,74 @@ async function cargarMisPubs() {
         const fecha = c.updated_at ? new Date(c.updated_at).toLocaleDateString('es-CO') : '';
         return `<div class="pub-item" style="opacity:0.75;"><div class="pub-icon">${c.icon||'📦'}</div><div style="flex:1;min-width:120px;"><div style="font-weight:700;font-size:13px;margin-bottom:2px;">${c.titulo||c.tipo||'Carga'}</div><div style="font-size:12px;color:var(--texto);">${c.sub||c.origen+' → '+c.destino}</div></div><span style="font-size:11px;color:var(--verde);white-space:nowrap;">✅ Finalizada<br><span style="color:var(--texto);font-size:10px;">${fecha}</span></span></div>`;
       }).join('');
+  cargarServiciosCompletados();
 }
 
+async function cargarServiciosCompletados() {
+  if(!perfilActual) return;
+  const sw  = document.getElementById('servicios-completados-wrap');
+  const sct = document.getElementById('servicios-count');
+  if(!sw) return;
+
+  const userId = perfilActual.id;
+  const { data: pagos } = await sb
+    .from('pagos')
+    .select('id, monto, estado, created_at, cliente_id, conductor_id, conversacion_id')
+    .or(`cliente_id.eq.${userId},conductor_id.eq.${userId}`)
+    .in('estado', ['LIBERADO', 'REEMBOLSO'])
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if(!pagos || pagos.length === 0) {
+    if(sct) sct.textContent = '';
+    sw.innerHTML = '<div class="empty"><div class="empty-icon">\uD83D\uDE9B</div><div class="empty-title">Sin servicios a\u00FAn</div><div class="empty-sub">Aqu\u00ED aparecer\u00E1n tus fletes completados.</div></div>';
+    return;
+  }
+
+  // Nombres de la otra parte
+  const otherIds = [...new Set(pagos.map(p => p.cliente_id === userId ? p.conductor_id : p.cliente_id).filter(Boolean))];
+  const { data: perfilesOtros } = otherIds.length > 0
+    ? await sb.from('perfiles').select('id, nombre').in('id', otherIds)
+    : { data: [] };
+  const nombresMap = {};
+  (perfilesOtros||[]).forEach(p => nombresMap[p.id] = p.nombre);
+
+  // Info de carga via conversaciones
+  const convIds = [...new Set(pagos.map(p => p.conversacion_id).filter(Boolean))];
+  const cargaMap = {};
+  if(convIds.length > 0) {
+    const { data: convs } = await sb.from('conversaciones').select('id, carga_id').in('id', convIds);
+    const convToCarga = {};
+    (convs||[]).forEach(cv => { if(cv.carga_id) convToCarga[cv.id] = cv.carga_id; });
+    const cargaIds = [...new Set(Object.values(convToCarga).filter(Boolean))];
+    if(cargaIds.length > 0) {
+      const { data: cargas } = await sb.from('cargas').select('id, origen, destino, icon').in('id', cargaIds);
+      const cargasById = {};
+      (cargas||[]).forEach(cg => cargasById[cg.id] = cg);
+      pagos.forEach(p => {
+        const cargaId = p.conversacion_id ? convToCarga[p.conversacion_id] : null;
+        if(cargaId && cargasById[cargaId]) cargaMap[p.id] = cargasById[cargaId];
+      });
+    }
+  }
+
+  if(sct) sct.textContent = pagos.length;
+  sw.innerHTML = pagos.map(p => {
+    const esCliente = p.cliente_id === userId;
+    const otherId   = esCliente ? p.conductor_id : p.cliente_id;
+    const otroNombre = nombresMap[otherId] || (esCliente ? 'Conductor' : 'Cliente');
+    const carga = cargaMap[p.id];
+    const icon  = carga?.icon || '\uD83D\uDE9B';
+    const ruta  = carga ? `${h(carga.origen)} \u2192 ${h(carga.destino)}` : 'Servicio completado';
+    const monto = (p.monto||0).toLocaleString('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0});
+    const fecha = p.created_at ? new Date(p.created_at).toLocaleDateString('es-CO') : '';
+    const rol   = esCliente ? 'Cliente' : 'Conductor';
+    const badge = p.estado === 'LIBERADO'
+      ? `<span class="pub-status2" style="color:var(--verde);background:rgba(0,200,100,0.1);">\u2705 Completado</span>`
+      : `<span class="pub-status2" style="color:#e67e22;background:rgba(230,126,34,0.1);">\u21A9\uFE0F Reembolso</span>`;
+    return `<div class="pub-item" style="opacity:0.9;"><div class="pub-icon">${icon}</div><div style="flex:1;min-width:120px;"><div style="font-weight:700;font-size:13px;margin-bottom:2px;">${ruta}</div><div style="font-size:12px;color:var(--texto);">${h(otroNombre)} \u00B7 ${monto}</div><div style="font-size:11px;color:var(--texto);opacity:0.6;">${rol} \u00B7 ${fecha}</div></div>${badge}</div>`;
+  }).join('');
+}
 async function eliminarRuta(id, btn) {
   if(id && !id.startsWith('undefined')) await sb.from('rutas').update({estado:'eliminada'}).eq('id',id);
   btn.closest('.pub-item').remove();
@@ -4922,7 +5115,16 @@ async function cargarMensajes(convId) {
           .order('created_at', { ascending: false }).limit(1);
         const estadoPago = pagosData?.[0]?.estado;
 
-        if(estadoPago === 'LIBERADO' || tieneEntregaConfirmada) {
+        if(estadoPago === 'EN_DISPUTA') {
+          // Disputa abierta
+          setBotonesSegunEstadoPago('en_disputa');
+          if(ppForm) ppForm.style.display = 'none';
+          if(ppExitoso) ppExitoso.style.display = 'none';
+          if(ppCompletado) ppCompletado.style.display = 'none';
+          const ppDisputa = document.getElementById('pp-disputa2');
+          if(ppDisputa) ppDisputa.style.display = 'block';
+          actualizarEscrowBar('EN_DISPUTA');
+        } else if(estadoPago === 'LIBERADO' || tieneEntregaConfirmada) {
           // Entrega ya confirmada (detectado por pago LIBERADO o mensaje)
           setBotonesSegunEstadoPago('entregado');
           if(ppForm) ppForm.style.display = 'none';
@@ -4971,6 +5173,17 @@ function renderMensaje(m) {
   const div = document.createElement('div');
   div.className = `msg-g ${tipo}`;
   div.dataset.msgId = m.id;
+  if(m.tipo === 'disputa') {
+    div.className = 'msg-g';
+    div.innerHTML = `<div class="sys-msg" style="background:rgba(220,38,38,0.07);border:1px solid rgba(220,38,38,0.2);border-radius:12px;padding:12px 16px;">
+      <div style="font-weight:700;color:var(--rojo);margin-bottom:3px;">⚠️ Disputa abierta</div>
+      <div style="font-size:12px;color:var(--texto);">${h(m.contenido)}</div>
+      <div style="font-size:10px;color:var(--texto);margin-top:4px;opacity:0.7;">El equipo de fletescolombia revisará el caso en menos de 24h</div>
+    </div>`;
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+    return;
+  }
   if(m.tipo === 'entrega_confirmada') {
       // Mostrar mensaje de entrega y actualizar UI
       if(perfilActual?.rol === 'cliente') {
@@ -5046,7 +5259,7 @@ function renderMensaje(m) {
   } else if(m.tipo === 'oferta') {
     div.innerHTML = `<div class="msg-row2" style="${esMio?'flex-direction:row-reverse':''}"><div class="msg-av2">${esMio?'🧑':'👨'}</div><div><div style="background:rgba(245,196,0,0.07);border:1px solid rgba(245,196,0,0.18);border-radius:6px;padding:13px 15px;"><div style="font-weight:700;font-size:12px;color:var(--amarillo);margin-bottom:3px;">💰 ${esMio?'Mi oferta':'Oferta recibida'}</div><div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;margin-bottom:5px;">$${parseInt(m.oferta_monto).toLocaleString('es-CO')} COP</div>${!esMio?`<div style="display:flex;gap:8px;margin-top:8px;"><button onclick="aceptarOfertaReal(${m.oferta_monto})" style="background:var(--verde);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">✅ Aceptar</button></div>`:''}</div><div class="msg-time2">${hora}</div></div></div>`;
   } else {
-    div.innerHTML = `<div class="msg-row2" style="${esMio?'flex-direction:row-reverse':''}"><div class="msg-av2">${esMio?'🧑':'👨'}</div><div><div class="bubble">${m.contenido}</div><div class="msg-time2">${hora}${esMio?' · ✓✓':''}</div></div></div>`;
+    div.innerHTML = `<div class="msg-row2" style="${esMio?'flex-direction:row-reverse':''}"><div class="msg-av2">${esMio?'🧑':'👨'}</div><div><div class="bubble">${h(m.contenido)}</div><div class="msg-time2">${hora}${esMio?' · ✓✓':''}</div></div></div>`;
   }
   wrap.appendChild(div);
 }
@@ -5148,7 +5361,11 @@ async function cargarConversaciones(convActivaId) {
   let nombresMap = {};
   if(otrosIds.length > 0) {
     const { data: perfiles } = await sb.from('usuarios').select('id, nombre, apellido').in('id', otrosIds);
-    (perfiles||[]).forEach(p => { nombresMap[p.id] = `${p.nombre||''} ${p.apellido||''}`.trim(); });
+    (perfiles||[]).forEach(p => {
+      const n = `${p.nombre||''} ${p.apellido||''}`.trim();
+      nombresMap[p.id] = n;
+      _nombresCache[p.id] = n; // cache global para notificaciones
+    });
   }
 
   const list = document.getElementById('conv-list');
@@ -5299,7 +5516,7 @@ async function enviarMsg() {
   divTemp.className = 'msg-g mine';
   divTemp.id = 'msg-temp';
   divTemp.dataset.msgId = 'temp-sending';
-  divTemp.innerHTML = `<div class="msg-row2" style="flex-direction:row-reverse"><div class="msg-av2">🧑</div><div><div class="bubble">${txt}</div><div class="msg-time2">${hora} · ⏳</div></div></div>`;
+  divTemp.innerHTML = `<div class="msg-row2" style="flex-direction:row-reverse"><div class="msg-av2">🧑</div><div><div class="bubble">${h(txt)}</div><div class="msg-time2">${hora} · ⏳</div></div></div>`;
   wrap.appendChild(divTemp);
   wrap.scrollTop = wrap.scrollHeight;
 
@@ -5411,7 +5628,7 @@ function addMsg(txt,tipo) {
   const hora=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
   const div=document.createElement('div');
   div.className=`msg-g ${tipo}`;
-  div.innerHTML=`<div class="msg-row2" style="${tipo==='mine'?'flex-direction:row-reverse':''}"><div class="msg-av2">${tipo==='mine'?'🧑':'👨'}</div><div><div class="bubble">${txt}</div><div class="msg-time2">${hora}${tipo==='mine'?' · ✓✓':''}</div></div></div>`;
+  div.innerHTML=`<div class="msg-row2" style="${tipo==='mine'?'flex-direction:row-reverse':''}"><div class="msg-av2">${tipo==='mine'?'🧑':'👨'}</div><div><div class="bubble">${h(txt)}</div><div class="msg-time2">${hora}${tipo==='mine'?' · ✓✓':''}</div></div></div>`;
   wrap.appendChild(div);
   wrap.scrollTop=wrap.scrollHeight;
 }
@@ -5477,7 +5694,22 @@ async function aceptarOfertaReal(monto) {
 async function prepararWompiConMonto(monto) {
   if(!perfilActual) { toast('Debes iniciar sesion', 'error'); return; }
   if(!verificarRegistroParaAccion('realizar el pago')) return;
+
+  // Leer monto desde Supabase para evitar manipulación del cliente
+  if(convActual?.id && convActual.id !== 'demo') {
+    const { data: conv, error: convErr } = await sb.from('conversaciones')
+      .select('precio_acordado')
+      .eq('id', convActual.id)
+      .single();
+    if(convErr || !conv?.precio_acordado || conv.precio_acordado < 1000) {
+      toast('No hay un precio acordado para esta conversación', 'error');
+      return;
+    }
+    monto = conv.precio_acordado;
+  }
+
   if(!monto || monto < 1000) { toast('Monto invalido', 'error'); return; }
+
   // Bloquear si ya existe un pago para esta conversación
   if(convActual?.id) {
     const { data: pagosExistentes } = await sb.from('pagos')
@@ -6044,7 +6276,7 @@ function renderMsgSoporte(msg) {
   div.className = 'smsg ' + (esUser ? 'user' : 'admin-reply');
   div.dataset.msgId = msg.id;
   if (!esUser) div.innerHTML = `<div class="smsg-name">⚡ Soporte fletescolombia</div>`;
-  div.innerHTML += `<div>${msg.mensaje}</div><div class="smsg-time">${formatHoraS(msg.created_at)}</div>`;
+  div.innerHTML += `<div>${h(msg.mensaje)}</div><div class="smsg-time">${formatHoraS(msg.created_at)}</div>`;
   return div;
 }
 
@@ -6126,6 +6358,71 @@ async function enviarMensajeSoporte() {
     btn.disabled = false;
   }
 }
+
+// ══ SISTEMA DE DISPUTAS ══
+function abrirModalDisputa() {
+  const modal = document.getElementById('modal-disputa');
+  if(modal) { modal.style.display = 'flex'; }
+  document.getElementById('disputa-motivo').value = '';
+  document.getElementById('disputa-detalle').value = '';
+  document.getElementById('disputa-error').style.display = 'none';
+}
+
+function cerrarModalDisputa() {
+  const modal = document.getElementById('modal-disputa');
+  if(modal) modal.style.display = 'none';
+}
+
+async function confirmarDisputa() {
+  const motivo = document.getElementById('disputa-motivo').value;
+  const detalle = document.getElementById('disputa-detalle').value.trim();
+  const errEl = document.getElementById('disputa-error');
+
+  if(!motivo) {
+    errEl.textContent = 'Selecciona un motivo para continuar.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const razon = detalle ? `${motivo} — ${detalle}` : motivo;
+
+  try {
+    // Marcar pago como EN_DISPUTA
+    if(convActual?.id) {
+      await sb.from('pagos')
+        .update({ estado: 'EN_DISPUTA', disputa_razon: razon })
+        .eq('conversacion_id', convActual.id)
+        .in('estado', ['APPROVED', 'pendiente']);
+
+      // Insertar mensaje de disputa en el chat
+      await sb.from('mensajes').insert({
+        conversacion_id: convActual.id,
+        emisor_id: perfilActual.id,
+        contenido: razon,
+        tipo: 'disputa'
+      });
+    }
+
+    cerrarModalDisputa();
+
+    // Actualizar UI
+    const ppExitoso = document.getElementById('pp-exitoso2');
+    const ppDisputa = document.getElementById('pp-disputa2');
+    if(ppExitoso) ppExitoso.style.display = 'none';
+    if(ppDisputa) {
+      ppDisputa.style.display = 'block';
+      const razonTxt = document.getElementById('disputa-razon-txt');
+      if(razonTxt) razonTxt.textContent = razon;
+    }
+
+    actualizarEscrowBar('EN_DISPUTA');
+    setBotonesSegunEstadoPago('en_disputa');
+    toast('⚠️ Disputa reportada. Te contactaremos en menos de 24h.', 'info');
+  } catch(e) {
+    errEl.textContent = 'Error al abrir la disputa. Intenta de nuevo.';
+    errEl.style.display = 'block';
+  }
+}
 </script>
 
 <!-- MODAL PERFIL CONDUCTOR -->
@@ -6148,84 +6445,29 @@ async function enviarMensajeSoporte() {
   </div>
 </div>
 
-<!-- ══ MODAL RECORTE DE DOCUMENTO ══ -->
-<div id="crop-modal" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;padding:16px;">
-  <div style="background:#1a1a1a;border:1px solid #333;border-radius:18px;padding:20px;width:min(96vw,520px);display:flex;flex-direction:column;gap:14px;max-height:95vh;overflow:hidden;">
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;color:#fff;">✂️ Recorta el documento</div>
-        <div style="font-size:12px;color:#888;margin-top:2px;">Ajusta el recuadro para que quede solo el documento</div>
-      </div>
-      <button onclick="cancelarCrop()" style="background:#333;border:none;border-radius:50%;width:32px;height:32px;color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;">×</button>
+<!-- ══ MODAL DISPUTA ══ -->
+<div id="modal-disputa" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--gris1);border-radius:18px;padding:24px;width:min(96vw,420px);display:flex;flex-direction:column;gap:14px;">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;color:var(--rojo);">⚠️ Abrir disputa</div>
+    <div style="font-size:13px;color:var(--texto);line-height:1.6;">Describe qué salió mal. Nuestro equipo revisará el caso en <strong>menos de 24 horas</strong> y decidirá si liberar el pago al conductor o realizar un reembolso.</div>
+    <div>
+      <div style="font-size:11px;color:var(--texto);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;">Motivo de la disputa</div>
+      <select id="disputa-motivo" style="width:100%;background:var(--gris2);border:1.5px solid var(--gris4);border-radius:9px;padding:10px 12px;color:var(--blanco);font-size:13px;font-family:'Inter',sans-serif;outline:none;margin-bottom:8px;">
+        <option value="">Selecciona un motivo...</option>
+        <option>La carga llegó dañada</option>
+        <option>El conductor no hizo la entrega</option>
+        <option>La carga llegó incompleta</option>
+        <option>El conductor no cumplió lo acordado</option>
+        <option>Otro motivo</option>
+      </select>
+      <textarea id="disputa-detalle" style="width:100%;background:var(--gris2);border:1.5px solid var(--gris4);border-radius:9px;padding:10px 12px;color:var(--blanco);font-size:12px;font-family:'Inter',sans-serif;outline:none;resize:none;" rows="3" placeholder="Describe el problema con más detalle (opcional)..."></textarea>
     </div>
-    <div style="border-radius:10px;overflow:hidden;background:#000;max-height:58vh;">
-      <img id="crop-img" style="display:block;max-width:100%;">
-    </div>
-    <div style="font-size:11px;color:#666;text-align:center;">Arrastra el recuadro · Esquinas para redimensionar</div>
+    <div id="disputa-error" style="font-size:11px;color:var(--rojo);display:none;"></div>
     <div style="display:flex;gap:10px;">
-      <button onclick="cancelarCrop()" style="flex:1;padding:13px;background:#2a2a2a;border:1px solid #444;border-radius:10px;color:#aaa;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;font-size:13px;">Cancelar</button>
-      <button id="crop-confirm-btn" onclick="confirmarCrop()" style="flex:2;padding:13px;background:var(--amarillo);color:#fff;border:none;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;cursor:pointer;">✅ Confirmar recorte</button>
+      <button onclick="cerrarModalDisputa()" style="flex:1;padding:12px;background:var(--gris3);border:1px solid var(--gris4);border-radius:10px;color:var(--texto);cursor:pointer;font-family:'Inter',sans-serif;">Cancelar</button>
+      <button onclick="confirmarDisputa()" style="flex:2;padding:12px;background:var(--rojo);color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:15px;">⚠️ Confirmar disputa</button>
     </div>
   </div>
 </div>
-
-<script>
-// ══ CROP DE DOCUMENTOS (Cropper.js) ══
-let _cropperInst = null;
-let _cropCallback = null;
-
-function abrirCrop(file, callback) {
-  _cropCallback = callback;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const modal = document.getElementById('crop-modal');
-    modal.style.display = 'flex';
-    const img = document.getElementById('crop-img');
-    if(_cropperInst) { _cropperInst.destroy(); _cropperInst = null; }
-    img.src = '';
-    img.onload = function() {
-      _cropperInst = new Cropper(img, {
-        viewMode: 1,
-        dragMode: 'move',
-        autoCropArea: 0.88,
-        guides: true,
-        center: true,
-        highlight: true,
-        cropBoxMovable: true,
-        cropBoxResizable: true,
-        toggleDragModeOnDblclick: false,
-        responsive: true,
-        minContainerHeight: 200,
-      });
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-function confirmarCrop() {
-  if(!_cropperInst) return;
-  const btn = document.getElementById('crop-confirm-btn');
-  if(btn) { btn.disabled = true; btn.textContent = '⏳ Procesando...'; }
-  _cropperInst.getCroppedCanvas({ maxWidth: 1600, maxHeight: 1600, imageSmoothingEnabled: true, imageSmoothingQuality: 'high' })
-    .toBlob(function(blob) {
-      cerrarCrop();
-      if(_cropCallback) { _cropCallback(blob); _cropCallback = null; }
-    }, 'image/jpeg', 0.93);
-}
-
-function cancelarCrop() {
-  cerrarCrop();
-  if(_cropCallback) { _cropCallback(null); _cropCallback = null; }
-}
-
-function cerrarCrop() {
-  const modal = document.getElementById('crop-modal');
-  if(modal) modal.style.display = 'none';
-  if(_cropperInst) { _cropperInst.destroy(); _cropperInst = null; }
-  const btn = document.getElementById('crop-confirm-btn');
-  if(btn) { btn.disabled = false; btn.textContent = '✅ Confirmar recorte'; }
-}
-</script>
 </body>
 </html>
