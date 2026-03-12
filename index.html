@@ -195,9 +195,17 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
 .loc-banner.gps{background:rgba(0,212,106,0.05);border-bottom-color:rgba(0,212,106,0.15);}
 .rutas-wrap{display:grid;grid-template-columns:1fr 340px;flex:1;min-height:0;overflow:hidden;}
 .rutas-list{padding:0 24px 100px;display:flex;flex-direction:column;gap:12px;}
-.carrusel-slide{min-width:100%;height:110px;background-size:cover;background-position:center;cursor:pointer;border-radius:6px;}
-.carrusel-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.4);cursor:pointer;transition:all 0.2s;}
-.carrusel-dot.active{background:#fff;width:18px;border-radius:3px;}@media(min-width:701px){#carrusel-wrap{padding:16px 24px 8px;}#carrusel-container{height:200px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);max-width:960px;margin:0 auto;}.carrusel-slide{border-radius:12px;}}
+.carrusel-slide{min-width:100%;height:200px;background-size:cover;background-position:center;cursor:pointer;border-radius:0;}
+.carrusel-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.5);cursor:pointer;transition:all 0.2s;}
+.carrusel-dot.active{background:#fff;width:24px;border-radius:4px;}
+@media(min-width:701px){
+  #carrusel-wrap{padding:0;margin-bottom:8px;}
+  #carrusel-container{height:440px;border-radius:0;box-shadow:none;width:100%;max-width:100%;}
+  .carrusel-slide{height:440px;background-size:cover;background-position:center;}
+  #carrusel-dots{bottom:16px;}
+  .carrusel-dot{width:10px;height:10px;}
+  .carrusel-dot.active{width:28px;}
+}
 .ruta-card{background:var(--gris2);border:1px solid rgba(0,0,0,0.04);border-radius:8px;padding:18px;cursor:pointer;transition:all 0.2s;position:relative;}
 .ruta-card::before{content:'';position:absolute;left:0;top:15%;bottom:15%;width:3px;background:transparent;transition:background 0.2s;border-radius:0 2px 2px 0;}
 .ruta-card:hover{border-color:rgba(0,0,0,0.08);}
@@ -820,14 +828,14 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
   </div>
 
   <!-- CARRUSEL PUBLICITARIO -->
-  <div id="carrusel-wrap" style="padding:0 16px 12px;display:none;">
-    <div style="position:relative;border-radius:6px;overflow:hidden;height:110px;background:var(--gris2);" id="carrusel-container">
-      <div id="carrusel-slides" style="display:flex;transition:transform 0.4s ease;height:100%;"></div>
+  <div id="carrusel-wrap" style="padding:0;display:none;">
+    <div style="position:relative;overflow:hidden;height:200px;background:var(--gris2);width:100%;" id="carrusel-container">
+      <div id="carrusel-slides" style="display:flex;transition:transform 0.45s cubic-bezier(.4,0,.2,1);height:100%;"></div>
       <!-- Dots -->
-      <div id="carrusel-dots" style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:5px;"></div>
+      <div id="carrusel-dots" style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:2;"></div>
       <!-- Flechas -->
-      <button onclick="carruselPrev()" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.5);border:none;color:#fff;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:14px;">‹</button>
-      <button onclick="carruselNext()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.5);border:none;color:#fff;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:14px;">›</button>
+      <button onclick="carruselPrev()" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);border:none;color:#fff;border-radius:50%;width:40px;height:40px;cursor:pointer;font-size:20px;z-index:2;transition:background 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.7)'" onmouseout="this.style.background='rgba(0,0,0,0.4)'">‹</button>
+      <button onclick="carruselNext()" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);border:none;color:#fff;border-radius:50%;width:40px;height:40px;cursor:pointer;font-size:20px;z-index:2;transition:background 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.7)'" onmouseout="this.style.background='rgba(0,0,0,0.4)'">›</button>
     </div>
   </div>
 
