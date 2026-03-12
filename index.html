@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -1482,7 +1482,7 @@ function pushNotif(titulo, cuerpo, tag) {
 // ══ SUPABASE INIT ══
 // Registrar Service Worker
 // ══ WOMPI CONFIG ══
-const WOMPI_PUBLIC_KEY = 'pub_test_PKG7uFnDqNkrSa6LaITeGmGqQRe8MlCk';
+const WOMPI_PUBLIC_KEY = 'pub_prod_KqiBYlv2dRrcAOUj3tBuezZqfZ3CqMle';
 let montoAcordado = 0;
 
 // Obtiene el hash de integridad desde la Edge Function de Supabase
@@ -2040,7 +2040,7 @@ function compartirRecibo() {
 ` : '') +
     `
 _fletescolombia — Transporte seguro_
-fletecol.vercel.app`;
+www.fletescolombia.com`;
 
   if(navigator.share) {
     navigator.share({ title: 'Recibo fletescolombia', text: texto })
