@@ -2337,7 +2337,8 @@ async function manejarSesion(session) {
   if(!perfilActual && session.user.email) {
     const nombreCompleto = session.user.user_metadata?.full_name || '';
     const partes = nombreCompleto.split(' ');
-    // Google: cliente aprobado automáticamente, sin pasos extra ni formularios
+    // Google: cliente aprobado automáticamente por defecto
+    // Si elige conductor después, se actualiza a incompleto
     const { error } = await sb.from('usuarios').upsert({
       auth_id:           session.user.id,
       nombre:            partes[0] || 'Usuario',
@@ -2349,7 +2350,10 @@ async function manejarSesion(session) {
       foto_perfil:       session.user.user_metadata?.avatar_url || null
     }, { onConflict: 'auth_id', ignoreDuplicates: true });
     if(error) { console.error('Error creando perfil Google:', error); }
-    else { await cargarPerfil(); }
+    else {
+      localStorage.setItem('google_nuevo', '1'); // mostrar selector rol UNA vez
+      await cargarPerfil();
+    }
   }
 
   const vieneDePago = await verificarRetornoWompi();
@@ -2704,13 +2708,14 @@ async function redirigirSegunEstado() {
   const estado = perfilActual.estado;
   if(estado === 'aprobado') {
     await irApp('s-rutas');
-  } else if(estado === 'incompleto') {
-    await irApp('s-rutas');
-    // Solo mostrar selector de rol si aún no ha elegido (rol sigue en 'cliente' por defecto)
-    // Si ya eligió conductor y está incompleto (faltan docs), NO volver a preguntar
-    if(!perfilActual.rol || perfilActual.rol === 'cliente') {
+    // Solo para usuarios nuevos de Google: preguntar si son conductor
+    if(localStorage.getItem('google_nuevo')) {
       setTimeout(() => mostrarSelectorRolGoogle(), 800);
     }
+  } else if(estado === 'incompleto') {
+    await irApp('s-rutas');
+    // Conductor que eligió su rol pero aún no subió docs → no volver a preguntar
+    // (el modal ya se mostró cuando eran clientes aprobados nuevos)
   } else if(estado === 'pendiente') {
     // Conductor que ya envió docs → puede explorar pero no actuar
     await irApp('s-rutas');
@@ -3027,25 +3032,21 @@ async function confirmarRolInicial() {
   if(!_rolInicialSeleccionado) return;
   const modal = document.getElementById('modal-rol-inicial');
   if(modal) modal.remove();
+  localStorage.removeItem('google_nuevo'); // consumir flag — no volver a mostrar
 
   if(_rolInicialSeleccionado === 'cliente') {
-    // Cliente → aprobar automáticamente, sin documentos
-    const { error } = await sb.from('usuarios')
-      .update({ rol: 'cliente', estado: 'aprobado' })
-      .eq('auth_id', usuarioActual.id);
-    if(!error) {
-      await cargarPerfil();
-      toast('✅ ¡Bienvenido! Ya puedes usar fletescolombia', 'success');
-    }
+    // Cliente → ya está aprobado (se creó así), solo cerrar el modal
+    toast('✅ ¡Bienvenido a fletescolombia!', 'success');
   } else {
-    // Conductor → queda incompleto, entra a explorar la app libremente
+    // Conductor → actualizar rol a conductor + incompleto para subir docs
     const { error } = await sb.from('usuarios')
       .update({ rol: 'conductor', estado: 'incompleto' })
       .eq('auth_id', usuarioActual.id);
     if(!error) {
       await cargarPerfil();
-      await irApp('s-rutas');
-      toast('🚛 Bienvenido a fletescolombia. Explora la app y completa tu registro cuando quieras.', 'info');
+      toast('🚛 Bienvenido. Completa tu registro para empezar a recibir cargas.', 'info');
+      // Mostrar el modal de documentos del conductor
+      setTimeout(() => irRegistroIncompleto(), 400);
     }
   }
 }
