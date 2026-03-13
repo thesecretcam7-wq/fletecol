@@ -2652,7 +2652,11 @@ async function redirigirSegunEstado() {
     await irApp('s-rutas');
   } else if(estado === 'incompleto') {
     await irApp('s-rutas');
-    setTimeout(() => mostrarSelectorRolGoogle(), 800);
+    // Solo mostrar selector de rol si aún no ha elegido (rol sigue en 'cliente' por defecto)
+    // Si ya eligió conductor y está incompleto (faltan docs), NO volver a preguntar
+    if(!perfilActual.rol || perfilActual.rol === 'cliente') {
+      setTimeout(() => mostrarSelectorRolGoogle(), 800);
+    }
   } else if(estado === 'pendiente') {
     // Conductor que ya envió docs → puede explorar pero no actuar
     await irApp('s-rutas');
@@ -2915,7 +2919,10 @@ async function login() {
 async function loginGoogle() {
   await sb.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: window.location.origin }
+    options: {
+      redirectTo: window.location.origin,
+      queryParams: { prompt: 'select_account' }
+    }
   });
 }
 
