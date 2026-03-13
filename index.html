@@ -5640,37 +5640,18 @@ async function enviarMsg() {
   mensajesPendientes.push(pendiente);
 
   try {
-    console.log('[enviar] Intentando insert via fetch...');
-    // Usar fetch con timeout y AbortController
-    const { data: { session } } = await sb.auth.getSession();
-    const token = session?.access_token;
-    const abortCtrl = new AbortController();
-    const abortTimer = setTimeout(() => abortCtrl.abort(), 6000);
-    const fetchRes = await fetch('https://sorldaixuzpqlyqdcedi.supabase.co/rest/v1/mensajes?select=*', {
-      signal: abortCtrl.signal,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token,
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvcmxkYWl4dXpwcWx5cWRjZWRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMjkxODIsImV4cCI6MjA4NzcwNTE4Mn0.L1RjnhY62XiBltYHaT0vciFY9SHSrKbiM3GA8Buy89Q',
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify({
+    console.log('[enviar] Intentando insert...');
+    const { data: msg, error: errMsg } = await Promise.race([
+      sb.from('mensajes').insert({
         conversacion_id: pendiente.conversacion_id,
         emisor_id: pendiente.emisor_id,
         contenido: pendiente.contenido,
         tipo: pendiente.tipo
-      })
-    });
-    clearTimeout(abortTimer);
-    if(!fetchRes.ok) {
-      const errTxt = await fetchRes.text();
-      throw new Error('HTTP ' + fetchRes.status + ': ' + errTxt);
-    }
-    const msgs = await fetchRes.json();
-    const msg = Array.isArray(msgs) ? msgs[0] : msgs;
+      }).select().single(),
+      new Promise((_,reject) => setTimeout(() => reject(new Error('Timeout')), 8000))
+    ]);
+    if(errMsg) throw errMsg;
     console.log('[enviar] OK:', msg?.id);
-    const errMsg = null;
 
     // Éxito — quitar de pendientes y marcar como enviado
     mensajesPendientes = mensajesPendientes.filter(p => p.id !== pendiente.id);
