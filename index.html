@@ -2288,6 +2288,7 @@ function suscribirBuscador() {
 // ══ INIT ══
 let estadoSub = null;
 let _authListo = false;
+let _appLista = false;
 
 async function init() {
   try {
@@ -2425,11 +2426,11 @@ document.addEventListener('visibilitychange', async () => {
 (async function restaurarEstado() {
   // Esperar a que la autenticación complete — en mobile puede tardar más de 1 segundo
   let waited = 0;
-  while((!perfilActual || !usuarioActual) && waited < 5000) {
+  while((!perfilActual || !usuarioActual || !_appLista) && waited < 6000) {
     await new Promise(r => setTimeout(r, 300));
     waited += 300;
   }
-  if(!perfilActual || !usuarioActual) return; // sin sesión, no restaurar nada
+  if(!perfilActual || !usuarioActual || !_appLista) return; // sin sesión o app no lista
 
   const pantalla = localStorage.getItem('fl_pantalla');
   const savedConv = localStorage.getItem('fl_conv');
@@ -2447,19 +2448,15 @@ document.addEventListener('visibilitychange', async () => {
   const pantallasSegurasApp = ['s-rutas','s-publicar','s-chat','s-pagos','s-perfil','s-mis'];
   if(pantalla && pantallasSegurasApp.includes(pantalla)) {
     localStorage.removeItem('fl_pantalla');
-    // Solo restaurar si actualmente estamos en una pantalla de app (no sobreescribir si ya navegamos)
-    const pantallaHoy = document.querySelector('.screen.activa')?.id || '';
-    if(pantallasSegurasApp.includes(pantallaHoy)) {
-      const el = document.getElementById(pantalla);
-      if(el) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('activa'));
-        el.classList.add('activa');
-        try {
-          if(pantalla === 's-rutas') { cargandoRutas = false; cargarRutas(); }
-          if(pantalla === 's-chat') { await cargarConversaciones(convActual?.id); if(convActual?.id) await abrirConvExistente(convActual.id); }
-          if(pantalla === 's-pagos') { await cargarCuentaBancaria(); }
-        } catch(e) { console.warn('[restaurar] Error:', e.message); }
-      }
+    const el = document.getElementById(pantalla);
+    if(el) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('activa'));
+      el.classList.add('activa');
+      try {
+        if(pantalla === 's-rutas') { cargandoRutas = false; cargarRutas(); }
+        if(pantalla === 's-chat') { await cargarConversaciones(convActual?.id); if(convActual?.id) await abrirConvExistente(convActual.id); }
+        if(pantalla === 's-pagos') { await cargarCuentaBancaria(); }
+      } catch(e) { console.warn('[restaurar] Error:', e.message); }
     }
   } else {
     localStorage.removeItem('fl_pantalla'); // limpiar cualquier basura
@@ -2882,6 +2879,7 @@ function verificarBannerDocs() {
 async function irApp(screenId) {
   detenerPolling(); // ya no necesitamos verificar
   ir(screenId);
+  _appLista = true;
   document.getElementById('bottom-nav').classList.add('visible');
   const map = {'s-rutas':0,'s-publicar':1,'s-chat':2,'s-pagos':3,'s-perfil':4};
   document.querySelectorAll('.bnav-item').forEach((b,i) => b.classList.toggle('active', i === map[screenId]));
