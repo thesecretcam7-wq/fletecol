@@ -561,12 +561,7 @@ tbody tr:hover { background:rgba(0,0,0,0.02); }
           <thead><tr>
             <th>Evento</th><th>Usuario</th><th>Fecha</th><th>Estado</th>
           </tr></thead>
-          <tbody>
-            <tr><td>Nuevo registro</td><td>Carlos Mendoza</td><td>Hoy 9:14am</td><td><span class="badge pending">Pendiente</span></td></tr>
-            <tr><td>Nuevo registro</td><td>Luisa Jiménez</td><td>Hoy 8:50am</td><td><span class="badge pending">Pendiente</span></td></tr>
-            <tr><td>Nuevo registro</td><td>Pedro Transportes</td><td>Ayer 4:22pm</td><td><span class="badge pending">Pendiente</span></td></tr>
-            <tr><td>Ruta publicada</td><td>—</td><td>Ayer 2:10pm</td><td><span class="badge active">Activa</span></td></tr>
-          </tbody>
+          <tbody id="tbody-actividad"></tbody>
         </table>
       </div>
     </div>
@@ -1105,6 +1100,37 @@ function renderTables() {
           </div>
         </td>
       </tr>`).join('');
+
+  // Actividad reciente (últimos 10 usuarios por updated_at o created_at)
+  const tbAct = document.getElementById('tbody-actividad');
+  if(tbAct) {
+    const todos = [...usuarios, ...baneados]
+      .sort((a,b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
+      .slice(0, 10);
+    tbAct.innerHTML = todos.length === 0
+      ? `<tr><td colspan="4"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">Sin actividad</div></div></td></tr>`
+      : todos.map(u => {
+          const esNuevo = u.estado === 'pendiente' && u.created_at === u.updated_at;
+          const evento  = u.estado === 'aprobado'  ? 'Usuario aprobado'
+                        : u.estado === 'rechazado' ? 'Usuario rechazado'
+                        : u.estado === 'baneado'   ? 'Usuario baneado'
+                        : 'Nuevo registro';
+          const badgeCls = u.estado === 'aprobado'  ? 'approved'
+                         : u.estado === 'rechazado' ? 'rejected'
+                         : u.estado === 'baneado'   ? 'rejected'
+                         : 'pending';
+          const badgeTxt = u.estado === 'aprobado'  ? 'Aprobado'
+                         : u.estado === 'rechazado' ? 'Rechazado'
+                         : u.estado === 'baneado'   ? 'Baneado'
+                         : 'Pendiente';
+          return `<tr>
+            <td>${evento}</td>
+            <td>${h(nombreCompleto(u))}</td>
+            <td>${fechaRelativa(u.updated_at || u.created_at)}</td>
+            <td><span class="badge ${badgeCls}">${badgeTxt}</span></td>
+          </tr>`;
+        }).join('');
+  }
 
   // Baneados
   const tbB = document.getElementById('tbody-baneados');
