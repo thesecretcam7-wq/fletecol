@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fletecol-v1';
+const CACHE_NAME = 'fletescolombia-v2';
 
 const STATIC_ASSETS = [
   '/',
@@ -36,7 +36,7 @@ self.addEventListener('fetch', event => {
     url.hostname.includes('emailjs.com') ||
     url.protocol === 'chrome-extension:'
   ) {
-    return; // dejar pasar sin interceptar
+    return;
   }
 
   // Fuentes Google: cache-first
@@ -65,22 +65,42 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// ── PUSH NOTIFICATIONS ──
+// ── PUSH NOTIFICATIONS (app cerrada) ──
 self.addEventListener('push', event => {
-  if (!event.data) return;
-  const data = event.data.json();
+  let data = { title: 'fletescolombia', body: 'Tienes un mensaje nuevo' };
+  try { if (event.data) data = { ...data, ...event.data.json() }; } catch(e) {}
+
+  const options = {
+    body:    data.body,
+    icon:    '/icons/icon-192.png',
+    badge:   '/icons/icon-96.png',
+    vibrate: [200, 100, 200],
+    tag:     data.tag || 'fletescolombia',
+    renotify: true,
+    silent:  false,
+    data:    { url: data.url || '/' }
+  };
+
   event.waitUntil(
-    self.registration.showNotification(data.title || 'FleteCOL', {
-      body:    data.body || 'Hay una nueva ruta disponible',
-      icon:    '/icons/icon-192.png',
-      badge:   '/icons/icon-96.png',
-      vibrate: [200, 100, 200],
-      data:    { url: data.url || '/' }
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// ── CLICK en notificación → abrir la app ──
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      // Si ya hay una ventana abierta, enfocarla
+      const existing = list.find(c => c.url.includes(self.location.origin));
+      if (existing) { existing.focus(); return; }
+      return clients.openWindow(url);
     })
   );
 });
 
-self.addEventListener('notificationclick', event => {
-  event.notification.close();
-  event.waitUntil(clients.openWindow(event.notification.data.url || '/'));
+// ── Mensaje desde la app para guardar subscription ──
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
