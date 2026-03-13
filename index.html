@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -917,7 +917,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
           </div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label class="form-label">📍 Origen</label><input class="form-input" id="r-origen" placeholder="Bogotá" autocomplete="off" oninput="acBarrios('r-origen','r-origen-list')"><div id="r-origen-list" class="ac-list" style="display:none;"></div></div>
+          <div class="form-group"><label class="form-label">🏙️ Ciudad de publicación</label><select class="form-input" id="r-ciudad"><option value="">Selecciona ciudad...</option><option>Bogotá</option><option>Medellín</option><option>Cali</option><option>Barranquilla</option><option>Cartagena</option><option>Bucaramanga</option><option>Manizales</option><option>Pereira</option><option>Santa Marta</option><option>Cúcuta</option><option>Ibagué</option><option>Villavicencio</option><option>Pasto</option><option>Armenia</option><option>Montería</option><option>Neiva</option><option>Popayán</option><option>Tunja</option><option>Sincelejo</option><option>Valledupar</option></select></div><div class="form-group"><label class="form-label">📍 Origen</label><input class="form-input" id="r-origen" placeholder="Bogotá" autocomplete="off" oninput="acBarrios('r-origen','r-origen-list')"><div id="r-origen-list" class="ac-list" style="display:none;"></div></div>
           <div class="form-group"><label class="form-label">🏁 Destino</label><input class="form-input" id="r-destino" placeholder="Medellín" autocomplete="off" oninput="acBarrios('r-destino','r-destino-list')"><div id="r-destino-list" class="ac-list" style="display:none;"></div></div>
         </div>
         <div class="form-row">
@@ -1036,7 +1036,7 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none;overscroll-behavi
         <!-- CAMPOS COMUNES -->
         <div class="form-group"><label class="form-label">📝 Descripción adicional</label><input class="form-input" id="c-desc" placeholder="Detalles importantes para el conductor..."></div>
         <div class="form-row">
-          <div class="form-group"><label class="form-label">📍 Origen</label><input class="form-input" id="c-origen" placeholder="Chapinero, Bogotá" autocomplete="off" oninput="acBarrios('c-origen','c-origen-list')"><div id="c-origen-list" class="ac-list" style="display:none;"></div></div>
+          <div class="form-group"><label class="form-label">🏙️ Ciudad de publicación</label><select class="form-input" id="c-ciudad"><option value="">Selecciona ciudad...</option><option>Bogotá</option><option>Medellín</option><option>Cali</option><option>Barranquilla</option><option>Cartagena</option><option>Bucaramanga</option><option>Manizales</option><option>Pereira</option><option>Santa Marta</option><option>Cúcuta</option><option>Ibagué</option><option>Villavicencio</option><option>Pasto</option><option>Armenia</option><option>Montería</option><option>Neiva</option><option>Popayán</option><option>Tunja</option><option>Sincelejo</option><option>Valledupar</option></select></div><div class="form-group"><label class="form-label">📍 Origen</label><input class="form-input" id="c-origen" placeholder="Chapinero, Bogotá" autocomplete="off" oninput="acBarrios('c-origen','c-origen-list')"><div id="c-origen-list" class="ac-list" style="display:none;"></div></div>
           <div class="form-group"><label class="form-label">🏁 Destino</label><input class="form-input" id="c-destino" placeholder="Bello, Antioquia" autocomplete="off" oninput="acBarrios('c-destino','c-destino-list')"><div id="c-destino-list" class="ac-list" style="display:none;"></div></div>
         </div>
         <div class="form-row">
@@ -3905,6 +3905,7 @@ async function cargarRutas() {
     .eq('estado','activa')
     .order('created_at', { ascending: false });
   if(filtroVehActual !== 'todos') qRutas = qRutas.eq('vehiculo', filtroVehActual);
+  if(!origen && !destino) { const cs = (document.getElementById('depto-sel')?.value || perfilActual?.ciudad || '').trim(); if(cs) qRutas = qRutas.ilike('ciudad', `%${cs}%`); }
   if(origen)  qRutas = qRutas.ilike('origen',  `%${origen}%`);
   if(destino) qRutas = qRutas.ilike('destino', `%${destino}%`);
 
@@ -3918,7 +3919,7 @@ async function cargarRutas() {
   // Filtrar cargas por ciudad/departamento del usuario si no hay búsqueda específica
   if(!origen && !destino) {
     const ciudadSel = (document.getElementById('depto-sel')?.value || perfilActual?.ciudad || '').trim();
-    if(ciudadSel) qCargas = qCargas.ilike('origen', `%${ciudadSel}%`);
+    if(ciudadSel) qCargas = qCargas.or(`origen.ilike.%${ciudadSel}%,ciudad.ilike.%${ciudadSel}%`);
   }
 
   let rutas = [], cargas = [];
@@ -4562,6 +4563,7 @@ async function publicarRuta() {
 
   // ── VALIDACIÓN ──────────────────────────────────────────────
   const campos = [
+    { id: 'r-ciudad',   label: 'Ciudad' },
     { id: 'r-origen',   label: 'Origen' },
     { id: 'r-destino',  label: 'Destino' },
     { id: 'r-fecha',    label: 'Fecha' },
@@ -4598,6 +4600,7 @@ async function publicarRuta() {
 
   const { error } = await sb.from('rutas').insert({
     ...conductorData,
+    ciudad:    document.getElementById('r-ciudad').value,
     origen:    document.getElementById('r-origen').value,
     destino:   document.getElementById('r-destino').value,
     fecha:     document.getElementById('r-fecha').value,
@@ -4615,7 +4618,7 @@ async function publicarRuta() {
   if(error) { toast('Error al publicar: '+error.message, 'error'); return; }
   toast('✅ Ruta publicada exitosamente', 'success');
   // Limpiar formulario
-  ['r-origen','r-destino','r-fecha','r-hora','r-capacidad','r-desc'].forEach(id => {
+  ['r-ciudad','r-origen','r-destino','r-fecha','r-hora','r-capacidad','r-desc'].forEach(id => {
     const el = document.getElementById(id); if(el) el.value = '';
   });
   // Ir al buscador para que vea su ruta publicada
@@ -4758,6 +4761,7 @@ async function publicarCarga() {
 
   const { error } = await sb.from('cargas').insert({
     cliente_id:         perfilActual.id,
+    ciudad:             document.getElementById('c-ciudad').value,
     tipo,
     descripcion:        descripcionFinal,
     origen,
@@ -4783,6 +4787,7 @@ async function publicarCarga() {
   document.querySelectorAll('[id^="ct-"]').forEach(v => v.classList.remove('sel'));
   document.getElementById('c-tipo').value = '';
   document.getElementById('sec-mudanza').style.display = 'none';
+  document.getElementById('c-ciudad').value = '';
   document.getElementById('c-origen').value = '';
   document.getElementById('c-destino').value = '';
   document.getElementById('c-peso').value = '';
