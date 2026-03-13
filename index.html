@@ -2337,20 +2337,19 @@ async function manejarSesion(session) {
   if(!perfilActual && session.user.email) {
     const nombreCompleto = session.user.user_metadata?.full_name || '';
     const partes = nombreCompleto.split(' ');
+    // Google: cliente aprobado automáticamente, sin pasos extra ni formularios
     const { error } = await sb.from('usuarios').upsert({
-      auth_id: session.user.id,
-      nombre:  partes[0] || 'Usuario',
-      apellido: partes.slice(1).join(' ') || '',
-      email:   session.user.email,
-      rol:     'cliente',
-      estado:  'incompleto',
-      foto_perfil: session.user.user_metadata?.avatar_url || null
+      auth_id:           session.user.id,
+      nombre:            partes[0] || 'Usuario',
+      apellido:          partes.slice(1).join(' ') || '',
+      email:             session.user.email,
+      rol:               'cliente',
+      estado:            'aprobado',
+      notificacion_vista: true,
+      foto_perfil:       session.user.user_metadata?.avatar_url || null
     }, { onConflict: 'auth_id', ignoreDuplicates: true });
     if(error) { console.error('Error creando perfil Google:', error); }
-    else {
-      localStorage.setItem('nuevo_google', '1');
-      await cargarPerfil();
-    }
+    else { await cargarPerfil(); }
   }
 
   const vieneDePago = await verificarRetornoWompi();
