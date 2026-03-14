@@ -2892,12 +2892,9 @@ async function irApp(screenId) {
     const cl = document.querySelector('.chat-layout');
     if(cl) cl.style.gridTemplateColumns = '260px 1fr';
     if(esMobile()) {
-      if(convActual?.id) {
-        // Re-abrir la conversación activa para restaurar el estado de los botones
-        abrirConvExistente(convActual.id);
-      } else {
-        volverListaChat();
-      }
+      // Siempre mostrar la lista al tocar el botón de chat
+      // (restaurarEstado se encarga de re-abrir la última conversación solo en recargas)
+      volverListaChat();
     }
   }
   if(screenId === 's-rutas') cargarCarrusel();
