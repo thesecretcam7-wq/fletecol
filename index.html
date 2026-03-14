@@ -5447,6 +5447,12 @@ function suscribirMensajes(convId) {
 async function cargarConversaciones(convActivaId) {
   if(!perfilActual) return;
   try {
+    // En iOS PWA el token puede estar expirado — refrescar antes de queries que requieren auth
+    let { data: sessionData } = await sb.auth.getSession();
+    if(!sessionData?.session?.access_token) {
+      const { data: refreshed } = await sb.auth.refreshSession();
+      if(!refreshed?.session) return;
+    }
     const { data: convs, error } = await sb.from('conversaciones')
       .select(`*, mensajes(contenido, created_at, emisor_id, tipo, leido)`)
       .or(`usuario1_id.eq.${perfilActual.id},usuario2_id.eq.${perfilActual.id}`)
