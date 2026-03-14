@@ -5035,6 +5035,13 @@ async function abrirChatConConductor(otroUserId, otroNombre, precio, origen, des
     }
     let { data: convs } = await query;
 
+    // No reutilizar conversaciones que el usuario ocultó (eliminó)
+    convs = (convs || []).filter(c => {
+      if(c.usuario1_id === miId) return !c.oculta_usuario1;
+      if(c.usuario2_id === miId) return !c.oculta_usuario2;
+      return true;
+    });
+
     let conv = convs?.[0] || null;
 
     if(!conv) {
